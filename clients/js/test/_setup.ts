@@ -78,5 +78,3 @@ export const signAndSendTransaction = async (
 export const getBalance = async (client: Client, address: Address) =>
   (await client.rpc.getBalance(address, { commitment: 'confirmed' }).send())
     .value;
-
-

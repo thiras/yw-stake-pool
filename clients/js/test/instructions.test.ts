@@ -46,7 +46,11 @@ test('initializePool with different reward_rate values', (t) => {
     const encoded = codec.encode(data);
     const decoded = codec.decode(encoded);
 
-    t.is(decoded.rewardRate, rate, `Reward rate ${description} should be preserved`);
+    t.is(
+      decoded.rewardRate,
+      rate,
+      `Reward rate ${description} should be preserved`
+    );
   });
 });
 
@@ -69,9 +73,9 @@ test('stake with various amounts', (t) => {
   const codec = getStakeInstructionDataCodec();
 
   const amounts = [
-    1_000_000n,     // 1 token
-    10_000_000n,    // 10 tokens
-    100_000_000n,   // 100 tokens
+    1_000_000n, // 1 token
+    10_000_000n, // 10 tokens
+    100_000_000n, // 100 tokens
     1_000_000_000n, // 1000 tokens
   ];
 

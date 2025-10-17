@@ -1,8 +1,5 @@
 import test from 'ava';
-import {
-  getStakePoolCodec,
-  getStakeAccountCodec,
-} from '../src';
+import { getStakePoolCodec, getStakeAccountCodec } from '../src';
 import { Key } from '../src';
 import { address } from '@solana/kit';
 
