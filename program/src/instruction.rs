@@ -16,7 +16,7 @@ pub enum StakePoolInstruction {
     #[account(8, name="system_program", desc = "The system program")]
     #[account(9, name="rent", desc = "Rent sysvar")]
     InitializePool {
-        reward_rate_per_second: u64,
+        reward_rate: u64,
         min_stake_amount: u64,
         lockup_period: i64,
     },
@@ -64,7 +64,7 @@ pub enum StakePoolInstruction {
     #[account(0, writable, name="pool", desc = "The stake pool")]
     #[account(1, signer, name="authority", desc = "The pool authority")]
     UpdatePool {
-        reward_rate_per_second: Option<u64>,
+        reward_rate: Option<u64>,
         min_stake_amount: Option<u64>,
         lockup_period: Option<i64>,
         is_paused: Option<bool>,

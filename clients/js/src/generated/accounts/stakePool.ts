@@ -21,8 +21,6 @@ import {
   getI64Encoder,
   getStructDecoder,
   getStructEncoder,
-  getU128Decoder,
-  getU128Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -48,9 +46,7 @@ export type StakePool = {
   stakeVault: Address;
   rewardVault: Address;
   totalStaked: bigint;
-  rewardRatePerSecond: bigint;
-  lastUpdateTime: bigint;
-  rewardPerTokenStored: bigint;
+  rewardRate: bigint;
   minStakeAmount: bigint;
   lockupPeriod: bigint;
   isPaused: boolean;
@@ -65,9 +61,7 @@ export type StakePoolArgs = {
   stakeVault: Address;
   rewardVault: Address;
   totalStaked: number | bigint;
-  rewardRatePerSecond: number | bigint;
-  lastUpdateTime: number | bigint;
-  rewardPerTokenStored: number | bigint;
+  rewardRate: number | bigint;
   minStakeAmount: number | bigint;
   lockupPeriod: number | bigint;
   isPaused: boolean;
@@ -83,9 +77,7 @@ export function getStakePoolEncoder(): FixedSizeEncoder<StakePoolArgs> {
     ['stakeVault', getAddressEncoder()],
     ['rewardVault', getAddressEncoder()],
     ['totalStaked', getU64Encoder()],
-    ['rewardRatePerSecond', getU64Encoder()],
-    ['lastUpdateTime', getI64Encoder()],
-    ['rewardPerTokenStored', getU128Encoder()],
+    ['rewardRate', getU64Encoder()],
     ['minStakeAmount', getU64Encoder()],
     ['lockupPeriod', getI64Encoder()],
     ['isPaused', getBooleanEncoder()],
@@ -102,9 +94,7 @@ export function getStakePoolDecoder(): FixedSizeDecoder<StakePool> {
     ['stakeVault', getAddressDecoder()],
     ['rewardVault', getAddressDecoder()],
     ['totalStaked', getU64Decoder()],
-    ['rewardRatePerSecond', getU64Decoder()],
-    ['lastUpdateTime', getI64Decoder()],
-    ['rewardPerTokenStored', getU128Decoder()],
+    ['rewardRate', getU64Decoder()],
     ['minStakeAmount', getU64Decoder()],
     ['lockupPeriod', getI64Decoder()],
     ['isPaused', getBooleanDecoder()],
@@ -170,5 +160,5 @@ export async function fetchAllMaybeStakePool(
 }
 
 export function getStakePoolSize(): number {
-  return 219;
+  return 195;
 }

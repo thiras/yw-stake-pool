@@ -68,14 +68,14 @@ export type UpdatePoolInstruction<
 
 export type UpdatePoolInstructionData = {
   discriminator: number;
-  rewardRatePerSecond: Option<bigint>;
+  rewardRate: Option<bigint>;
   minStakeAmount: Option<bigint>;
   lockupPeriod: Option<bigint>;
   isPaused: Option<boolean>;
 };
 
 export type UpdatePoolInstructionDataArgs = {
-  rewardRatePerSecond: OptionOrNullable<number | bigint>;
+  rewardRate: OptionOrNullable<number | bigint>;
   minStakeAmount: OptionOrNullable<number | bigint>;
   lockupPeriod: OptionOrNullable<number | bigint>;
   isPaused: OptionOrNullable<boolean>;
@@ -85,7 +85,7 @@ export function getUpdatePoolInstructionDataEncoder(): Encoder<UpdatePoolInstruc
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['rewardRatePerSecond', getOptionEncoder(getU64Encoder())],
+      ['rewardRate', getOptionEncoder(getU64Encoder())],
       ['minStakeAmount', getOptionEncoder(getU64Encoder())],
       ['lockupPeriod', getOptionEncoder(getI64Encoder())],
       ['isPaused', getOptionEncoder(getBooleanEncoder())],
@@ -97,7 +97,7 @@ export function getUpdatePoolInstructionDataEncoder(): Encoder<UpdatePoolInstruc
 export function getUpdatePoolInstructionDataDecoder(): Decoder<UpdatePoolInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['rewardRatePerSecond', getOptionDecoder(getU64Decoder())],
+    ['rewardRate', getOptionDecoder(getU64Decoder())],
     ['minStakeAmount', getOptionDecoder(getU64Decoder())],
     ['lockupPeriod', getOptionDecoder(getI64Decoder())],
     ['isPaused', getOptionDecoder(getBooleanDecoder())],
@@ -122,7 +122,7 @@ export type UpdatePoolInput<
   pool: Address<TAccountPool>;
   /** The pool authority */
   authority: TransactionSigner<TAccountAuthority>;
-  rewardRatePerSecond: UpdatePoolInstructionDataArgs['rewardRatePerSecond'];
+  rewardRate: UpdatePoolInstructionDataArgs['rewardRate'];
   minStakeAmount: UpdatePoolInstructionDataArgs['minStakeAmount'];
   lockupPeriod: UpdatePoolInstructionDataArgs['lockupPeriod'];
   isPaused: UpdatePoolInstructionDataArgs['isPaused'];

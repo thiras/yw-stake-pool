@@ -88,7 +88,7 @@
       ],
       "args": [
         {
-          "name": "rewardRatePerSecond",
+          "name": "rewardRate",
           "type": "u64"
         },
         {
@@ -402,7 +402,7 @@
       ],
       "args": [
         {
-          "name": "rewardRatePerSecond",
+          "name": "rewardRate",
           "type": {
             "option": "u64"
           }
@@ -524,16 +524,8 @@
             "type": "u64"
           },
           {
-            "name": "rewardRatePerSecond",
+            "name": "rewardRate",
             "type": "u64"
-          },
-          {
-            "name": "lastUpdateTime",
-            "type": "i64"
-          },
-          {
-            "name": "rewardPerTokenStored",
-            "type": "u128"
           },
           {
             "name": "minStakeAmount",
@@ -579,14 +571,6 @@
           },
           {
             "name": "amountStaked",
-            "type": "u64"
-          },
-          {
-            "name": "rewardPerTokenPaid",
-            "type": "u128"
-          },
-          {
-            "name": "rewardsEarned",
             "type": "u64"
           },
           {

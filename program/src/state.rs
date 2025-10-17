@@ -31,12 +31,8 @@ pub struct StakePool {
     pub reward_vault: Pubkey,
     /// Total amount staked in the pool
     pub total_staked: u64,
-    /// Reward rate per second (scaled by 1e9)
-    pub reward_rate_per_second: u64,
-    /// Last time rewards were updated
-    pub last_update_time: i64,
-    /// Accumulated rewards per token (scaled by 1e18)
-    pub reward_per_token_stored: u128,
+    /// Fixed reward rate as a percentage (scaled by 1e9, e.g., 10_000_000_000 = 10% reward after lockup)
+    pub reward_rate: u64,
     /// Minimum stake amount
     pub min_stake_amount: u64,
     /// Lockup period in seconds (0 for no lockup)
@@ -60,10 +56,6 @@ pub struct StakeAccount {
     pub index: u64,
     /// Amount staked
     pub amount_staked: u64,
-    /// Reward per token paid to this account
-    pub reward_per_token_paid: u128,
-    /// Pending rewards not yet claimed
-    pub rewards_earned: u64,
     /// Timestamp when stake was deposited
     pub stake_timestamp: i64,
     /// Bump seed for PDA derivation
@@ -71,7 +63,7 @@ pub struct StakeAccount {
 }
 
 impl StakePool {
-    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 16 + 8 + 8 + 1 + 1;
+    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey) -> Vec<Vec<u8>> {
         vec![
@@ -101,57 +93,41 @@ impl StakePool {
         })
     }
 
-    /// Calculate current reward per token
-    pub fn reward_per_token(&self, current_time: i64) -> Result<u128, ProgramError> {
-        if self.total_staked == 0 {
-            return Ok(self.reward_per_token_stored);
-        }
-
-        let time_delta = current_time
-            .checked_sub(self.last_update_time)
-            .ok_or(StakePoolError::NumericalOverflow)?;
-
-        let reward_increase = (self.reward_rate_per_second as u128)
-            .checked_mul(time_delta as u128)
-            .ok_or(StakePoolError::NumericalOverflow)?
-            .checked_mul(1_000_000_000_000_000_000) // Scale by 1e18
-            .ok_or(StakePoolError::NumericalOverflow)?
-            .checked_div(self.total_staked as u128)
-            .ok_or(StakePoolError::NumericalOverflow)?;
-
-        self.reward_per_token_stored
-            .checked_add(reward_increase)
-            .ok_or(StakePoolError::NumericalOverflow.into())
-    }
-
-    /// Calculate earned rewards for a stake amount
-    pub fn calculate_earned(
+    /// Calculate rewards for a stake based on fixed reward rate
+    /// Rewards are only earned if lockup period is complete
+    /// Formula: (amount * reward_rate) / 1e9
+    pub fn calculate_rewards(
         &self,
         amount_staked: u64,
-        reward_per_token_paid: u128,
-        rewards_earned: u64,
+        stake_timestamp: i64,
         current_time: i64,
     ) -> Result<u64, ProgramError> {
-        let reward_per_token = self.reward_per_token(current_time)?;
-
-        let reward_diff = reward_per_token
-            .checked_sub(reward_per_token_paid)
+        // Check if lockup period is complete
+        let time_staked = current_time
+            .checked_sub(stake_timestamp)
             .ok_or(StakePoolError::NumericalOverflow)?;
 
-        let new_rewards = (amount_staked as u128)
-            .checked_mul(reward_diff)
+        if time_staked < self.lockup_period {
+            // No rewards if lockup not complete
+            return Ok(0);
+        }
+
+        // Calculate fixed rewards based on reward rate
+        // reward_rate is scaled by 1e9 (e.g., 10_000_000_000 = 10% of staked amount)
+        const SCALE: u128 = 1_000_000_000;
+
+        let rewards = (amount_staked as u128)
+            .checked_mul(self.reward_rate as u128)
             .ok_or(StakePoolError::NumericalOverflow)?
-            .checked_div(1_000_000_000_000_000_000) // Unscale from 1e18
+            .checked_div(SCALE)
             .ok_or(StakePoolError::NumericalOverflow)? as u64;
 
-        rewards_earned
-            .checked_add(new_rewards)
-            .ok_or(StakePoolError::NumericalOverflow.into())
+        Ok(rewards)
     }
 }
 
 impl StakeAccount {
-    pub const LEN: usize = 1 + 32 + 32 + 8 + 8 + 16 + 8 + 8 + 1; // Added 8 bytes for index
+    pub const LEN: usize = 1 + 32 + 32 + 8 + 8 + 8 + 1;
 
     pub fn seeds(pool: &Pubkey, owner: &Pubkey, index: u64) -> Vec<Vec<u8>> {
         vec![

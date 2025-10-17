@@ -19,8 +19,6 @@ import {
   getI64Encoder,
   getStructDecoder,
   getStructEncoder,
-  getU128Decoder,
-  getU128Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -44,8 +42,6 @@ export type StakeAccount = {
   owner: Address;
   index: bigint;
   amountStaked: bigint;
-  rewardPerTokenPaid: bigint;
-  rewardsEarned: bigint;
   stakeTimestamp: bigint;
   bump: number;
 };
@@ -56,8 +52,6 @@ export type StakeAccountArgs = {
   owner: Address;
   index: number | bigint;
   amountStaked: number | bigint;
-  rewardPerTokenPaid: number | bigint;
-  rewardsEarned: number | bigint;
   stakeTimestamp: number | bigint;
   bump: number;
 };
@@ -69,8 +63,6 @@ export function getStakeAccountEncoder(): FixedSizeEncoder<StakeAccountArgs> {
     ['owner', getAddressEncoder()],
     ['index', getU64Encoder()],
     ['amountStaked', getU64Encoder()],
-    ['rewardPerTokenPaid', getU128Encoder()],
-    ['rewardsEarned', getU64Encoder()],
     ['stakeTimestamp', getI64Encoder()],
     ['bump', getU8Encoder()],
   ]);
@@ -83,8 +75,6 @@ export function getStakeAccountDecoder(): FixedSizeDecoder<StakeAccount> {
     ['owner', getAddressDecoder()],
     ['index', getU64Decoder()],
     ['amountStaked', getU64Decoder()],
-    ['rewardPerTokenPaid', getU128Decoder()],
-    ['rewardsEarned', getU64Decoder()],
     ['stakeTimestamp', getI64Decoder()],
     ['bump', getU8Decoder()],
   ]);
@@ -151,5 +141,5 @@ export async function fetchAllMaybeStakeAccount(
 }
 
 export function getStakeAccountSize(): number {
-  return 114;
+  return 90;
 }
