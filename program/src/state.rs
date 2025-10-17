@@ -58,6 +58,8 @@ pub struct StakeAccount {
     pub amount_staked: u64,
     /// Timestamp when stake was deposited
     pub stake_timestamp: i64,
+    /// Total rewards already claimed
+    pub claimed_rewards: u64,
     /// Bump seed for PDA derivation
     pub bump: u8,
 }
@@ -127,7 +129,7 @@ impl StakePool {
 }
 
 impl StakeAccount {
-    pub const LEN: usize = 1 + 32 + 32 + 8 + 8 + 8 + 1;
+    pub const LEN: usize = 1 + 32 + 32 + 8 + 8 + 8 + 8 + 1;
 
     pub fn seeds(pool: &Pubkey, owner: &Pubkey, index: u64) -> Vec<Vec<u8>> {
         vec![

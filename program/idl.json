@@ -586,6 +586,10 @@
             "type": "i64"
           },
           {
+            "name": "claimedRewards",
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }

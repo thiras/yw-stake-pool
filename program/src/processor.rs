@@ -169,6 +169,7 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>], index: u64) -> 
         index,
         amount_staked: 0,
         stake_timestamp: 0,
+        claimed_rewards: 0,
         bump,
     };
 
@@ -271,6 +272,7 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> Progra
         index,
         amount_staked: transfer_amount,
         stake_timestamp: clock.unix_timestamp,
+        claimed_rewards: 0,
         bump,
     };
 
@@ -335,6 +337,14 @@ fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
         .checked_sub(amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
+    // If fully unstaking, reset claimed rewards
+    // For partial unstakes, claimed_rewards remains to track what's already been claimed
+    if stake_account_data.amount_staked == 0 {
+        stake_account_data.claimed_rewards = 0;
+        stake_account_data.stake_timestamp = 0;
+        msg!("Full unstake - stake account reset");
+    }
+
     // Save state
     pool_data.save(ctx.accounts.pool)?;
     stake_account_data.save(ctx.accounts.stake_account)
@@ -346,7 +356,7 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
 
     // Load accounts
     let pool_data = StakePool::load(ctx.accounts.pool)?;
-    let stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
+    let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
@@ -356,7 +366,7 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
 
-    // Calculate rewards instantly based on stake duration and reward rate
+    // Calculate total rewards based on stake duration and reward rate
     // Rewards are only given if lockup period is complete
     let total_rewards = pool_data.calculate_rewards(
         stake_account_data.amount_staked,
@@ -364,14 +374,19 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         clock.unix_timestamp,
     )?;
 
-    if total_rewards == 0 {
-        msg!("No rewards to claim - lockup period not complete or no stake");
+    // Calculate unclaimed rewards (total - already claimed)
+    let unclaimed_rewards = total_rewards
+        .checked_sub(stake_account_data.claimed_rewards)
+        .ok_or(StakePoolError::NumericalOverflow)?;
+
+    if unclaimed_rewards == 0 {
+        msg!("No rewards to claim - lockup period not complete, no stake, or rewards already claimed");
         return Ok(());
     }
 
     // Check reward vault has sufficient balance
     let reward_vault_balance = get_token_account_balance(ctx.accounts.reward_vault)?;
-    if reward_vault_balance < total_rewards {
+    if reward_vault_balance < unclaimed_rewards {
         return Err(StakePoolError::InsufficientRewards.into());
     }
 
@@ -386,14 +401,25 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         ctx.accounts.user_reward_account,
         ctx.accounts.pool,
         ctx.accounts.token_program,
-        total_rewards,
+        unclaimed_rewards,
         &[&seeds_refs],
     )?;
 
-    msg!("Claimed {} reward tokens", total_rewards);
+    // Update claimed rewards tracking
+    stake_account_data.claimed_rewards = stake_account_data
+        .claimed_rewards
+        .checked_add(unclaimed_rewards)
+        .ok_or(StakePoolError::NumericalOverflow)?;
 
-    // Note: We don't update stake_account here. Each claim gives rewards for the entire stake duration.
-    // If you want to prevent double claiming, you'd need to reset stake_timestamp or track claimed amounts.
+    // Save updated stake account
+    stake_account_data.save(ctx.accounts.stake_account)?;
+
+    msg!(
+        "Claimed {} reward tokens (total claimed: {})",
+        unclaimed_rewards,
+        stake_account_data.claimed_rewards
+    );
+
     Ok(())
 }
 
