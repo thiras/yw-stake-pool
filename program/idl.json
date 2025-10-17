@@ -1,0 +1,697 @@
+{
+  "version": "0.0.0",
+  "name": "your_wallet_stake_pool",
+  "instructions": [
+    {
+      "name": "InitializePool",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool PDA"
+          ]
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The pool authority"
+          ]
+        },
+        {
+          "name": "stakeMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token mint being staked"
+          ]
+        },
+        {
+          "name": "rewardMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The reward token mint"
+          ]
+        },
+        {
+          "name": "stakeVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The pool's stake token vault"
+          ]
+        },
+        {
+          "name": "rewardVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The pool's reward token vault"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "The account paying for rent"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token program"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The system program"
+          ]
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Rent sysvar"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardRatePerSecond",
+          "type": "u64"
+        },
+        {
+          "name": "minStakeAmount",
+          "type": "u64"
+        },
+        {
+          "name": "lockupPeriod",
+          "type": "i64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 0
+      }
+    },
+    {
+      "name": "InitializeStakeAccount",
+      "accounts": [
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake account PDA"
+          ]
+        },
+        {
+          "name": "pool",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The stake account owner"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "The account paying for rent"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The system program"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 1
+      }
+    },
+    {
+      "name": "Stake",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        },
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The user's stake account"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The stake account owner"
+          ]
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "User's token account"
+          ]
+        },
+        {
+          "name": "stakeVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Pool's stake vault"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token program (Token or Token-2022)"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 2
+      }
+    },
+    {
+      "name": "Unstake",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        },
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The user's stake account"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The stake account owner"
+          ]
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "User's token account"
+          ]
+        },
+        {
+          "name": "stakeVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Pool's stake vault"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token program"
+          ]
+        },
+        {
+          "name": "clock",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Clock sysvar"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 3
+      }
+    },
+    {
+      "name": "ClaimRewards",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        },
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The user's stake account"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The stake account owner"
+          ]
+        },
+        {
+          "name": "userRewardAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "User's reward token account"
+          ]
+        },
+        {
+          "name": "rewardVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Pool's reward vault"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token program"
+          ]
+        },
+        {
+          "name": "clock",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Clock sysvar"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
+    },
+    {
+      "name": "UpdatePool",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The pool authority"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardRatePerSecond",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "minStakeAmount",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "lockupPeriod",
+          "type": {
+            "option": "i64"
+          }
+        },
+        {
+          "name": "isPaused",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 5
+      }
+    },
+    {
+      "name": "FundRewards",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        },
+        {
+          "name": "funder",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The account funding rewards"
+          ]
+        },
+        {
+          "name": "funderTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Funder's reward token account"
+          ]
+        },
+        {
+          "name": "rewardVault",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Pool's reward vault"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 6
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StakePool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "defined": "Key"
+            }
+          },
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "stakeMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "rewardMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "stakeVault",
+            "type": "publicKey"
+          },
+          {
+            "name": "rewardVault",
+            "type": "publicKey"
+          },
+          {
+            "name": "totalStaked",
+            "type": "u64"
+          },
+          {
+            "name": "rewardRatePerSecond",
+            "type": "u64"
+          },
+          {
+            "name": "lastUpdateTime",
+            "type": "i64"
+          },
+          {
+            "name": "rewardPerTokenStored",
+            "type": "u128"
+          },
+          {
+            "name": "minStakeAmount",
+            "type": "u64"
+          },
+          {
+            "name": "lockupPeriod",
+            "type": "i64"
+          },
+          {
+            "name": "isPaused",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StakeAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "defined": "Key"
+            }
+          },
+          {
+            "name": "pool",
+            "type": "publicKey"
+          },
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "amountStaked",
+            "type": "u64"
+          },
+          {
+            "name": "rewardPerTokenPaid",
+            "type": "u128"
+          },
+          {
+            "name": "rewardsEarned",
+            "type": "u64"
+          },
+          {
+            "name": "stakeTimestamp",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "Key",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Uninitialized"
+          },
+          {
+            "name": "StakePool"
+          },
+          {
+            "name": "StakeAccount"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 0,
+      "name": "DeserializationError",
+      "msg": "Error deserializing an account"
+    },
+    {
+      "code": 1,
+      "name": "SerializationError",
+      "msg": "Error serializing an account"
+    },
+    {
+      "code": 2,
+      "name": "InvalidProgramOwner",
+      "msg": "Invalid program owner"
+    },
+    {
+      "code": 3,
+      "name": "InvalidPda",
+      "msg": "Invalid PDA derivation"
+    },
+    {
+      "code": 4,
+      "name": "ExpectedEmptyAccount",
+      "msg": "Expected empty account"
+    },
+    {
+      "code": 5,
+      "name": "ExpectedNonEmptyAccount",
+      "msg": "Expected non empty account"
+    },
+    {
+      "code": 6,
+      "name": "ExpectedSignerAccount",
+      "msg": "Expected signer account"
+    },
+    {
+      "code": 7,
+      "name": "ExpectedWritableAccount",
+      "msg": "Expected writable account"
+    },
+    {
+      "code": 8,
+      "name": "AccountMismatch",
+      "msg": "Account mismatch"
+    },
+    {
+      "code": 9,
+      "name": "InvalidAccountKey",
+      "msg": "Invalid account key"
+    },
+    {
+      "code": 10,
+      "name": "NumericalOverflow",
+      "msg": "Numerical overflow"
+    },
+    {
+      "code": 11,
+      "name": "PoolPaused",
+      "msg": "Pool is paused"
+    },
+    {
+      "code": 12,
+      "name": "AmountBelowMinimum",
+      "msg": "Amount below minimum stake"
+    },
+    {
+      "code": 13,
+      "name": "InsufficientStakedBalance",
+      "msg": "Insufficient staked balance"
+    },
+    {
+      "code": 14,
+      "name": "LockupNotExpired",
+      "msg": "Lockup period not expired"
+    },
+    {
+      "code": 15,
+      "name": "InsufficientRewards",
+      "msg": "Insufficient rewards in pool"
+    },
+    {
+      "code": 16,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 17,
+      "name": "InvalidTokenProgram",
+      "msg": "Invalid token program"
+    },
+    {
+      "code": 18,
+      "name": "InvalidMint",
+      "msg": "Invalid mint"
+    }
+  ],
+  "metadata": {
+    "origin": "shank",
+    "address": "Bdm2SF3wrRLmo2t9MyGKydLHAgU5Bhxif8wN9HNMYfSH",
+    "binaryVersion": "0.4.5",
+    "libVersion": "^0.4.2"
+  }
+}

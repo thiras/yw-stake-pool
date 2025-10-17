@@ -1,0 +1,28 @@
+[package]
+name = "your-wallet-stake-pool"
+version = "0.0.0"
+edition = "2021"
+readme = "./README.md"
+license-file = "../LICENSE"
+publish = false
+
+[package.metadata.solana]
+program-id = "Bdm2SF3wrRLmo2t9MyGKydLHAgU5Bhxif8wN9HNMYfSH"
+program-dependencies = []
+account-dependencies = []
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+no-entrypoint = []
+
+[dependencies]
+borsh = "^0.10"
+shank = "^0.4.2"
+num-derive = "^0.3"
+num-traits = "^0.2"
+solana-program = "^2.1"
+thiserror = "^1.0"
+spl-token-2022 = { version = "^6.0", features = ["no-entrypoint"] }
+solana-sdk-ids = "3.0.0"
