@@ -52,7 +52,9 @@ export type StakePool = {
   lastUpdateTime: bigint;
   rewardPerTokenStored: bigint;
   minStakeAmount: bigint;
-  lockupPeriod: bigint;
+  endTime: bigint;
+  minWithdrawPeriod: bigint;
+  minRewardPeriod: bigint;
   isPaused: boolean;
   bump: number;
 };
@@ -69,7 +71,9 @@ export type StakePoolArgs = {
   lastUpdateTime: number | bigint;
   rewardPerTokenStored: number | bigint;
   minStakeAmount: number | bigint;
-  lockupPeriod: number | bigint;
+  endTime: number | bigint;
+  minWithdrawPeriod: number | bigint;
+  minRewardPeriod: number | bigint;
   isPaused: boolean;
   bump: number;
 };
@@ -87,7 +91,9 @@ export function getStakePoolEncoder(): FixedSizeEncoder<StakePoolArgs> {
     ['lastUpdateTime', getI64Encoder()],
     ['rewardPerTokenStored', getU128Encoder()],
     ['minStakeAmount', getU64Encoder()],
-    ['lockupPeriod', getI64Encoder()],
+    ['endTime', getI64Encoder()],
+    ['minWithdrawPeriod', getI64Encoder()],
+    ['minRewardPeriod', getI64Encoder()],
     ['isPaused', getBooleanEncoder()],
     ['bump', getU8Encoder()],
   ]);
@@ -106,7 +112,9 @@ export function getStakePoolDecoder(): FixedSizeDecoder<StakePool> {
     ['lastUpdateTime', getI64Decoder()],
     ['rewardPerTokenStored', getU128Decoder()],
     ['minStakeAmount', getU64Decoder()],
-    ['lockupPeriod', getI64Decoder()],
+    ['endTime', getI64Decoder()],
+    ['minWithdrawPeriod', getI64Decoder()],
+    ['minRewardPeriod', getI64Decoder()],
     ['isPaused', getBooleanDecoder()],
     ['bump', getU8Decoder()],
   ]);
@@ -170,5 +178,5 @@ export async function fetchAllMaybeStakePool(
 }
 
 export function getStakePoolSize(): number {
-  return 219;
+  return 235;
 }

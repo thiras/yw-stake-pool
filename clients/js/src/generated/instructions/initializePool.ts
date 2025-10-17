@@ -105,13 +105,17 @@ export type InitializePoolInstructionData = {
   discriminator: number;
   rewardRatePerSecond: bigint;
   minStakeAmount: bigint;
-  lockupPeriod: bigint;
+  endTime: bigint;
+  minWithdrawPeriod: bigint;
+  minRewardPeriod: bigint;
 };
 
 export type InitializePoolInstructionDataArgs = {
   rewardRatePerSecond: number | bigint;
   minStakeAmount: number | bigint;
-  lockupPeriod: number | bigint;
+  endTime: number | bigint;
+  minWithdrawPeriod: number | bigint;
+  minRewardPeriod: number | bigint;
 };
 
 export function getInitializePoolInstructionDataEncoder(): FixedSizeEncoder<InitializePoolInstructionDataArgs> {
@@ -120,7 +124,9 @@ export function getInitializePoolInstructionDataEncoder(): FixedSizeEncoder<Init
       ['discriminator', getU8Encoder()],
       ['rewardRatePerSecond', getU64Encoder()],
       ['minStakeAmount', getU64Encoder()],
-      ['lockupPeriod', getI64Encoder()],
+      ['endTime', getI64Encoder()],
+      ['minWithdrawPeriod', getI64Encoder()],
+      ['minRewardPeriod', getI64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_POOL_DISCRIMINATOR })
   );
@@ -131,7 +137,9 @@ export function getInitializePoolInstructionDataDecoder(): FixedSizeDecoder<Init
     ['discriminator', getU8Decoder()],
     ['rewardRatePerSecond', getU64Decoder()],
     ['minStakeAmount', getU64Decoder()],
-    ['lockupPeriod', getI64Decoder()],
+    ['endTime', getI64Decoder()],
+    ['minWithdrawPeriod', getI64Decoder()],
+    ['minRewardPeriod', getI64Decoder()],
   ]);
 }
 
@@ -179,7 +187,9 @@ export type InitializePoolInput<
   rent?: Address<TAccountRent>;
   rewardRatePerSecond: InitializePoolInstructionDataArgs['rewardRatePerSecond'];
   minStakeAmount: InitializePoolInstructionDataArgs['minStakeAmount'];
-  lockupPeriod: InitializePoolInstructionDataArgs['lockupPeriod'];
+  endTime: InitializePoolInstructionDataArgs['endTime'];
+  minWithdrawPeriod: InitializePoolInstructionDataArgs['minWithdrawPeriod'];
+  minRewardPeriod: InitializePoolInstructionDataArgs['minRewardPeriod'];
 };
 
 export function getInitializePoolInstruction<

@@ -96,7 +96,15 @@
           "type": "u64"
         },
         {
-          "name": "lockupPeriod",
+          "name": "endTime",
+          "type": "i64"
+        },
+        {
+          "name": "minWithdrawPeriod",
+          "type": "i64"
+        },
+        {
+          "name": "minRewardPeriod",
           "type": "i64"
         }
       ],
@@ -414,12 +422,6 @@
           }
         },
         {
-          "name": "lockupPeriod",
-          "type": {
-            "option": "i64"
-          }
-        },
-        {
           "name": "isPaused",
           "type": {
             "option": "bool"
@@ -540,7 +542,15 @@
             "type": "u64"
           },
           {
-            "name": "lockupPeriod",
+            "name": "endTime",
+            "type": "i64"
+          },
+          {
+            "name": "minWithdrawPeriod",
+            "type": "i64"
+          },
+          {
+            "name": "minRewardPeriod",
             "type": "i64"
           },
           {

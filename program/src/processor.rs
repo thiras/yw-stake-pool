@@ -26,14 +26,18 @@ pub fn process_instruction<'a>(
         StakePoolInstruction::InitializePool {
             reward_rate_per_second,
             min_stake_amount,
-            lockup_period,
+            end_time,
+            min_withdraw_period,
+            min_reward_period,
         } => {
             msg!("Instruction: InitializePool");
             initialize_pool(
                 accounts,
                 reward_rate_per_second,
                 min_stake_amount,
-                lockup_period,
+                end_time,
+                min_withdraw_period,
+                min_reward_period,
             )
         }
         StakePoolInstruction::InitializeStakeAccount { index } => {
@@ -55,7 +59,6 @@ pub fn process_instruction<'a>(
         StakePoolInstruction::UpdatePool {
             reward_rate_per_second,
             min_stake_amount,
-            lockup_period,
             is_paused,
         } => {
             msg!("Instruction: UpdatePool");
@@ -63,7 +66,6 @@ pub fn process_instruction<'a>(
                 accounts,
                 reward_rate_per_second,
                 min_stake_amount,
-                lockup_period,
                 is_paused,
             )
         }
@@ -78,7 +80,9 @@ fn initialize_pool<'a>(
     accounts: &'a [AccountInfo<'a>],
     reward_rate_per_second: u64,
     min_stake_amount: u64,
-    lockup_period: i64,
+    end_time: i64,
+    min_withdraw_period: i64,
+    min_reward_period: i64,
 ) -> ProgramResult {
     // Use ShankContext to parse accounts
     let ctx = InitializePoolAccounts::context(accounts)?;
@@ -127,7 +131,9 @@ fn initialize_pool<'a>(
         last_update_time: clock.unix_timestamp,
         reward_per_token_stored: 0,
         min_stake_amount,
-        lockup_period,
+        end_time,
+        min_withdraw_period,
+        min_reward_period,
         is_paused: false,
         bump,
     };
@@ -292,30 +298,25 @@ fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
 
-    // Check lockup period
-    if pool_data.lockup_period > 0 {
-        let time_staked = clock
-            .unix_timestamp
-            .checked_sub(stake_account_data.stake_timestamp)
-            .ok_or(StakePoolError::NumericalOverflow)?;
-
-        if time_staked < pool_data.lockup_period {
-            return Err(StakePoolError::LockupNotExpired.into());
-        }
+    // Check minimum withdraw period using the new helper method
+    if !pool_data.can_withdraw(stake_account_data.stake_timestamp, clock.unix_timestamp) {
+        return Err(StakePoolError::LockupNotExpired.into());
     }
 
-    // Update pool rewards
+    // Update pool rewards (respects end_time)
     pool_data.reward_per_token_stored = pool_data.reward_per_token(clock.unix_timestamp)?;
     pool_data.last_update_time = clock.unix_timestamp;
 
-    // Update stake account rewards
-    stake_account_data.rewards_earned = pool_data.calculate_earned(
-        stake_account_data.amount_staked,
-        stake_account_data.reward_per_token_paid,
-        stake_account_data.rewards_earned,
-        clock.unix_timestamp,
-    )?;
-    stake_account_data.reward_per_token_paid = pool_data.reward_per_token_stored;
+    // Update stake account rewards only if eligible
+    if pool_data.is_eligible_for_rewards(stake_account_data.stake_timestamp, clock.unix_timestamp) {
+        stake_account_data.rewards_earned = pool_data.calculate_earned(
+            stake_account_data.amount_staked,
+            stake_account_data.reward_per_token_paid,
+            stake_account_data.rewards_earned,
+            clock.unix_timestamp,
+        )?;
+        stake_account_data.reward_per_token_paid = pool_data.reward_per_token_stored;
+    }
 
     // Transfer tokens back (with PDA signer)
     let pool_seeds = StakePool::seeds(&pool_data.authority, &pool_data.stake_mint);
@@ -364,7 +365,13 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
 
-    // Update pool rewards
+    // Check if user is eligible for rewards based on minimum reward period
+    if !pool_data.is_eligible_for_rewards(stake_account_data.stake_timestamp, clock.unix_timestamp) {
+        msg!("Stake has not met minimum reward period requirement");
+        return Err(StakePoolError::LockupNotExpired.into()); // Reusing error, could add specific error
+    }
+
+    // Update pool rewards (respects end_time)
     pool_data.reward_per_token_stored = pool_data.reward_per_token(clock.unix_timestamp)?;
     pool_data.last_update_time = clock.unix_timestamp;
 
@@ -415,7 +422,6 @@ fn update_pool<'a>(
     accounts: &'a [AccountInfo<'a>],
     reward_rate_per_second: Option<u64>,
     min_stake_amount: Option<u64>,
-    lockup_period: Option<i64>,
     is_paused: Option<bool>,
 ) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
@@ -434,9 +440,6 @@ fn update_pool<'a>(
     }
     if let Some(min_amount) = min_stake_amount {
         pool_data.min_stake_amount = min_amount;
-    }
-    if let Some(lockup) = lockup_period {
-        pool_data.lockup_period = lockup;
     }
     if let Some(paused) = is_paused {
         pool_data.is_paused = paused;
