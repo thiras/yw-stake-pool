@@ -19,7 +19,6 @@ jobs:
         with:
           clippy: true
           rustfmt: true
-          solana: true
 
       - name: Format Programs
         run: pnpm programs:format
