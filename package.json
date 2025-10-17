@@ -43,7 +43,7 @@
     ],
     "programs/**/**.{ts,rs}": [
       "pnpm programs:lint",
-      "pnpm programs:format --write"
+      "pnpm programs:format --fix"
     ]
   },
   "packageManager": "pnpm@9.1.0"
