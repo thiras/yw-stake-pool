@@ -1,19 +1,20 @@
 use borsh::BorshDeserialize;
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey,
-    program_error::ProgramError, sysvar::{clock::Clock, Sysvar},
+    account_info::AccountInfo,
+    entrypoint::ProgramResult,
+    msg,
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    sysvar::{clock::Clock, Sysvar},
 };
-use spl_token_2022::{
-    extension::StateWithExtensions,
-    state::Account as TokenAccount,
-};
+use spl_token_2022::{extension::StateWithExtensions, state::Account as TokenAccount};
 
 use crate::assertions::*;
 use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
 use crate::instruction::StakePoolInstruction;
 use crate::state::{Key, StakeAccount, StakePool};
-use crate::utils::*;
+use crate::utils::{create_account, transfer_tokens_with_fee};
 
 pub fn process_instruction<'a>(
     _program_id: &Pubkey,
@@ -79,13 +80,14 @@ fn initialize_pool<'a>(
     min_stake_amount: u64,
     lockup_period: i64,
 ) -> ProgramResult {
+    // Use ShankContext to parse accounts
     let ctx = InitializePoolAccounts::context(accounts)?;
 
     // Guards
     let pool_seeds = StakePool::seeds(ctx.accounts.authority.key, ctx.accounts.stake_mint.key);
     let pool_seeds_refs: Vec<&[u8]> = pool_seeds.iter().map(|s| s.as_slice()).collect();
     let (pool_key, bump) = Pubkey::find_program_address(&pool_seeds_refs, &crate::ID);
-    
+
     assert_same_pubkeys("pool", ctx.accounts.pool, &pool_key)?;
     assert_signer("authority", ctx.accounts.authority)?;
     assert_signer("payer", ctx.accounts.payer)?;
@@ -113,7 +115,7 @@ fn initialize_pool<'a>(
     )?;
 
     // Initialize pool
-    let pool = StakePool {
+    let pool_data = StakePool {
         key: Key::StakePool,
         authority: *ctx.accounts.authority.key,
         stake_mint: *ctx.accounts.stake_mint.key,
@@ -130,10 +132,11 @@ fn initialize_pool<'a>(
         bump,
     };
 
-    pool.save(ctx.accounts.pool)
+    pool_data.save(ctx.accounts.pool)
 }
 
 fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
     let ctx = InitializeStakeAccountAccounts::context(accounts)?;
 
     // Guards
@@ -141,7 +144,11 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResul
     let stake_seeds_refs: Vec<&[u8]> = stake_account_seeds.iter().map(|s| s.as_slice()).collect();
     let (stake_account_key, bump) = Pubkey::find_program_address(&stake_seeds_refs, &crate::ID);
 
-    assert_same_pubkeys("stake_account", ctx.accounts.stake_account, &stake_account_key)?;
+    assert_same_pubkeys(
+        "stake_account",
+        ctx.accounts.stake_account,
+        &stake_account_key,
+    )?;
     assert_signer("owner", ctx.accounts.owner)?;
     assert_signer("payer", ctx.accounts.payer)?;
     assert_empty("stake_account", ctx.accounts.stake_account)?;
@@ -164,7 +171,7 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResul
     )?;
 
     // Initialize stake account
-    let stake_account = StakeAccount {
+    let stake_account_data = StakeAccount {
         key: Key::StakeAccount,
         pool: *ctx.accounts.pool.key,
         owner: *ctx.accounts.owner.key,
@@ -175,26 +182,27 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResul
         bump,
     };
 
-    stake_account.save(ctx.accounts.stake_account)
+    stake_account_data.save(ctx.accounts.stake_account)
 }
 
 fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
     let ctx = StakeAccounts::context(accounts)?;
 
     // Load accounts
-    let mut pool = StakePool::load(ctx.accounts.pool)?;
-    let mut stake_account = StakeAccount::load(ctx.accounts.stake_account)?;
+    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+    let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
-    assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account.owner)?;
-    assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account.pool)?;
-    
-    if pool.is_paused {
+    assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
+    assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account_data.pool)?;
+
+    if pool_data.is_paused {
         return Err(StakePoolError::PoolPaused.into());
     }
 
-    if amount < pool.min_stake_amount {
+    if amount < pool_data.min_stake_amount {
         return Err(StakePoolError::AmountBelowMinimum.into());
     }
 
@@ -202,17 +210,17 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     let clock = Clock::get()?;
 
     // Update pool rewards
-    pool.reward_per_token_stored = pool.reward_per_token(clock.unix_timestamp)?;
-    pool.last_update_time = clock.unix_timestamp;
+    pool_data.reward_per_token_stored = pool_data.reward_per_token(clock.unix_timestamp)?;
+    pool_data.last_update_time = clock.unix_timestamp;
 
     // Update stake account rewards
-    stake_account.rewards_earned = pool.calculate_earned(
-        stake_account.amount_staked,
-        stake_account.reward_per_token_paid,
-        stake_account.rewards_earned,
+    stake_account_data.rewards_earned = pool_data.calculate_earned(
+        stake_account_data.amount_staked,
+        stake_account_data.reward_per_token_paid,
+        stake_account_data.rewards_earned,
         clock.unix_timestamp,
     )?;
-    stake_account.reward_per_token_paid = pool.reward_per_token_stored;
+    stake_account_data.reward_per_token_paid = pool_data.reward_per_token_stored;
 
     // Transfer tokens with transfer fee support
     let transfer_amount = transfer_tokens_with_fee(
@@ -225,39 +233,40 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     )?;
 
     // Update balances
-    stake_account.amount_staked = stake_account
+    stake_account_data.amount_staked = stake_account_data
         .amount_staked
         .checked_add(transfer_amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    pool.total_staked = pool
+    pool_data.total_staked = pool_data
         .total_staked
         .checked_add(transfer_amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
     // Set stake timestamp on first stake
-    if stake_account.stake_timestamp == 0 {
-        stake_account.stake_timestamp = clock.unix_timestamp;
+    if stake_account_data.stake_timestamp == 0 {
+        stake_account_data.stake_timestamp = clock.unix_timestamp;
     }
 
     // Save state
-    pool.save(ctx.accounts.pool)?;
-    stake_account.save(ctx.accounts.stake_account)
+    pool_data.save(ctx.accounts.pool)?;
+    stake_account_data.save(ctx.accounts.stake_account)
 }
 
 fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
     let ctx = UnstakeAccounts::context(accounts)?;
 
     // Load accounts
-    let mut pool = StakePool::load(ctx.accounts.pool)?;
-    let mut stake_account = StakeAccount::load(ctx.accounts.stake_account)?;
+    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+    let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
-    assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account.owner)?;
-    assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account.pool)?;
+    assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
+    assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account_data.pool)?;
 
-    if stake_account.amount_staked < amount {
+    if stake_account_data.amount_staked < amount {
         return Err(StakePoolError::InsufficientStakedBalance.into());
     }
 
@@ -265,34 +274,34 @@ fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
 
     // Check lockup period
-    if pool.lockup_period > 0 {
+    if pool_data.lockup_period > 0 {
         let time_staked = clock
             .unix_timestamp
-            .checked_sub(stake_account.stake_timestamp)
+            .checked_sub(stake_account_data.stake_timestamp)
             .ok_or(StakePoolError::NumericalOverflow)?;
 
-        if time_staked < pool.lockup_period {
+        if time_staked < pool_data.lockup_period {
             return Err(StakePoolError::LockupNotExpired.into());
         }
     }
 
     // Update pool rewards
-    pool.reward_per_token_stored = pool.reward_per_token(clock.unix_timestamp)?;
-    pool.last_update_time = clock.unix_timestamp;
+    pool_data.reward_per_token_stored = pool_data.reward_per_token(clock.unix_timestamp)?;
+    pool_data.last_update_time = clock.unix_timestamp;
 
     // Update stake account rewards
-    stake_account.rewards_earned = pool.calculate_earned(
-        stake_account.amount_staked,
-        stake_account.reward_per_token_paid,
-        stake_account.rewards_earned,
+    stake_account_data.rewards_earned = pool_data.calculate_earned(
+        stake_account_data.amount_staked,
+        stake_account_data.reward_per_token_paid,
+        stake_account_data.rewards_earned,
         clock.unix_timestamp,
     )?;
-    stake_account.reward_per_token_paid = pool.reward_per_token_stored;
+    stake_account_data.reward_per_token_paid = pool_data.reward_per_token_stored;
 
     // Transfer tokens back (with PDA signer)
-    let pool_seeds = StakePool::seeds(&pool.authority, &pool.stake_mint);
+    let pool_seeds = StakePool::seeds(&pool_data.authority, &pool_data.stake_mint);
     let mut seeds_with_bump = pool_seeds.clone();
-    seeds_with_bump.push(vec![pool.bump]);
+    seeds_with_bump.push(vec![pool_data.bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
 
     let _transfer_amount = transfer_tokens_with_fee(
@@ -305,45 +314,46 @@ fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     )?;
 
     // Update balances
-    stake_account.amount_staked = stake_account
+    stake_account_data.amount_staked = stake_account_data
         .amount_staked
         .checked_sub(amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    pool.total_staked = pool
+    pool_data.total_staked = pool_data
         .total_staked
         .checked_sub(amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
     // Save state
-    pool.save(ctx.accounts.pool)?;
-    stake_account.save(ctx.accounts.stake_account)
+    pool_data.save(ctx.accounts.pool)?;
+    stake_account_data.save(ctx.accounts.stake_account)
 }
 
 fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
     let ctx = ClaimRewardsAccounts::context(accounts)?;
 
     // Load accounts
-    let mut pool = StakePool::load(ctx.accounts.pool)?;
-    let mut stake_account = StakeAccount::load(ctx.accounts.stake_account)?;
+    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+    let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
-    assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account.owner)?;
-    assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account.pool)?;
+    assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
+    assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account_data.pool)?;
 
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
 
     // Update pool rewards
-    pool.reward_per_token_stored = pool.reward_per_token(clock.unix_timestamp)?;
-    pool.last_update_time = clock.unix_timestamp;
+    pool_data.reward_per_token_stored = pool_data.reward_per_token(clock.unix_timestamp)?;
+    pool_data.last_update_time = clock.unix_timestamp;
 
     // Calculate total rewards
-    let total_rewards = pool.calculate_earned(
-        stake_account.amount_staked,
-        stake_account.reward_per_token_paid,
-        stake_account.rewards_earned,
+    let total_rewards = pool_data.calculate_earned(
+        stake_account_data.amount_staked,
+        stake_account_data.reward_per_token_paid,
+        stake_account_data.rewards_earned,
         clock.unix_timestamp,
     )?;
 
@@ -359,9 +369,9 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     }
 
     // Transfer rewards (with PDA signer)
-    let pool_seeds = StakePool::seeds(&pool.authority, &pool.stake_mint);
+    let pool_seeds = StakePool::seeds(&pool_data.authority, &pool_data.stake_mint);
     let mut seeds_with_bump = pool_seeds.clone();
-    seeds_with_bump.push(vec![pool.bump]);
+    seeds_with_bump.push(vec![pool_data.bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
 
     transfer_tokens_with_fee(
@@ -374,12 +384,12 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     )?;
 
     // Update stake account
-    stake_account.rewards_earned = 0;
-    stake_account.reward_per_token_paid = pool.reward_per_token_stored;
+    stake_account_data.rewards_earned = 0;
+    stake_account_data.reward_per_token_paid = pool_data.reward_per_token_stored;
 
     // Save state
-    pool.save(ctx.accounts.pool)?;
-    stake_account.save(ctx.accounts.stake_account)
+    pool_data.save(ctx.accounts.pool)?;
+    stake_account_data.save(ctx.accounts.stake_account)
 }
 
 fn update_pool<'a>(
@@ -389,41 +399,47 @@ fn update_pool<'a>(
     lockup_period: Option<i64>,
     is_paused: Option<bool>,
 ) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
     let ctx = UpdatePoolAccounts::context(accounts)?;
 
     // Load pool
-    let mut pool = StakePool::load(ctx.accounts.pool)?;
+    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("authority", ctx.accounts.authority)?;
-    assert_same_pubkeys("authority", ctx.accounts.authority, &pool.authority)?;
+    assert_same_pubkeys("authority", ctx.accounts.authority, &pool_data.authority)?;
 
     // Update fields
     if let Some(rate) = reward_rate_per_second {
-        pool.reward_rate_per_second = rate;
+        pool_data.reward_rate_per_second = rate;
     }
     if let Some(min_amount) = min_stake_amount {
-        pool.min_stake_amount = min_amount;
+        pool_data.min_stake_amount = min_amount;
     }
     if let Some(lockup) = lockup_period {
-        pool.lockup_period = lockup;
+        pool_data.lockup_period = lockup;
     }
     if let Some(paused) = is_paused {
-        pool.is_paused = paused;
+        pool_data.is_paused = paused;
     }
 
-    pool.save(ctx.accounts.pool)
+    pool_data.save(ctx.accounts.pool)
 }
 
 fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
     let ctx = FundRewardsAccounts::context(accounts)?;
 
     // Load pool
-    let pool = StakePool::load(ctx.accounts.pool)?;
+    let pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("funder", ctx.accounts.funder)?;
-    assert_same_pubkeys("reward_vault", ctx.accounts.reward_vault, &pool.reward_vault)?;
+    assert_same_pubkeys(
+        "reward_vault",
+        ctx.accounts.reward_vault,
+        &pool_data.reward_vault,
+    )?;
 
     // Transfer reward tokens to pool
     transfer_tokens_with_fee(
@@ -442,11 +458,11 @@ fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResu
 // Helper functions
 fn verify_token_account(token_account: &AccountInfo, expected_mint: &Pubkey) -> ProgramResult {
     let account_data = token_account.try_borrow_data()?;
-    
+
     // Support both Token and Token-2022
     let account = StateWithExtensions::<TokenAccount>::unpack(&account_data)
         .map_err(|_| StakePoolError::InvalidTokenProgram)?;
-    
+
     if &account.base.mint != expected_mint {
         return Err(StakePoolError::InvalidMint.into());
     }
