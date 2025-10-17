@@ -16,6 +16,8 @@ crate-type = ["cdylib", "lib"]
 
 [features]
 no-entrypoint = []
+custom-heap = []
+custom-panic = []
 
 [dependencies]
 borsh = "^0.10"
