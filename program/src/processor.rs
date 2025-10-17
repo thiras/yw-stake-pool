@@ -191,6 +191,11 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> Progra
     assert_signer("owner", ctx.accounts.owner)?;
     assert_signer("payer", ctx.accounts.payer)?;
     assert_empty("stake_account", ctx.accounts.stake_account)?;
+    assert_same_pubkeys(
+        "reward_vault",
+        ctx.accounts.reward_vault,
+        &pool_data.reward_vault,
+    )?;
 
     if pool_data.is_paused {
         return Err(StakePoolError::PoolPaused.into());
@@ -198,6 +203,24 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> Progra
 
     if amount < pool_data.min_stake_amount {
         return Err(StakePoolError::AmountBelowMinimum.into());
+    }
+
+    // Calculate expected rewards for this stake
+    let expected_rewards = (amount as u128)
+        .checked_mul(pool_data.reward_rate as u128)
+        .ok_or(StakePoolError::NumericalOverflow)?
+        .checked_div(1_000_000_000)
+        .ok_or(StakePoolError::NumericalOverflow)? as u64;
+
+    // Check if reward vault has sufficient balance to cover the expected rewards
+    let reward_vault_balance = get_token_account_balance(ctx.accounts.reward_vault)?;
+    if reward_vault_balance < expected_rewards {
+        msg!(
+            "Insufficient rewards in pool. Required: {}, Available: {}",
+            expected_rewards,
+            reward_vault_balance
+        );
+        return Err(StakePoolError::InsufficientRewards.into());
     }
 
     // Verify stake account PDA

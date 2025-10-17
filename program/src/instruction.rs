@@ -35,9 +35,10 @@ pub enum StakePoolInstruction {
     #[account(2, signer, name="owner", desc = "The stake account owner")]
     #[account(3, writable, name="user_token_account", desc = "User's token account")]
     #[account(4, writable, name="stake_vault", desc = "Pool's stake vault")]
-    #[account(5, name="token_program", desc = "The token program (Token or Token-2022)")]
-    #[account(6, writable, signer, name="payer", desc = "The account paying for rent")]
-    #[account(7, name="system_program", desc = "The system program")]
+    #[account(5, name="reward_vault", desc = "Pool's reward vault (for checking available rewards)")]
+    #[account(6, name="token_program", desc = "The token program (Token or Token-2022)")]
+    #[account(7, writable, signer, name="payer", desc = "The account paying for rent")]
+    #[account(8, name="system_program", desc = "The system program")]
     Stake { amount: u64, index: u64 },
 
     /// Unstake tokens from the pool

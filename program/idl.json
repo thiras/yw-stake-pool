@@ -204,6 +204,14 @@
           ]
         },
         {
+          "name": "rewardVault",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Pool's reward vault (for checking available rewards)"
+          ]
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false,
