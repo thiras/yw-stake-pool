@@ -50,7 +50,7 @@ fn validate_and_deserialize<T: BorshDeserialize>(
     // Verify the account type matches expected (discriminator check)
     // This is done after deserialization to access the key field
     // Note: We rely on borsh deserialization failing if the structure doesn't match
-    
+
     Ok(deserialized)
 }
 
@@ -129,13 +129,13 @@ impl StakePool {
 
     pub fn load(account: &AccountInfo) -> Result<Self, ProgramError> {
         let pool = validate_and_deserialize::<Self>(account, "StakePool")?;
-        
+
         // Verify discriminator matches expected type
         if !matches!(pool.key, Key::StakePool) {
             msg!("Invalid StakePool discriminator");
             return Err(StakePoolError::InvalidAccountDiscriminator.into());
         }
-        
+
         Ok(pool)
     }
 
@@ -204,13 +204,13 @@ impl StakeAccount {
 
     pub fn load(account: &AccountInfo) -> Result<Self, ProgramError> {
         let stake_account = validate_and_deserialize::<Self>(account, "StakeAccount")?;
-        
+
         // Verify discriminator matches expected type
         if !matches!(stake_account.key, Key::StakeAccount) {
             msg!("Invalid StakeAccount discriminator");
             return Err(StakePoolError::InvalidAccountDiscriminator.into());
         }
-        
+
         Ok(stake_account)
     }
 
