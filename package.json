@@ -23,6 +23,8 @@
   "devDependencies": {
     "@codama/nodes-from-anchor": "^1.0.0",
     "@codama/renderers-js": "^1.0.0",
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
     "@iarna/toml": "^2.2.5",
     "@metaplex-foundation/shank-js": "^0.1.7",
     "codama": "^1.0.0",
@@ -35,15 +37,13 @@
     "node": ">=v20.0.0"
   },
   "lint-staged": {
-    "*.{ts,js}": [
+    "client/js/**/*.{ts,js}": [
       "pnpm clients:js:lint",
-      "pnpm clients:js:format --write",
-      "git add"
+      "pnpm clients:js:format --write"
     ],
     "programs/**/**.{ts,rs}": [
       "pnpm programs:lint",
-      "pnpm programs:format --write",
-      "git add"
+      "pnpm programs:format --write"
     ]
   },
   "packageManager": "pnpm@9.1.0"
