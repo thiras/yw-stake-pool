@@ -93,6 +93,52 @@ jobs:
       - name: Test Programs
         run: pnpm programs:test
 
+  security_scan_xray:
+    name: Security Scan (X-ray)
+    runs-on: ubuntu-latest
+    needs: build_programs
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore Program Builds
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ./**/*.so
+            ./target/deploy/*.json
+          key: ${{ runner.os }}-builds-${{ github.sha }}
+
+      - name: Run Sec3 X-ray Security Scan
+        run: |
+          docker run --rm \
+            -v "$(pwd):/workspace" \
+            ghcr.io/sec3-product/x-ray:latest \
+            /workspace/program
+
+      - name: Check for Vulnerabilities
+        run: |
+          docker run --rm \
+            -v "$(pwd):/workspace" \
+            ghcr.io/sec3-product/x-ray:latest \
+            /workspace/program 2>&1 | tee xray-output.txt
+          
+          # Fail the job if vulnerabilities are found
+          if grep -q "VULNERABLE" xray-output.txt; then
+            echo "❌ Security vulnerabilities detected by X-ray!"
+            exit 1
+          else
+            echo "✅ No vulnerabilities detected"
+          fi
+
+      - name: Upload X-ray Security Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xray-security-report
+          path: xray-output.txt
+          retention-days: 90
+
   generate_idls:
     name: Check IDL Generation
     runs-on: ubuntu-latest
