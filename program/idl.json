@@ -88,7 +88,7 @@
       ],
       "args": [
         {
-          "name": "rewardRatePerSecond",
+          "name": "rewardRate",
           "type": "u64"
         },
         {
@@ -201,6 +201,14 @@
           "isSigner": false,
           "docs": [
             "Pool's stake vault"
+          ]
+        },
+        {
+          "name": "rewardVault",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Pool's reward vault (for checking available rewards)"
           ]
         },
         {
@@ -402,7 +410,7 @@
       ],
       "args": [
         {
-          "name": "rewardRatePerSecond",
+          "name": "rewardRate",
           "type": {
             "option": "u64"
           }
@@ -524,16 +532,8 @@
             "type": "u64"
           },
           {
-            "name": "rewardRatePerSecond",
+            "name": "rewardRate",
             "type": "u64"
-          },
-          {
-            "name": "lastUpdateTime",
-            "type": "i64"
-          },
-          {
-            "name": "rewardPerTokenStored",
-            "type": "u128"
           },
           {
             "name": "minStakeAmount",
@@ -582,16 +582,12 @@
             "type": "u64"
           },
           {
-            "name": "rewardPerTokenPaid",
-            "type": "u128"
-          },
-          {
-            "name": "rewardsEarned",
-            "type": "u64"
-          },
-          {
             "name": "stakeTimestamp",
             "type": "i64"
+          },
+          {
+            "name": "claimedRewards",
+            "type": "u64"
           },
           {
             "name": "bump",

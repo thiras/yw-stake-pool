@@ -103,13 +103,13 @@ export type InitializePoolInstruction<
 
 export type InitializePoolInstructionData = {
   discriminator: number;
-  rewardRatePerSecond: bigint;
+  rewardRate: bigint;
   minStakeAmount: bigint;
   lockupPeriod: bigint;
 };
 
 export type InitializePoolInstructionDataArgs = {
-  rewardRatePerSecond: number | bigint;
+  rewardRate: number | bigint;
   minStakeAmount: number | bigint;
   lockupPeriod: number | bigint;
 };
@@ -118,7 +118,7 @@ export function getInitializePoolInstructionDataEncoder(): FixedSizeEncoder<Init
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['rewardRatePerSecond', getU64Encoder()],
+      ['rewardRate', getU64Encoder()],
       ['minStakeAmount', getU64Encoder()],
       ['lockupPeriod', getI64Encoder()],
     ]),
@@ -129,7 +129,7 @@ export function getInitializePoolInstructionDataEncoder(): FixedSizeEncoder<Init
 export function getInitializePoolInstructionDataDecoder(): FixedSizeDecoder<InitializePoolInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['rewardRatePerSecond', getU64Decoder()],
+    ['rewardRate', getU64Decoder()],
     ['minStakeAmount', getU64Decoder()],
     ['lockupPeriod', getI64Decoder()],
   ]);
@@ -177,7 +177,7 @@ export type InitializePoolInput<
   systemProgram?: Address<TAccountSystemProgram>;
   /** Rent sysvar */
   rent?: Address<TAccountRent>;
-  rewardRatePerSecond: InitializePoolInstructionDataArgs['rewardRatePerSecond'];
+  rewardRate: InitializePoolInstructionDataArgs['rewardRate'];
   minStakeAmount: InitializePoolInstructionDataArgs['minStakeAmount'];
   lockupPeriod: InitializePoolInstructionDataArgs['lockupPeriod'];
 };

@@ -16,7 +16,7 @@ pub enum StakePoolInstruction {
     #[account(8, name="system_program", desc = "The system program")]
     #[account(9, name="rent", desc = "Rent sysvar")]
     InitializePool {
-        reward_rate_per_second: u64,
+        reward_rate: u64,
         min_stake_amount: u64,
         lockup_period: i64,
     },
@@ -35,9 +35,10 @@ pub enum StakePoolInstruction {
     #[account(2, signer, name="owner", desc = "The stake account owner")]
     #[account(3, writable, name="user_token_account", desc = "User's token account")]
     #[account(4, writable, name="stake_vault", desc = "Pool's stake vault")]
-    #[account(5, name="token_program", desc = "The token program (Token or Token-2022)")]
-    #[account(6, writable, signer, name="payer", desc = "The account paying for rent")]
-    #[account(7, name="system_program", desc = "The system program")]
+    #[account(5, name="reward_vault", desc = "Pool's reward vault (for checking available rewards)")]
+    #[account(6, name="token_program", desc = "The token program (Token or Token-2022)")]
+    #[account(7, writable, signer, name="payer", desc = "The account paying for rent")]
+    #[account(8, name="system_program", desc = "The system program")]
     Stake { amount: u64, index: u64 },
 
     /// Unstake tokens from the pool
@@ -64,7 +65,7 @@ pub enum StakePoolInstruction {
     #[account(0, writable, name="pool", desc = "The stake pool")]
     #[account(1, signer, name="authority", desc = "The pool authority")]
     UpdatePool {
-        reward_rate_per_second: Option<u64>,
+        reward_rate: Option<u64>,
         min_stake_amount: Option<u64>,
         lockup_period: Option<i64>,
         is_paused: Option<bool>,
