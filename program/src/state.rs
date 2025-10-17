@@ -7,6 +7,53 @@ use solana_program::{
 
 use crate::error::StakePoolError;
 
+/// Generic function to validate and deserialize account data
+/// This prevents the UnvalidatedAccount vulnerability by ensuring:
+/// 1. Account is owned by this program
+/// 2. Account has data
+/// 3. Account data meets minimum size requirements
+fn validate_and_deserialize<T: BorshDeserialize>(
+    account: &AccountInfo,
+    account_type_name: &str,
+) -> Result<T, ProgramError> {
+    // Validate account ownership
+    if account.owner != &crate::ID {
+        msg!(
+            "{} account not owned by this program. Owner: {}",
+            account_type_name,
+            account.owner
+        );
+        return Err(ProgramError::IllegalOwner);
+    }
+
+    // Ensure account has data
+    if account.data_is_empty() {
+        msg!("{} account data is empty", account_type_name);
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    let data = account.data.borrow();
+
+    // Check minimum size (at least 1 byte for Key discriminator)
+    if data.is_empty() {
+        msg!("{} account data too short", account_type_name);
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    // Deserialize and validate Key discriminator
+    let mut bytes: &[u8] = &data;
+    let deserialized = T::deserialize(&mut bytes).map_err(|error| {
+        msg!("{} deserialization error: {}", account_type_name, error);
+        StakePoolError::DeserializationError
+    })?;
+
+    // Verify the account type matches expected (discriminator check)
+    // This is done after deserialization to access the key field
+    // Note: We rely on borsh deserialization failing if the structure doesn't match
+    
+    Ok(deserialized)
+}
+
 #[derive(Clone, BorshSerialize, BorshDeserialize, Debug)]
 pub enum Key {
     Uninitialized,
@@ -81,11 +128,15 @@ impl StakePool {
     }
 
     pub fn load(account: &AccountInfo) -> Result<Self, ProgramError> {
-        let mut bytes: &[u8] = &(*account.data).borrow();
-        StakePool::deserialize(&mut bytes).map_err(|error| {
-            msg!("Error: {}", error);
-            StakePoolError::DeserializationError.into()
-        })
+        let pool = validate_and_deserialize::<Self>(account, "StakePool")?;
+        
+        // Verify discriminator matches expected type
+        if !matches!(pool.key, Key::StakePool) {
+            msg!("Invalid StakePool discriminator");
+            return Err(StakePoolError::InvalidAccountDiscriminator.into());
+        }
+        
+        Ok(pool)
     }
 
     pub fn save(&self, account: &AccountInfo) -> ProgramResult {
@@ -152,11 +203,15 @@ impl StakeAccount {
     }
 
     pub fn load(account: &AccountInfo) -> Result<Self, ProgramError> {
-        let mut bytes: &[u8] = &(*account.data).borrow();
-        StakeAccount::deserialize(&mut bytes).map_err(|error| {
-            msg!("Error: {}", error);
-            StakePoolError::DeserializationError.into()
-        })
+        let stake_account = validate_and_deserialize::<Self>(account, "StakeAccount")?;
+        
+        // Verify discriminator matches expected type
+        if !matches!(stake_account.key, Key::StakeAccount) {
+            msg!("Invalid StakeAccount discriminator");
+            return Err(StakePoolError::InvalidAccountDiscriminator.into());
+        }
+        
+        Ok(stake_account)
     }
 
     pub fn save(&self, account: &AccountInfo) -> ProgramResult {

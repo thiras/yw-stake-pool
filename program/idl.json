@@ -711,6 +711,11 @@
       "code": 18,
       "name": "InvalidMint",
       "msg": "Invalid mint"
+    },
+    {
+      "code": 19,
+      "name": "InvalidAccountDiscriminator",
+      "msg": "Invalid account discriminator"
     }
   ],
   "metadata": {

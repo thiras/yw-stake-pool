@@ -52,6 +52,8 @@ export const STAKE_POOL_ERROR__UNAUTHORIZED = 0x10; // 16
 export const STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM = 0x11; // 17
 /** InvalidMint: Invalid mint */
 export const STAKE_POOL_ERROR__INVALID_MINT = 0x12; // 18
+/** InvalidAccountDiscriminator: Invalid account discriminator */
+export const STAKE_POOL_ERROR__INVALID_ACCOUNT_DISCRIMINATOR = 0x13; // 19
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -63,6 +65,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__EXPECTED_WRITABLE_ACCOUNT
   | typeof STAKE_POOL_ERROR__INSUFFICIENT_REWARDS
   | typeof STAKE_POOL_ERROR__INSUFFICIENT_STAKED_BALANCE
+  | typeof STAKE_POOL_ERROR__INVALID_ACCOUNT_DISCRIMINATOR
   | typeof STAKE_POOL_ERROR__INVALID_ACCOUNT_KEY
   | typeof STAKE_POOL_ERROR__INVALID_MINT
   | typeof STAKE_POOL_ERROR__INVALID_PDA
@@ -86,6 +89,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__EXPECTED_WRITABLE_ACCOUNT]: `Expected writable account`,
     [STAKE_POOL_ERROR__INSUFFICIENT_REWARDS]: `Insufficient rewards in pool`,
     [STAKE_POOL_ERROR__INSUFFICIENT_STAKED_BALANCE]: `Insufficient staked balance`,
+    [STAKE_POOL_ERROR__INVALID_ACCOUNT_DISCRIMINATOR]: `Invalid account discriminator`,
     [STAKE_POOL_ERROR__INVALID_ACCOUNT_KEY]: `Invalid account key`,
     [STAKE_POOL_ERROR__INVALID_MINT]: `Invalid mint`,
     [STAKE_POOL_ERROR__INVALID_PDA]: `Invalid PDA derivation`,

@@ -61,6 +61,9 @@ pub enum StakePoolError {
     /// 18 - Invalid mint
     #[error("Invalid mint")]
     InvalidMint,
+    /// 19 - Invalid account discriminator
+    #[error("Invalid account discriminator")]
+    InvalidAccountDiscriminator,
 }
 
 impl From<StakePoolError> for ProgramError {
