@@ -29,6 +29,7 @@ import {
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
+  type WritableSignerAccount,
 } from '@solana/kit';
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -49,6 +50,10 @@ export type StakeInstruction<
   TAccountTokenProgram extends
     | string
     | AccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  TAccountPayer extends string | AccountMeta<string> = string,
+  TAccountSystemProgram extends
+    | string
+    | AccountMeta<string> = '11111111111111111111111111111111',
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -73,19 +78,34 @@ export type StakeInstruction<
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
+      TAccountPayer extends string
+        ? WritableSignerAccount<TAccountPayer> &
+            AccountSignerMeta<TAccountPayer>
+        : TAccountPayer,
+      TAccountSystemProgram extends string
+        ? ReadonlyAccount<TAccountSystemProgram>
+        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >;
 
-export type StakeInstructionData = { discriminator: number; amount: bigint };
+export type StakeInstructionData = {
+  discriminator: number;
+  amount: bigint;
+  index: bigint;
+};
 
-export type StakeInstructionDataArgs = { amount: number | bigint };
+export type StakeInstructionDataArgs = {
+  amount: number | bigint;
+  index: number | bigint;
+};
 
 export function getStakeInstructionDataEncoder(): FixedSizeEncoder<StakeInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['amount', getU64Encoder()],
+      ['index', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: STAKE_DISCRIMINATOR })
   );
@@ -95,6 +115,7 @@ export function getStakeInstructionDataDecoder(): FixedSizeDecoder<StakeInstruct
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['amount', getU64Decoder()],
+    ['index', getU64Decoder()],
   ]);
 }
 
@@ -115,10 +136,12 @@ export type StakeInput<
   TAccountUserTokenAccount extends string = string,
   TAccountStakeVault extends string = string,
   TAccountTokenProgram extends string = string,
+  TAccountPayer extends string = string,
+  TAccountSystemProgram extends string = string,
 > = {
   /** The stake pool */
   pool: Address<TAccountPool>;
-  /** The user's stake account */
+  /** The user's new stake account */
   stakeAccount: Address<TAccountStakeAccount>;
   /** The stake account owner */
   owner: TransactionSigner<TAccountOwner>;
@@ -128,7 +151,12 @@ export type StakeInput<
   stakeVault: Address<TAccountStakeVault>;
   /** The token program (Token or Token-2022) */
   tokenProgram?: Address<TAccountTokenProgram>;
+  /** The account paying for rent */
+  payer: TransactionSigner<TAccountPayer>;
+  /** The system program */
+  systemProgram?: Address<TAccountSystemProgram>;
   amount: StakeInstructionDataArgs['amount'];
+  index: StakeInstructionDataArgs['index'];
 };
 
 export function getStakeInstruction<
@@ -138,6 +166,8 @@ export function getStakeInstruction<
   TAccountUserTokenAccount extends string,
   TAccountStakeVault extends string,
   TAccountTokenProgram extends string,
+  TAccountPayer extends string,
+  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
   input: StakeInput<
@@ -146,7 +176,9 @@ export function getStakeInstruction<
     TAccountOwner,
     TAccountUserTokenAccount,
     TAccountStakeVault,
-    TAccountTokenProgram
+    TAccountTokenProgram,
+    TAccountPayer,
+    TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): StakeInstruction<
@@ -156,7 +188,9 @@ export function getStakeInstruction<
   TAccountOwner,
   TAccountUserTokenAccount,
   TAccountStakeVault,
-  TAccountTokenProgram
+  TAccountTokenProgram,
+  TAccountPayer,
+  TAccountSystemProgram
 > {
   // Program address.
   const programAddress = config?.programAddress ?? STAKE_POOL_PROGRAM_ADDRESS;
@@ -172,6 +206,8 @@ export function getStakeInstruction<
     },
     stakeVault: { value: input.stakeVault ?? null, isWritable: true },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
+    payer: { value: input.payer ?? null, isWritable: true },
+    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -186,6 +222,10 @@ export function getStakeInstruction<
     accounts.tokenProgram.value =
       'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
   }
+  if (!accounts.systemProgram.value) {
+    accounts.systemProgram.value =
+      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
@@ -196,6 +236,8 @@ export function getStakeInstruction<
       getAccountMeta(accounts.userTokenAccount),
       getAccountMeta(accounts.stakeVault),
       getAccountMeta(accounts.tokenProgram),
+      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.systemProgram),
     ],
     data: getStakeInstructionDataEncoder().encode(
       args as StakeInstructionDataArgs
@@ -208,7 +250,9 @@ export function getStakeInstruction<
     TAccountOwner,
     TAccountUserTokenAccount,
     TAccountStakeVault,
-    TAccountTokenProgram
+    TAccountTokenProgram,
+    TAccountPayer,
+    TAccountSystemProgram
   >);
 }
 
@@ -220,7 +264,7 @@ export type ParsedStakeInstruction<
   accounts: {
     /** The stake pool */
     pool: TAccountMetas[0];
-    /** The user's stake account */
+    /** The user's new stake account */
     stakeAccount: TAccountMetas[1];
     /** The stake account owner */
     owner: TAccountMetas[2];
@@ -230,6 +274,10 @@ export type ParsedStakeInstruction<
     stakeVault: TAccountMetas[4];
     /** The token program (Token or Token-2022) */
     tokenProgram: TAccountMetas[5];
+    /** The account paying for rent */
+    payer: TAccountMetas[6];
+    /** The system program */
+    systemProgram: TAccountMetas[7];
   };
   data: StakeInstructionData;
 };
@@ -242,7 +290,7 @@ export function parseStakeInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedStakeInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -261,6 +309,8 @@ export function parseStakeInstruction<
       userTokenAccount: getNextAccount(),
       stakeVault: getNextAccount(),
       tokenProgram: getNextAccount(),
+      payer: getNextAccount(),
+      systemProgram: getNextAccount(),
     },
     data: getStakeInstructionDataDecoder().decode(instruction.data),
   };

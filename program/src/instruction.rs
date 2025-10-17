@@ -21,22 +21,24 @@ pub enum StakePoolInstruction {
         lockup_period: i64,
     },
 
-    /// Initialize a stake account for a user
+    /// Initialize a stake account for a user with a specific index
     #[account(0, writable, name="stake_account", desc = "The stake account PDA")]
     #[account(1, name="pool", desc = "The stake pool")]
     #[account(2, signer, name="owner", desc = "The stake account owner")]
     #[account(3, writable, signer, name="payer", desc = "The account paying for rent")]
     #[account(4, name="system_program", desc = "The system program")]
-    InitializeStakeAccount,
+    InitializeStakeAccount { index: u64 },
 
-    /// Stake tokens into the pool
+    /// Stake tokens into the pool (creates a new stake account for each deposit)
     #[account(0, writable, name="pool", desc = "The stake pool")]
-    #[account(1, writable, name="stake_account", desc = "The user's stake account")]
+    #[account(1, writable, name="stake_account", desc = "The user's new stake account")]
     #[account(2, signer, name="owner", desc = "The stake account owner")]
     #[account(3, writable, name="user_token_account", desc = "User's token account")]
     #[account(4, writable, name="stake_vault", desc = "Pool's stake vault")]
     #[account(5, name="token_program", desc = "The token program (Token or Token-2022)")]
-    Stake { amount: u64 },
+    #[account(6, writable, signer, name="payer", desc = "The account paying for rent")]
+    #[account(7, name="system_program", desc = "The system program")]
+    Stake { amount: u64, index: u64 },
 
     /// Unstake tokens from the pool
     #[account(0, writable, name="pool", desc = "The stake pool")]

@@ -47,7 +47,7 @@ pub struct StakePool {
     pub bump: u8,
 }
 
-/// Individual user stake account
+/// Individual user stake account (one per deposit)
 #[repr(C)]
 #[derive(Clone, BorshSerialize, BorshDeserialize, Debug, ShankAccount)]
 pub struct StakeAccount {
@@ -56,6 +56,8 @@ pub struct StakeAccount {
     pub pool: Pubkey,
     /// The owner of this stake account
     pub owner: Pubkey,
+    /// The index of this stake account (0, 1, 2, ...)
+    pub index: u64,
     /// Amount staked
     pub amount_staked: u64,
     /// Reward per token paid to this account
@@ -153,21 +155,24 @@ impl StakePool {
 }
 
 impl StakeAccount {
-    pub const LEN: usize = 1 + 32 + 32 + 8 + 16 + 8 + 8 + 1;
+    pub const LEN: usize = 1 + 32 + 32 + 8 + 8 + 16 + 8 + 8 + 1; // Added 8 bytes for index
 
-    pub fn seeds(pool: &Pubkey, owner: &Pubkey) -> Vec<Vec<u8>> {
+    pub fn seeds(pool: &Pubkey, owner: &Pubkey, index: u64) -> Vec<Vec<u8>> {
         vec![
             b"stake_account".to_vec(),
             pool.as_ref().to_vec(),
             owner.as_ref().to_vec(),
+            index.to_le_bytes().to_vec(),
         ]
     }
 
-    pub fn find_pda(pool: &Pubkey, owner: &Pubkey) -> (Pubkey, u8) {
+    pub fn find_pda(pool: &Pubkey, owner: &Pubkey, index: u64) -> (Pubkey, u8) {
+        let index_bytes = index.to_le_bytes();
         let seeds: Vec<&[u8]> = vec![
             b"stake_account",
             pool.as_ref(),
             owner.as_ref(),
+            &index_bytes,
         ];
         Pubkey::find_program_address(&seeds, &crate::ID)
     }

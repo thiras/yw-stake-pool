@@ -10,6 +10,8 @@ import {
   combineCodec,
   getStructDecoder,
   getStructEncoder,
+  getU64Decoder,
+  getU64Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
@@ -73,13 +75,21 @@ export type InitializeStakeAccountInstruction<
     ]
   >;
 
-export type InitializeStakeAccountInstructionData = { discriminator: number };
+export type InitializeStakeAccountInstructionData = {
+  discriminator: number;
+  index: bigint;
+};
 
-export type InitializeStakeAccountInstructionDataArgs = {};
+export type InitializeStakeAccountInstructionDataArgs = {
+  index: number | bigint;
+};
 
 export function getInitializeStakeAccountInstructionDataEncoder(): FixedSizeEncoder<InitializeStakeAccountInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([['discriminator', getU8Encoder()]]),
+    getStructEncoder([
+      ['discriminator', getU8Encoder()],
+      ['index', getU64Encoder()],
+    ]),
     (value) => ({
       ...value,
       discriminator: INITIALIZE_STAKE_ACCOUNT_DISCRIMINATOR,
@@ -88,7 +98,10 @@ export function getInitializeStakeAccountInstructionDataEncoder(): FixedSizeEnco
 }
 
 export function getInitializeStakeAccountInstructionDataDecoder(): FixedSizeDecoder<InitializeStakeAccountInstructionData> {
-  return getStructDecoder([['discriminator', getU8Decoder()]]);
+  return getStructDecoder([
+    ['discriminator', getU8Decoder()],
+    ['index', getU64Decoder()],
+  ]);
 }
 
 export function getInitializeStakeAccountInstructionDataCodec(): FixedSizeCodec<
@@ -118,6 +131,7 @@ export type InitializeStakeAccountInput<
   payer: TransactionSigner<TAccountPayer>;
   /** The system program */
   systemProgram?: Address<TAccountSystemProgram>;
+  index: InitializeStakeAccountInstructionDataArgs['index'];
 };
 
 export function getInitializeStakeAccountInstruction<
@@ -160,6 +174,9 @@ export function getInitializeStakeAccountInstruction<
     ResolvedAccount
   >;
 
+  // Original args.
+  const args = { ...input };
+
   // Resolve default values.
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
@@ -175,7 +192,9 @@ export function getInitializeStakeAccountInstruction<
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.systemProgram),
     ],
-    data: getInitializeStakeAccountInstructionDataEncoder().encode({}),
+    data: getInitializeStakeAccountInstructionDataEncoder().encode(
+      args as InitializeStakeAccountInstructionDataArgs
+    ),
     programAddress,
   } as InitializeStakeAccountInstruction<
     TProgramAddress,

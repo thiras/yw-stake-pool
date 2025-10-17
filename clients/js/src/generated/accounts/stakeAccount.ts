@@ -42,6 +42,7 @@ export type StakeAccount = {
   key: Key;
   pool: Address;
   owner: Address;
+  index: bigint;
   amountStaked: bigint;
   rewardPerTokenPaid: bigint;
   rewardsEarned: bigint;
@@ -53,6 +54,7 @@ export type StakeAccountArgs = {
   key: KeyArgs;
   pool: Address;
   owner: Address;
+  index: number | bigint;
   amountStaked: number | bigint;
   rewardPerTokenPaid: number | bigint;
   rewardsEarned: number | bigint;
@@ -65,6 +67,7 @@ export function getStakeAccountEncoder(): FixedSizeEncoder<StakeAccountArgs> {
     ['key', getKeyEncoder()],
     ['pool', getAddressEncoder()],
     ['owner', getAddressEncoder()],
+    ['index', getU64Encoder()],
     ['amountStaked', getU64Encoder()],
     ['rewardPerTokenPaid', getU128Encoder()],
     ['rewardsEarned', getU64Encoder()],
@@ -78,6 +81,7 @@ export function getStakeAccountDecoder(): FixedSizeDecoder<StakeAccount> {
     ['key', getKeyDecoder()],
     ['pool', getAddressDecoder()],
     ['owner', getAddressDecoder()],
+    ['index', getU64Decoder()],
     ['amountStaked', getU64Decoder()],
     ['rewardPerTokenPaid', getU128Decoder()],
     ['rewardsEarned', getU64Decoder()],
@@ -147,5 +151,5 @@ export async function fetchAllMaybeStakeAccount(
 }
 
 export function getStakeAccountSize(): number {
-  return 106;
+  return 114;
 }

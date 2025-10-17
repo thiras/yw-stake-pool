@@ -36,13 +36,13 @@ pub fn process_instruction<'a>(
                 lockup_period,
             )
         }
-        StakePoolInstruction::InitializeStakeAccount => {
+        StakePoolInstruction::InitializeStakeAccount { index } => {
             msg!("Instruction: InitializeStakeAccount");
-            initialize_stake_account(accounts)
+            initialize_stake_account(accounts, index)
         }
-        StakePoolInstruction::Stake { amount } => {
+        StakePoolInstruction::Stake { amount, index } => {
             msg!("Instruction: Stake");
-            stake(accounts, amount)
+            stake(accounts, amount, index)
         }
         StakePoolInstruction::Unstake { amount } => {
             msg!("Instruction: Unstake");
@@ -135,12 +135,12 @@ fn initialize_pool<'a>(
     pool_data.save(ctx.accounts.pool)
 }
 
-fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>], index: u64) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = InitializeStakeAccountAccounts::context(accounts)?;
 
     // Guards
-    let stake_account_seeds = StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key);
+    let stake_account_seeds = StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key, index);
     let stake_seeds_refs: Vec<&[u8]> = stake_account_seeds.iter().map(|s| s.as_slice()).collect();
     let (stake_account_key, bump) = Pubkey::find_program_address(&stake_seeds_refs, &crate::ID);
 
@@ -170,11 +170,12 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResul
         Some(&[&seeds_refs]),
     )?;
 
-    // Initialize stake account
+    // Initialize stake account with index
     let stake_account_data = StakeAccount {
         key: Key::StakeAccount,
         pool: *ctx.accounts.pool.key,
         owner: *ctx.accounts.owner.key,
+        index,
         amount_staked: 0,
         reward_per_token_paid: 0,
         rewards_earned: 0,
@@ -185,18 +186,17 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResul
     stake_account_data.save(ctx.accounts.stake_account)
 }
 
-fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
+fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = StakeAccounts::context(accounts)?;
 
-    // Load accounts
+    // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
-    let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
-    assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
-    assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account_data.pool)?;
+    assert_signer("payer", ctx.accounts.payer)?;
+    assert_empty("stake_account", ctx.accounts.stake_account)?;
 
     if pool_data.is_paused {
         return Err(StakePoolError::PoolPaused.into());
@@ -206,6 +206,17 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
         return Err(StakePoolError::AmountBelowMinimum.into());
     }
 
+    // Verify stake account PDA
+    let stake_account_seeds = StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key, index);
+    let stake_seeds_refs: Vec<&[u8]> = stake_account_seeds.iter().map(|s| s.as_slice()).collect();
+    let (stake_account_key, bump) = Pubkey::find_program_address(&stake_seeds_refs, &crate::ID);
+
+    assert_same_pubkeys(
+        "stake_account",
+        ctx.accounts.stake_account,
+        &stake_account_key,
+    )?;
+
     // Get current time
     let clock = Clock::get()?;
 
@@ -213,14 +224,19 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     pool_data.reward_per_token_stored = pool_data.reward_per_token(clock.unix_timestamp)?;
     pool_data.last_update_time = clock.unix_timestamp;
 
-    // Update stake account rewards
-    stake_account_data.rewards_earned = pool_data.calculate_earned(
-        stake_account_data.amount_staked,
-        stake_account_data.reward_per_token_paid,
-        stake_account_data.rewards_earned,
-        clock.unix_timestamp,
+    // Create the new stake account
+    let mut seeds_with_bump = stake_account_seeds.clone();
+    seeds_with_bump.push(vec![bump]);
+    let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
+
+    create_account(
+        ctx.accounts.stake_account,
+        ctx.accounts.payer,
+        ctx.accounts.system_program,
+        StakeAccount::LEN,
+        &crate::ID,
+        Some(&[&seeds_refs]),
     )?;
-    stake_account_data.reward_per_token_paid = pool_data.reward_per_token_stored;
 
     // Transfer tokens with transfer fee support
     let transfer_amount = transfer_tokens_with_fee(
@@ -232,21 +248,24 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
         &[],
     )?;
 
-    // Update balances
-    stake_account_data.amount_staked = stake_account_data
-        .amount_staked
-        .checked_add(transfer_amount)
-        .ok_or(StakePoolError::NumericalOverflow)?;
-
+    // Update pool total staked
     pool_data.total_staked = pool_data
         .total_staked
         .checked_add(transfer_amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    // Set stake timestamp on first stake
-    if stake_account_data.stake_timestamp == 0 {
-        stake_account_data.stake_timestamp = clock.unix_timestamp;
-    }
+    // Initialize new stake account with the deposit
+    let stake_account_data = StakeAccount {
+        key: Key::StakeAccount,
+        pool: *ctx.accounts.pool.key,
+        owner: *ctx.accounts.owner.key,
+        index,
+        amount_staked: transfer_amount,
+        reward_per_token_paid: pool_data.reward_per_token_stored,
+        rewards_earned: 0,
+        stake_timestamp: clock.unix_timestamp,
+        bump,
+    };
 
     // Save state
     pool_data.save(ctx.accounts.pool)?;
