@@ -8,10 +8,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use solana_sdk_ids::system_program;
-use spl_token_2022::{
-    extension::StateWithExtensions,
-    instruction::transfer_checked,
-};
+use spl_token_2022::{extension::StateWithExtensions, instruction::transfer_checked};
 
 use crate::error::StakePoolError;
 

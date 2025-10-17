@@ -82,11 +82,7 @@ impl StakePool {
     }
 
     pub fn find_pda(authority: &Pubkey, stake_mint: &Pubkey) -> (Pubkey, u8) {
-        let seeds: Vec<&[u8]> = vec![
-            b"stake_pool",
-            authority.as_ref(),
-            stake_mint.as_ref(),
-        ];
+        let seeds: Vec<&[u8]> = vec![b"stake_pool", authority.as_ref(), stake_mint.as_ref()];
         Pubkey::find_program_address(&seeds, &crate::ID)
     }
 

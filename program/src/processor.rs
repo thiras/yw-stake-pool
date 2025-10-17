@@ -140,7 +140,8 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>], index: u64) -> 
     let ctx = InitializeStakeAccountAccounts::context(accounts)?;
 
     // Guards
-    let stake_account_seeds = StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key, index);
+    let stake_account_seeds =
+        StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key, index);
     let stake_seeds_refs: Vec<&[u8]> = stake_account_seeds.iter().map(|s| s.as_slice()).collect();
     let (stake_account_key, bump) = Pubkey::find_program_address(&stake_seeds_refs, &crate::ID);
 
@@ -207,7 +208,8 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> Progra
     }
 
     // Verify stake account PDA
-    let stake_account_seeds = StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key, index);
+    let stake_account_seeds =
+        StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key, index);
     let stake_seeds_refs: Vec<&[u8]> = stake_account_seeds.iter().map(|s| s.as_slice()).collect();
     let (stake_account_key, bump) = Pubkey::find_program_address(&stake_seeds_refs, &crate::ID);
 
