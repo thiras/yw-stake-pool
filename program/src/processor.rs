@@ -29,12 +29,7 @@ pub fn process_instruction<'a>(
             lockup_period,
         } => {
             msg!("Instruction: InitializePool");
-            initialize_pool(
-                accounts,
-                reward_rate,
-                min_stake_amount,
-                lockup_period,
-            )
+            initialize_pool(accounts, reward_rate, min_stake_amount, lockup_period)
         }
         StakePoolInstruction::InitializeStakeAccount { index } => {
             msg!("Instruction: InitializeStakeAccount");
