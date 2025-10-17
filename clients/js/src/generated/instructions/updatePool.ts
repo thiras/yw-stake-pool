@@ -10,6 +10,8 @@ import {
   combineCodec,
   getBooleanDecoder,
   getBooleanEncoder,
+  getI64Decoder,
+  getI64Encoder,
   getOptionDecoder,
   getOptionEncoder,
   getStructDecoder,
@@ -68,12 +70,14 @@ export type UpdatePoolInstructionData = {
   discriminator: number;
   rewardRatePerSecond: Option<bigint>;
   minStakeAmount: Option<bigint>;
+  lockupPeriod: Option<bigint>;
   isPaused: Option<boolean>;
 };
 
 export type UpdatePoolInstructionDataArgs = {
   rewardRatePerSecond: OptionOrNullable<number | bigint>;
   minStakeAmount: OptionOrNullable<number | bigint>;
+  lockupPeriod: OptionOrNullable<number | bigint>;
   isPaused: OptionOrNullable<boolean>;
 };
 
@@ -83,6 +87,7 @@ export function getUpdatePoolInstructionDataEncoder(): Encoder<UpdatePoolInstruc
       ['discriminator', getU8Encoder()],
       ['rewardRatePerSecond', getOptionEncoder(getU64Encoder())],
       ['minStakeAmount', getOptionEncoder(getU64Encoder())],
+      ['lockupPeriod', getOptionEncoder(getI64Encoder())],
       ['isPaused', getOptionEncoder(getBooleanEncoder())],
     ]),
     (value) => ({ ...value, discriminator: UPDATE_POOL_DISCRIMINATOR })
@@ -94,6 +99,7 @@ export function getUpdatePoolInstructionDataDecoder(): Decoder<UpdatePoolInstruc
     ['discriminator', getU8Decoder()],
     ['rewardRatePerSecond', getOptionDecoder(getU64Decoder())],
     ['minStakeAmount', getOptionDecoder(getU64Decoder())],
+    ['lockupPeriod', getOptionDecoder(getI64Decoder())],
     ['isPaused', getOptionDecoder(getBooleanDecoder())],
   ]);
 }
@@ -118,6 +124,7 @@ export type UpdatePoolInput<
   authority: TransactionSigner<TAccountAuthority>;
   rewardRatePerSecond: UpdatePoolInstructionDataArgs['rewardRatePerSecond'];
   minStakeAmount: UpdatePoolInstructionDataArgs['minStakeAmount'];
+  lockupPeriod: UpdatePoolInstructionDataArgs['lockupPeriod'];
   isPaused: UpdatePoolInstructionDataArgs['isPaused'];
 };
 

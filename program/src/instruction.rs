@@ -4,7 +4,7 @@ use shank::{ShankContext, ShankInstruction};
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug, ShankContext, ShankInstruction)]
 #[rustfmt::skip]
 pub enum StakePoolInstruction {
-    /// Initialize a new stake pool with time-based reward controls
+    /// Initialize a new stake pool
     #[account(0, writable, name="pool", desc = "The stake pool PDA")]
     #[account(1, signer, name="authority", desc = "The pool authority")]
     #[account(2, name="stake_mint", desc = "The token mint being staked")]
@@ -18,9 +18,7 @@ pub enum StakePoolInstruction {
     InitializePool {
         reward_rate_per_second: u64,
         min_stake_amount: u64,
-        end_time: i64,
-        min_withdraw_period: i64,
-        min_reward_period: i64,
+        lockup_period: i64,
     },
 
     /// Initialize a stake account for a user with a specific index
@@ -68,6 +66,7 @@ pub enum StakePoolInstruction {
     UpdatePool {
         reward_rate_per_second: Option<u64>,
         min_stake_amount: Option<u64>,
+        lockup_period: Option<i64>,
         is_paused: Option<bool>,
     },
 
