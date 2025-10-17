@@ -18,7 +18,7 @@ inputs:
     required: false
   solana:
     description: Install Solana if `true`. Defaults to `false`.
-    required: false
+    required: true
 
 runs:
   using: 'composite'
