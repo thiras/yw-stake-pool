@@ -162,8 +162,8 @@ jobs:
           path: xray-output.txt
           retention-days: 90
 
-  static_analysis_solazy:
-    name: Static Analysis (sol-azy)
+  security_scan_solazy:
+    name: Security Scan (sol-azy)
     runs-on: ubuntu-latest
     needs: build_programs
     steps:
