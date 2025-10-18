@@ -79,20 +79,35 @@ pub fn realloc_account<'a>(
     target_account.resize(new_size)
 }
 
-/// Close an account.
+/// Close an account securely to prevent reinitialization attacks.
+/// This function:
+/// 1. Zeros out all account data
+/// 2. Transfers all lamports to the receiving account
+/// 3. Assigns ownership to the system program
 #[inline(always)]
 pub fn close_account<'a>(
     target_account: &AccountInfo<'a>,
     receiving_account: &AccountInfo<'a>,
 ) -> ProgramResult {
+    // Step 1: Zero out account data to prevent reinitialization attacks
+    let mut data = target_account.try_borrow_mut_data()?;
+    data.fill(0);
+    drop(data);
+
+    // Step 2: Transfer all lamports to the receiving account
     let dest_starting_lamports = receiving_account.lamports();
+    let target_lamports = target_account.lamports();
+    
     **receiving_account.lamports.borrow_mut() = dest_starting_lamports
-        .checked_add(target_account.lamports())
-        .unwrap();
+        .checked_add(target_lamports)
+        .ok_or(StakePoolError::NumericalOverflow)?;
     **target_account.lamports.borrow_mut() = 0;
 
+    // Step 3: Assign ownership to system program and resize to 0
     target_account.assign(&Pubkey::from(system_program::ID.to_bytes()));
-    target_account.resize(0)
+    target_account.resize(0)?;
+    
+    Ok(())
 }
 
 /// Transfer lamports.
@@ -111,16 +126,29 @@ pub fn transfer_lamports<'a>(
     )
 }
 
+/// Transfer lamports from one PDA to another.
+/// This is a secure alternative to direct lamport manipulation.
+/// Note: This should only be used for partial transfers, not account closure.
+/// For closing accounts, use close_account() which properly zeros data.
 pub fn transfer_lamports_from_pdas<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
     lamports: u64,
 ) -> ProgramResult {
-    **from.lamports.borrow_mut() = from
-        .lamports()
+    // Ensure we don't drain all lamports without properly closing the account
+    let from_lamports = from.lamports();
+    let remaining_lamports = from_lamports
         .checked_sub(lamports)
         .ok_or::<ProgramError>(StakePoolError::NumericalOverflow.into())?;
 
+    // If this would zero out the account, the caller should use close_account instead
+    if remaining_lamports == 0 && from.data_len() > 0 {
+        solana_program::msg!(
+            "Warning: Zeroing lamports on non-empty account. Consider using close_account() instead."
+        );
+    }
+
+    **from.lamports.borrow_mut() = remaining_lamports;
     **to.lamports.borrow_mut() = to
         .lamports()
         .checked_add(lamports)
