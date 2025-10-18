@@ -97,7 +97,7 @@ pub fn close_account<'a>(
     // Step 2: Transfer all lamports to the receiving account
     let dest_starting_lamports = receiving_account.lamports();
     let target_lamports = target_account.lamports();
-    
+
     **receiving_account.lamports.borrow_mut() = dest_starting_lamports
         .checked_add(target_lamports)
         .ok_or(StakePoolError::NumericalOverflow)?;
@@ -106,7 +106,7 @@ pub fn close_account<'a>(
     // Step 3: Assign ownership to system program and resize to 0
     target_account.assign(&Pubkey::from(system_program::ID.to_bytes()));
     target_account.resize(0)?;
-    
+
     Ok(())
 }
 
