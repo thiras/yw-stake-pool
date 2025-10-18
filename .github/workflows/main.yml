@@ -114,15 +114,38 @@ jobs:
           docker run --rm \
             -v "$(pwd):/workspace" \
             ghcr.io/sec3-product/x-ray:latest \
-            /workspace/program
+            /workspace/program 2>&1 | tee xray-output.txt
+
+      - name: Generate Step Summary
+        if: always()
+        run: |
+          echo "# 🔍 X-ray Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if vulnerabilities were found
+          if grep -q "VULNERABLE" xray-output.txt 2>/dev/null; then
+            echo "## ❌ Status: Vulnerabilities Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Scan Output:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat xray-output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ✅ Status: No Vulnerabilities Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The X-ray security scan completed successfully with no vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Scan Output:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat xray-output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Check for Vulnerabilities
         run: |
-          docker run --rm \
-            -v "$(pwd):/workspace" \
-            ghcr.io/sec3-product/x-ray:latest \
-            /workspace/program 2>&1 | tee xray-output.txt
-          
           # Fail the job if vulnerabilities are found
           if grep -q "VULNERABLE" xray-output.txt; then
             echo "❌ Security vulnerabilities detected by X-ray!"
