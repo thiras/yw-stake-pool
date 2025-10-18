@@ -187,7 +187,8 @@ jobs:
         run: |
           git clone https://github.com/FuzzingLabs/sol-azy.git /tmp/sol-azy
           cd /tmp/sol-azy
-          cargo build --release
+          # Build with warnings allowed (the project has a known lifetime warning)
+          RUSTFLAGS="-A warnings" cargo build --release
           echo "/tmp/sol-azy/target/release" >> $GITHUB_PATH
 
       - name: Run sol-azy Static Analysis
