@@ -41,7 +41,7 @@
       "pnpm clients:js:lint",
       "pnpm clients:js:format --write"
     ],
-    "programs/**/**.{ts,rs}": [
+    "program/**/**.{ts,rs}": [
       "pnpm programs:lint",
       "pnpm programs:format --fix"
     ]
