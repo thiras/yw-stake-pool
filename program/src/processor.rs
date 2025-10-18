@@ -21,7 +21,19 @@ pub fn process_instruction<'a>(
     accounts: &'a [AccountInfo<'a>],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let instruction: StakePoolInstruction = StakePoolInstruction::try_from_slice(instruction_data)?;
+    // Validate instruction data before deserialization to prevent type cosplay attacks
+    if instruction_data.is_empty() {
+        msg!("Instruction data is empty");
+        return Err(ProgramError::InvalidInstructionData);
+    }
+
+    // Deserialize instruction with explicit error handling
+    let instruction: StakePoolInstruction = StakePoolInstruction::try_from_slice(instruction_data)
+        .map_err(|_| {
+            msg!("Failed to deserialize instruction");
+            ProgramError::InvalidInstructionData
+        })?;
+
     match instruction {
         StakePoolInstruction::InitializePool {
             reward_rate,
@@ -180,6 +192,9 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> Progra
     // Parse accounts using ShankContext-generated struct
     let ctx = StakeAccounts::context(accounts)?;
 
+    // Verify pool account discriminator before loading (Type Cosplay protection)
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
@@ -285,6 +300,14 @@ fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = UnstakeAccounts::context(accounts)?;
 
+    // Verify account discriminators before loading (Type Cosplay protection)
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+    assert_account_key(
+        "stake_account",
+        ctx.accounts.stake_account,
+        Key::StakeAccount,
+    )?;
+
     // Load accounts
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
     let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
@@ -353,6 +376,14 @@ fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
 fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = ClaimRewardsAccounts::context(accounts)?;
+
+    // Verify account discriminators before loading (Type Cosplay protection)
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+    assert_account_key(
+        "stake_account",
+        ctx.accounts.stake_account,
+        Key::StakeAccount,
+    )?;
 
     // Load accounts
     let pool_data = StakePool::load(ctx.accounts.pool)?;
@@ -433,6 +464,9 @@ fn update_pool<'a>(
     // Parse accounts using ShankContext-generated struct
     let ctx = UpdatePoolAccounts::context(accounts)?;
 
+    // Verify pool account discriminator before loading (Type Cosplay protection)
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
@@ -460,6 +494,9 @@ fn update_pool<'a>(
 fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = FundRewardsAccounts::context(accounts)?;
+
+    // Verify pool account discriminator before loading (Type Cosplay protection)
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
     // Load pool
     let pool_data = StakePool::load(ctx.accounts.pool)?;
