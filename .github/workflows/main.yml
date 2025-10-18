@@ -228,11 +228,18 @@ jobs:
             echo "## 📊 Static Analysis (SAST)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             
+            # Count findings by severity
+            TOTAL_FINDINGS=0
+            if grep -q "Total Matches" solazy-output.txt 2>/dev/null; then
+              # Extract total matches from the table, excluding 0 matches
+              TOTAL_FINDINGS=$(grep -E "│.*│.*│.*│.*│\s+[1-9][0-9]*\s+│" solazy-output.txt | wc -l)
+            fi
+            
             # Check for issues
-            if grep -qE "(WARNING|ERROR|CRITICAL)" solazy-output.txt 2>/dev/null; then
-              echo "### ⚠️ Issues Found" >> $GITHUB_STEP_SUMMARY
+            if [ "$TOTAL_FINDINGS" -gt 0 ]; then
+              echo "### ❌ Security Issues Detected: $TOTAL_FINDINGS finding(s)" >> $GITHUB_STEP_SUMMARY
             else
-              echo "### ✅ Analysis Complete" >> $GITHUB_STEP_SUMMARY
+              echo "### ✅ No Security Issues Found" >> $GITHUB_STEP_SUMMARY
             fi
             
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -254,6 +261,26 @@ jobs:
               echo "... (output truncated, see artifact for full report)" >> $GITHUB_STEP_SUMMARY
             fi
             echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check for Security Findings
+        run: |
+          # Parse the sol-azy output and check for any findings
+          if [ -f solazy-output.txt ]; then
+            # Count findings (matches > 0)
+            TOTAL_FINDINGS=$(grep -E "│.*│.*│.*│.*│\s+[1-9][0-9]*\s+│" solazy-output.txt | wc -l)
+            
+            if [ "$TOTAL_FINDINGS" -gt 0 ]; then
+              echo "❌ sol-azy detected $TOTAL_FINDINGS security finding(s)!"
+              echo ""
+              echo "Please review the findings in the step summary or download the full report."
+              exit 1
+            else
+              echo "✅ No security findings detected by sol-azy"
+            fi
+          else
+            echo "⚠️ Warning: sol-azy output file not found"
+            exit 1
           fi
 
       - name: Upload sol-azy Reports
