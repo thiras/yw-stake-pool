@@ -205,7 +205,7 @@ jobs:
             if [ -f "$so_file" ]; then
               echo "Analyzing: $so_file" | tee -a solazy-reverse.txt
               /tmp/sol-azy/target/release/sol-azy reverse \
-                --mode disassembly \
+                --mode both \
                 --bytecodes-file "$so_file" \
                 --out-dir ./solazy-output \
                 --labeling \
