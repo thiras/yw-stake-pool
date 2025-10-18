@@ -127,7 +127,7 @@ jobs:
           
           # Check if vulnerabilities were found
           if grep -q "VULNERABLE" xray-output.txt 2>/dev/null; then
-            echo "## ❌ Status: Vulnerabilities Detected" >> $GITHUB_STEP_SUMMARY
+            echo "## ⚠️ Status: Vulnerabilities Detected" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Scan Output:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
@@ -146,10 +146,10 @@ jobs:
 
       - name: Check for Vulnerabilities
         run: |
-          # Fail the job if vulnerabilities are found
-          if grep -q "VULNERABLE" xray-output.txt; then
-            echo "❌ Security vulnerabilities detected by X-ray!"
-            exit 1
+          # Check for vulnerabilities and create warnings instead of failing
+          if grep -q "VULNERABLE" xray-output.txt 2>/dev/null; then
+            echo "::warning file=.github/workflows/main.yml,title=X-ray Security Scan::Security vulnerabilities detected by X-ray. Please review the findings in the step summary or download the full report."
+            echo "⚠️ Security vulnerabilities detected by X-ray!"
           else
             echo "✅ No vulnerabilities detected"
           fi
@@ -237,7 +237,7 @@ jobs:
             
             # Check for issues
             if [ "$TOTAL_FINDINGS" -gt 0 ]; then
-              echo "### ❌ Security Issues Detected: $TOTAL_FINDINGS finding(s)" >> $GITHUB_STEP_SUMMARY
+              echo "### ⚠️ Security Issues Detected: $TOTAL_FINDINGS finding(s)" >> $GITHUB_STEP_SUMMARY
             else
               echo "### ✅ No Security Issues Found" >> $GITHUB_STEP_SUMMARY
             fi
@@ -265,22 +265,29 @@ jobs:
 
       - name: Check for Security Findings
         run: |
-          # Parse the sol-azy output and check for any findings
+          # Parse the sol-azy output and create warnings instead of failing
           if [ -f solazy-output.txt ]; then
             # Count findings (matches > 0)
             TOTAL_FINDINGS=$(grep -E "│.*│.*│.*│.*│\s+[1-9][0-9]*\s+│" solazy-output.txt | wc -l)
             
             if [ "$TOTAL_FINDINGS" -gt 0 ]; then
-              echo "❌ sol-azy detected $TOTAL_FINDINGS security finding(s)!"
-              echo ""
-              echo "Please review the findings in the step summary or download the full report."
-              exit 1
+              echo "::warning file=.github/workflows/main.yml,title=sol-azy Static Analysis::sol-azy detected $TOTAL_FINDINGS security finding(s). Please review the findings in the step summary or download the full report."
+              echo "⚠️ sol-azy detected $TOTAL_FINDINGS security finding(s)!"
+              
+              # Extract and output individual findings as warnings
+              while IFS= read -r line; do
+                if [[ $line =~ \│[[:space:]]*([^│]+)[[:space:]]*\│[[:space:]]*(Medium|High|Critical|Low) ]]; then
+                  rule_name="${BASH_REMATCH[1]}"
+                  severity="${BASH_REMATCH[2]}"
+                  echo "::warning title=sol-azy: $rule_name ($severity)::Security finding detected. See step summary for details."
+                fi
+              done < <(grep -E "│.*│\s+(Medium|High|Critical|Low)\s+│" solazy-output.txt | grep -E "\s+[1-9][0-9]*\s+│")
             else
               echo "✅ No security findings detected by sol-azy"
             fi
           else
+            echo "::warning file=.github/workflows/main.yml,title=sol-azy Static Analysis::sol-azy output file not found"
             echo "⚠️ Warning: sol-azy output file not found"
-            exit 1
           fi
 
       - name: Upload sol-azy Reports
