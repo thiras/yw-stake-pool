@@ -86,7 +86,22 @@ pub fn load_stake_pool(svm: &LiteSVM, pool_address: &Pubkey) -> StakePool {
     let account = svm
         .get_account(pool_address)
         .expect("Pool account should exist");
-    StakePool::try_from_slice(&account.data).expect("Failed to deserialize pool")
+
+    // Use deserialize instead of try_from_slice to handle trailing zeros
+    // The account may have extra space allocated but only partial data written
+    let mut data: &[u8] = &account.data;
+    StakePool::deserialize(&mut data).unwrap_or_else(|e| {
+        eprintln!("Failed to deserialize pool:");
+        eprintln!("  Account data length: {} bytes", account.data.len());
+        eprintln!("  Error: {}", e);
+        if account.data.len() > 0 {
+            eprintln!(
+                "  First 32 bytes: {:?}",
+                &account.data[..account.data.len().min(32)]
+            );
+        }
+        panic!("Failed to deserialize pool: {}", e);
+    })
 }
 
 /// Load and deserialize a StakeAccount
@@ -94,7 +109,10 @@ pub fn load_stake_account(svm: &LiteSVM, stake_account_address: &Pubkey) -> Stak
     let account = svm
         .get_account(stake_account_address)
         .expect("Stake account should exist");
-    StakeAccount::try_from_slice(&account.data).expect("Failed to deserialize stake account")
+
+    // Use deserialize instead of try_from_slice to handle trailing zeros
+    let mut data: &[u8] = &account.data;
+    StakeAccount::deserialize(&mut data).expect("Failed to deserialize stake account")
 }
 
 // ============================================================================
