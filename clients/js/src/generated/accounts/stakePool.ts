@@ -56,6 +56,7 @@ export type StakePool = {
   isPaused: boolean;
   bump: number;
   pendingAuthority: Option<Address>;
+  poolEndDate: Option<bigint>;
 };
 
 export type StakePoolArgs = {
@@ -72,6 +73,7 @@ export type StakePoolArgs = {
   isPaused: boolean;
   bump: number;
   pendingAuthority: OptionOrNullable<Address>;
+  poolEndDate: OptionOrNullable<number | bigint>;
 };
 
 export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
@@ -89,6 +91,7 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
     ['isPaused', getBooleanEncoder()],
     ['bump', getU8Encoder()],
     ['pendingAuthority', getOptionEncoder(getAddressEncoder())],
+    ['poolEndDate', getOptionEncoder(getI64Encoder())],
   ]);
 }
 
@@ -107,6 +110,7 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['isPaused', getBooleanDecoder()],
     ['bump', getU8Decoder()],
     ['pendingAuthority', getOptionDecoder(getAddressDecoder())],
+    ['poolEndDate', getOptionDecoder(getI64Decoder())],
   ]);
 }
 

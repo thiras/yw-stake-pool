@@ -74,6 +74,9 @@ pub enum StakePoolError {
     /// 22 - Invalid pending authority
     #[error("Invalid pending authority")]
     InvalidPendingAuthority,
+    /// 23 - Pool has ended (no new stakes allowed)
+    #[error("Pool has ended (no new stakes allowed)")]
+    PoolEnded,
 }
 
 impl From<StakePoolError> for ProgramError {

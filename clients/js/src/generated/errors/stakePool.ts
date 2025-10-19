@@ -60,6 +60,8 @@ export const STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED = 0x14; // 20
 export const STAKE_POOL_ERROR__NO_PENDING_AUTHORITY = 0x15; // 21
 /** InvalidPendingAuthority: Invalid pending authority */
 export const STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY = 0x16; // 22
+/** PoolEnded: Pool has ended (no new stakes allowed) */
+export const STAKE_POOL_ERROR__POOL_ENDED = 0x17; // 23
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -81,6 +83,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED
   | typeof STAKE_POOL_ERROR__NO_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__NUMERICAL_OVERFLOW
+  | typeof STAKE_POOL_ERROR__POOL_ENDED
   | typeof STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED
   | typeof STAKE_POOL_ERROR__POOL_PAUSED
   | typeof STAKE_POOL_ERROR__SERIALIZATION_ERROR
@@ -108,6 +111,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED]: `Lockup period not expired`,
     [STAKE_POOL_ERROR__NO_PENDING_AUTHORITY]: `No pending authority transfer`,
     [STAKE_POOL_ERROR__NUMERICAL_OVERFLOW]: `Numerical overflow`,
+    [STAKE_POOL_ERROR__POOL_ENDED]: `Pool has ended (no new stakes allowed)`,
     [STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED]: `Pool parameters changed (frontrunning protection)`,
     [STAKE_POOL_ERROR__POOL_PAUSED]: `Pool is paused`,
     [STAKE_POOL_ERROR__SERIALIZATION_ERROR]: `Error serializing an account`,

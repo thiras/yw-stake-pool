@@ -98,6 +98,12 @@
         {
           "name": "lockupPeriod",
           "type": "i64"
+        },
+        {
+          "name": "poolEndDate",
+          "type": {
+            "option": "i64"
+          }
         }
       ],
       "discriminant": {
@@ -450,6 +456,14 @@
           "type": {
             "option": "bool"
           }
+        },
+        {
+          "name": "poolEndDate",
+          "type": {
+            "option": {
+              "option": "i64"
+            }
+          }
         }
       ],
       "discriminant": {
@@ -634,6 +648,12 @@
             "type": {
               "option": "publicKey"
             }
+          },
+          {
+            "name": "poolEndDate",
+            "type": {
+              "option": "i64"
+            }
           }
         ]
       }
@@ -815,6 +835,11 @@
       "code": 22,
       "name": "InvalidPendingAuthority",
       "msg": "Invalid pending authority"
+    },
+    {
+      "code": 23,
+      "name": "PoolEnded",
+      "msg": "Pool has ended (no new stakes allowed)"
     }
   ],
   "metadata": {

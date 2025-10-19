@@ -39,9 +39,16 @@ pub fn process_instruction<'a>(
             reward_rate,
             min_stake_amount,
             lockup_period,
+            pool_end_date,
         } => {
             msg!("Instruction: InitializePool");
-            initialize_pool(accounts, reward_rate, min_stake_amount, lockup_period)
+            initialize_pool(
+                accounts,
+                reward_rate,
+                min_stake_amount,
+                lockup_period,
+                pool_end_date,
+            )
         }
         StakePoolInstruction::InitializeStakeAccount { index } => {
             msg!("Instruction: InitializeStakeAccount");
@@ -78,6 +85,7 @@ pub fn process_instruction<'a>(
             min_stake_amount,
             lockup_period,
             is_paused,
+            pool_end_date,
         } => {
             msg!("Instruction: UpdatePool");
             update_pool(
@@ -86,6 +94,7 @@ pub fn process_instruction<'a>(
                 min_stake_amount,
                 lockup_period,
                 is_paused,
+                pool_end_date,
             )
         }
         StakePoolInstruction::FundRewards { amount } => {
@@ -108,6 +117,7 @@ fn initialize_pool<'a>(
     reward_rate: u64,
     min_stake_amount: u64,
     lockup_period: i64,
+    pool_end_date: Option<i64>,
 ) -> ProgramResult {
     // Use ShankContext to parse accounts
     let ctx = InitializePoolAccounts::context(accounts)?;
@@ -155,6 +165,7 @@ fn initialize_pool<'a>(
         is_paused: false,
         bump,
         pending_authority: None,
+        pool_end_date,
     };
 
     pool_data.save(ctx.accounts.pool)
@@ -262,6 +273,19 @@ fn stake<'a>(
 
     if pool_data.is_paused {
         return Err(StakePoolError::PoolPaused.into());
+    }
+
+    // Check if pool has ended
+    if let Some(end_date) = pool_data.pool_end_date {
+        let current_time = Clock::get()?.unix_timestamp;
+        if current_time >= end_date {
+            msg!(
+                "Pool has ended. End date: {}, Current time: {}",
+                end_date,
+                current_time
+            );
+            return Err(StakePoolError::PoolEnded.into());
+        }
     }
 
     if amount < pool_data.min_stake_amount {
@@ -528,6 +552,7 @@ fn update_pool<'a>(
     min_stake_amount: Option<u64>,
     lockup_period: Option<i64>,
     is_paused: Option<bool>,
+    pool_end_date: Option<Option<i64>>,
 ) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = UpdatePoolAccounts::context(accounts)?;
@@ -554,6 +579,9 @@ fn update_pool<'a>(
     }
     if let Some(paused) = is_paused {
         pool_data.is_paused = paused;
+    }
+    if let Some(end_date) = pool_end_date {
+        pool_data.pool_end_date = end_date;
     }
 
     pool_data.save(ctx.accounts.pool)

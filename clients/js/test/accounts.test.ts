@@ -20,6 +20,7 @@ test('StakePool codec encodes and decodes correctly', (t) => {
     isPaused: false,
     bump: 255,
     pendingAuthority: null,
+    poolEndDate: null,
   };
 
   const encoded = codec.encode(stakePool);
@@ -60,6 +61,7 @@ test('StakePool has correct reward_rate field', (t) => {
     isPaused: false,
     bump: 255,
     pendingAuthority: null,
+    poolEndDate: null,
   };
 
   const encoded = codec.encode(stakePool);

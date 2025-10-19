@@ -90,6 +90,9 @@ pub struct StakePool {
     pub bump: u8,
     /// Pending authority for two-step authority transfer (None if no transfer pending)
     pub pending_authority: Option<Pubkey>,
+    /// Optional pool end date (Unix timestamp). If set, no new stakes allowed after this time.
+    /// None means the pool runs indefinitely.
+    pub pool_end_date: Option<i64>,
 }
 
 /// Individual user stake account (one per deposit)
@@ -114,7 +117,7 @@ pub struct StakeAccount {
 }
 
 impl StakePool {
-    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 32;
+    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 32 + 1 + 8;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey) -> Vec<Vec<u8>> {
         vec![

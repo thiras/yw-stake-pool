@@ -10,6 +10,8 @@ import {
   combineCodec,
   getI64Decoder,
   getI64Encoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -20,12 +22,14 @@ import {
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
-  type FixedSizeCodec,
-  type FixedSizeDecoder,
-  type FixedSizeEncoder,
+  type Codec,
+  type Decoder,
+  type Encoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
@@ -106,36 +110,40 @@ export type InitializePoolInstructionData = {
   rewardRate: bigint;
   minStakeAmount: bigint;
   lockupPeriod: bigint;
+  poolEndDate: Option<bigint>;
 };
 
 export type InitializePoolInstructionDataArgs = {
   rewardRate: number | bigint;
   minStakeAmount: number | bigint;
   lockupPeriod: number | bigint;
+  poolEndDate: OptionOrNullable<number | bigint>;
 };
 
-export function getInitializePoolInstructionDataEncoder(): FixedSizeEncoder<InitializePoolInstructionDataArgs> {
+export function getInitializePoolInstructionDataEncoder(): Encoder<InitializePoolInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['rewardRate', getU64Encoder()],
       ['minStakeAmount', getU64Encoder()],
       ['lockupPeriod', getI64Encoder()],
+      ['poolEndDate', getOptionEncoder(getI64Encoder())],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_POOL_DISCRIMINATOR })
   );
 }
 
-export function getInitializePoolInstructionDataDecoder(): FixedSizeDecoder<InitializePoolInstructionData> {
+export function getInitializePoolInstructionDataDecoder(): Decoder<InitializePoolInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['rewardRate', getU64Decoder()],
     ['minStakeAmount', getU64Decoder()],
     ['lockupPeriod', getI64Decoder()],
+    ['poolEndDate', getOptionDecoder(getI64Decoder())],
   ]);
 }
 
-export function getInitializePoolInstructionDataCodec(): FixedSizeCodec<
+export function getInitializePoolInstructionDataCodec(): Codec<
   InitializePoolInstructionDataArgs,
   InitializePoolInstructionData
 > {
@@ -180,6 +188,7 @@ export type InitializePoolInput<
   rewardRate: InitializePoolInstructionDataArgs['rewardRate'];
   minStakeAmount: InitializePoolInstructionDataArgs['minStakeAmount'];
   lockupPeriod: InitializePoolInstructionDataArgs['lockupPeriod'];
+  poolEndDate: InitializePoolInstructionDataArgs['poolEndDate'];
 };
 
 export function getInitializePoolInstruction<

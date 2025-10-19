@@ -15,6 +15,7 @@ test('initializePool instruction data codec with reward_rate', (t) => {
     rewardRate: 100_000_000n, // 10%
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n, // 1 day
+    poolEndDate: null,
   };
 
   const encoded = codec.encode(data);
@@ -41,6 +42,7 @@ test('initializePool with different reward_rate values', (t) => {
       rewardRate: rate,
       minStakeAmount: 1_000_000n,
       lockupPeriod: 86400n,
+      poolEndDate: null,
     };
 
     const encoded = codec.encode(data);
@@ -158,6 +160,7 @@ test('updatePool instruction data codec with reward_rate', (t) => {
     minStakeAmount: some(2_000_000n),
     lockupPeriod: some(172800n), // 2 days
     isPaused: some(false),
+    poolEndDate: null,
   };
 
   const encoded = codec.encode(data);
@@ -178,6 +181,7 @@ test('updatePool can toggle pause state', (t) => {
     minStakeAmount: null,
     lockupPeriod: null,
     isPaused: some(true),
+    poolEndDate: null,
   };
 
   const pausedEncoded = codec.encode(pausedData);
@@ -191,6 +195,7 @@ test('updatePool can toggle pause state', (t) => {
     minStakeAmount: null,
     lockupPeriod: null,
     isPaused: some(false),
+    poolEndDate: null,
   };
 
   const unpausedEncoded = codec.encode(unpausedData);
@@ -214,6 +219,7 @@ test('updatePool with different reward_rate values', (t) => {
       minStakeAmount: null,
       lockupPeriod: some(lockupPeriod),
       isPaused: null,
+      poolEndDate: null,
     };
 
     const encoded = codec.encode(data);
@@ -233,6 +239,7 @@ test('updatePool with partial updates', (t) => {
     minStakeAmount: null,
     lockupPeriod: null,
     isPaused: null,
+    poolEndDate: null,
   };
 
   const encoded1 = codec.encode(onlyRewardRate);
@@ -249,6 +256,7 @@ test('updatePool with partial updates', (t) => {
     minStakeAmount: null,
     lockupPeriod: some(259200n),
     isPaused: null,
+    poolEndDate: null,
   };
 
   const encoded2 = codec.encode(onlyLockup);
@@ -266,6 +274,7 @@ test('instruction data codecs preserve exact values', (t) => {
     rewardRate: 123_456_789n,
     minStakeAmount: 987_654_321n,
     lockupPeriod: 555_555n,
+    poolEndDate: null,
   };
 
   const initPoolEncoded = initPoolCodec.encode(initPoolData);
