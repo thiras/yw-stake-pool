@@ -212,6 +212,7 @@ jobs:
       - name: Install sol-azy
         if: steps.cache-solazy.outputs.cache-hit != 'true'
         run: |
+          rm -rf /tmp/sol-azy
           git clone https://github.com/FuzzingLabs/sol-azy.git /tmp/sol-azy
           cd /tmp/sol-azy
           # Build with warnings allowed (the project has a known lifetime warning)
