@@ -38,7 +38,7 @@ test('StakePool codec encodes and decodes correctly', (t) => {
   t.is(decoded.lockupPeriod, stakePool.lockupPeriod);
   t.is(decoded.isPaused, stakePool.isPaused);
   t.is(decoded.bump, stakePool.bump);
-  
+
   // Check pendingAuthority is None
   t.deepEqual(decoded.pendingAuthority, { __option: 'None' });
 });
