@@ -34,12 +34,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Your Wallet/stake-pool.git"
+    "url": "git+https://github.com/yourwalletio/stake-pool.git"
   },
   "bugs": {
-    "url": "https://github.com/Your Wallet/stake-pool/issues"
+    "url": "https://github.com/yourwalletio/stake-pool/issues"
   },
-  "homepage": "https://github.com/Your Wallet/stake-pool#readme",
+  "homepage": "https://github.com/yourwalletio/stake-pool#readme",
   "license": "MIT",
   "peerDependencies": {
     "@solana/web3.js": "^2.0.0"
