@@ -167,7 +167,7 @@ impl StakePool {
         // Serialize to a vec first to get the exact size
         let serialized = borsh::to_vec(self).map_err(|error| {
             msg!("Serialization error: {}", error);
-            StakePoolError::SerializationError
+            ProgramError::from(StakePoolError::SerializationError)
         })?;
 
         // Zero-fill the account data
@@ -252,7 +252,7 @@ impl StakeAccount {
         // Serialize to a vec first to get the exact size
         let serialized = borsh::to_vec(self).map_err(|error| {
             msg!("Serialization error: {}", error);
-            StakePoolError::SerializationError
+            ProgramError::from(StakePoolError::SerializationError)
         })?;
 
         // Zero-fill the account data
