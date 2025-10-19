@@ -183,13 +183,25 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Cache sol-azy
+        id: cache-solazy
+        uses: actions/cache@v4
+        with:
+          path: /tmp/sol-azy
+          key: ${{ runner.os }}-solazy-${{ hashFiles('.github/workflows/main.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-solazy-
+
       - name: Install sol-azy
+        if: steps.cache-solazy.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/FuzzingLabs/sol-azy.git /tmp/sol-azy
           cd /tmp/sol-azy
           # Build with warnings allowed (the project has a known lifetime warning)
           RUSTFLAGS="-A warnings" cargo build --release
-          echo "/tmp/sol-azy/target/release" >> $GITHUB_PATH
+
+      - name: Add sol-azy to PATH
+        run: echo "/tmp/sol-azy/target/release" >> $GITHUB_PATH
 
       - name: Run sol-azy Static Analysis
         continue-on-error: true
