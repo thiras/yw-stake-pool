@@ -89,4 +89,17 @@ pub enum StakePoolInstruction {
     #[account(3, writable, name="reward_vault", desc = "Pool's reward vault")]
     #[account(4, name="token_program", desc = "The token program")]
     FundRewards { amount: u64 },
+
+    /// Nominate a new authority (current authority only)
+    /// This is the first step of a two-step authority transfer process
+    #[account(0, writable, name="pool", desc = "The stake pool")]
+    #[account(1, signer, name="current_authority", desc = "The current pool authority")]
+    #[account(2, name="new_authority", desc = "The new authority to nominate")]
+    NominateNewAuthority,
+
+    /// Accept authority transfer (pending authority only)
+    /// This is the second step that completes the authority transfer
+    #[account(0, writable, name="pool", desc = "The stake pool")]
+    #[account(1, signer, name="pending_authority", desc = "The pending authority accepting the transfer")]
+    AcceptAuthority,
 }

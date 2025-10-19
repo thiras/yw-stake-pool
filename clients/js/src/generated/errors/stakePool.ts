@@ -56,6 +56,10 @@ export const STAKE_POOL_ERROR__INVALID_MINT = 0x12; // 18
 export const STAKE_POOL_ERROR__INVALID_ACCOUNT_DISCRIMINATOR = 0x13; // 19
 /** PoolParametersChanged: Pool parameters changed (frontrunning protection) */
 export const STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED = 0x14; // 20
+/** NoPendingAuthority: No pending authority transfer */
+export const STAKE_POOL_ERROR__NO_PENDING_AUTHORITY = 0x15; // 21
+/** InvalidPendingAuthority: Invalid pending authority */
+export const STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY = 0x16; // 22
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -71,9 +75,11 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__INVALID_ACCOUNT_KEY
   | typeof STAKE_POOL_ERROR__INVALID_MINT
   | typeof STAKE_POOL_ERROR__INVALID_PDA
+  | typeof STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER
   | typeof STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM
   | typeof STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED
+  | typeof STAKE_POOL_ERROR__NO_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__NUMERICAL_OVERFLOW
   | typeof STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED
   | typeof STAKE_POOL_ERROR__POOL_PAUSED
@@ -96,9 +102,11 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__INVALID_ACCOUNT_KEY]: `Invalid account key`,
     [STAKE_POOL_ERROR__INVALID_MINT]: `Invalid mint`,
     [STAKE_POOL_ERROR__INVALID_PDA]: `Invalid PDA derivation`,
+    [STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY]: `Invalid pending authority`,
     [STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER]: `Invalid program owner`,
     [STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM]: `Invalid token program`,
     [STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED]: `Lockup period not expired`,
+    [STAKE_POOL_ERROR__NO_PENDING_AUTHORITY]: `No pending authority transfer`,
     [STAKE_POOL_ERROR__NUMERICAL_OVERFLOW]: `Numerical overflow`,
     [STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED]: `Pool parameters changed (frontrunning protection)`,
     [STAKE_POOL_ERROR__POOL_PAUSED]: `Pool is paused`,

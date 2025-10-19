@@ -511,6 +511,66 @@
         "type": "u8",
         "value": 6
       }
+    },
+    {
+      "name": "NominateNewAuthority",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        },
+        {
+          "name": "currentAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The current pool authority"
+          ]
+        },
+        {
+          "name": "newAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The new authority to nominate"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 7
+      }
+    },
+    {
+      "name": "AcceptAuthority",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        },
+        {
+          "name": "pendingAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The pending authority accepting the transfer"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 8
+      }
     }
   ],
   "accounts": [
@@ -568,6 +628,12 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "pendingAuthority",
+            "type": {
+              "option": "publicKey"
+            }
           }
         ]
       }
@@ -739,6 +805,16 @@
       "code": 20,
       "name": "PoolParametersChanged",
       "msg": "Pool parameters changed (frontrunning protection)"
+    },
+    {
+      "code": 21,
+      "name": "NoPendingAuthority",
+      "msg": "No pending authority transfer"
+    },
+    {
+      "code": 22,
+      "name": "InvalidPendingAuthority",
+      "msg": "Invalid pending authority"
     }
   ],
   "metadata": {

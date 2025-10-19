@@ -6,10 +6,12 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from './acceptAuthority';
 export * from './claimRewards';
 export * from './fundRewards';
 export * from './initializePool';
 export * from './initializeStakeAccount';
+export * from './nominateNewAuthority';
 export * from './stake';
 export * from './unstake';
 export * from './updatePool';

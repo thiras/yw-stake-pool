@@ -19,6 +19,8 @@ import {
   getBooleanEncoder,
   getI64Decoder,
   getI64Encoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -27,14 +29,16 @@ import {
   getU8Encoder,
   type Account,
   type Address,
+  type Codec,
+  type Decoder,
   type EncodedAccount,
+  type Encoder,
   type FetchAccountConfig,
   type FetchAccountsConfig,
-  type FixedSizeCodec,
-  type FixedSizeDecoder,
-  type FixedSizeEncoder,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type Option,
+  type OptionOrNullable,
 } from '@solana/kit';
 import { getKeyDecoder, getKeyEncoder, type Key, type KeyArgs } from '../types';
 
@@ -51,6 +55,7 @@ export type StakePool = {
   lockupPeriod: bigint;
   isPaused: boolean;
   bump: number;
+  pendingAuthority: Option<Address>;
 };
 
 export type StakePoolArgs = {
@@ -66,9 +71,10 @@ export type StakePoolArgs = {
   lockupPeriod: number | bigint;
   isPaused: boolean;
   bump: number;
+  pendingAuthority: OptionOrNullable<Address>;
 };
 
-export function getStakePoolEncoder(): FixedSizeEncoder<StakePoolArgs> {
+export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
   return getStructEncoder([
     ['key', getKeyEncoder()],
     ['authority', getAddressEncoder()],
@@ -82,10 +88,11 @@ export function getStakePoolEncoder(): FixedSizeEncoder<StakePoolArgs> {
     ['lockupPeriod', getI64Encoder()],
     ['isPaused', getBooleanEncoder()],
     ['bump', getU8Encoder()],
+    ['pendingAuthority', getOptionEncoder(getAddressEncoder())],
   ]);
 }
 
-export function getStakePoolDecoder(): FixedSizeDecoder<StakePool> {
+export function getStakePoolDecoder(): Decoder<StakePool> {
   return getStructDecoder([
     ['key', getKeyDecoder()],
     ['authority', getAddressDecoder()],
@@ -99,10 +106,11 @@ export function getStakePoolDecoder(): FixedSizeDecoder<StakePool> {
     ['lockupPeriod', getI64Decoder()],
     ['isPaused', getBooleanDecoder()],
     ['bump', getU8Decoder()],
+    ['pendingAuthority', getOptionDecoder(getAddressDecoder())],
   ]);
 }
 
-export function getStakePoolCodec(): FixedSizeCodec<StakePoolArgs, StakePool> {
+export function getStakePoolCodec(): Codec<StakePoolArgs, StakePool> {
   return combineCodec(getStakePoolEncoder(), getStakePoolDecoder());
 }
 
@@ -157,8 +165,4 @@ export async function fetchAllMaybeStakePool(
 ): Promise<MaybeAccount<StakePool>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config);
   return maybeAccounts.map((maybeAccount) => decodeStakePool(maybeAccount));
-}
-
-export function getStakePoolSize(): number {
-  return 195;
 }

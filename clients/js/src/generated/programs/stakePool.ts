@@ -13,10 +13,12 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
+  type ParsedAcceptAuthorityInstruction,
   type ParsedClaimRewardsInstruction,
   type ParsedFundRewardsInstruction,
   type ParsedInitializePoolInstruction,
   type ParsedInitializeStakeAccountInstruction,
+  type ParsedNominateNewAuthorityInstruction,
   type ParsedStakeInstruction,
   type ParsedUnstakeInstruction,
   type ParsedUpdatePoolInstruction,
@@ -38,6 +40,8 @@ export enum StakePoolInstruction {
   ClaimRewards,
   UpdatePool,
   FundRewards,
+  NominateNewAuthority,
+  AcceptAuthority,
 }
 
 export function identifyStakePoolInstruction(
@@ -64,6 +68,12 @@ export function identifyStakePoolInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(6), 0)) {
     return StakePoolInstruction.FundRewards;
+  }
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+    return StakePoolInstruction.NominateNewAuthority;
+  }
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+    return StakePoolInstruction.AcceptAuthority;
   }
   throw new Error(
     'The provided instruction could not be identified as a stakePool instruction.'
@@ -93,4 +103,10 @@ export type ParsedStakePoolInstruction<
     } & ParsedUpdatePoolInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.FundRewards;
-    } & ParsedFundRewardsInstruction<TProgram>);
+    } & ParsedFundRewardsInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.NominateNewAuthority;
+    } & ParsedNominateNewAuthorityInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.AcceptAuthority;
+    } & ParsedAcceptAuthorityInstruction<TProgram>);

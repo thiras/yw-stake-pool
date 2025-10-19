@@ -68,6 +68,12 @@ pub enum StakePoolError {
     /// 20 - Pool parameters changed (frontrunning protection)
     #[error("Pool parameters changed (frontrunning protection)")]
     PoolParametersChanged,
+    /// 21 - No pending authority transfer
+    #[error("No pending authority transfer")]
+    NoPendingAuthority,
+    /// 22 - Invalid pending authority
+    #[error("Invalid pending authority")]
+    InvalidPendingAuthority,
 }
 
 impl From<StakePoolError> for ProgramError {

@@ -88,6 +88,8 @@ pub struct StakePool {
     pub is_paused: bool,
     /// Bump seed for PDA derivation
     pub bump: u8,
+    /// Pending authority for two-step authority transfer (None if no transfer pending)
+    pub pending_authority: Option<Pubkey>,
 }
 
 /// Individual user stake account (one per deposit)
@@ -112,7 +114,7 @@ pub struct StakeAccount {
 }
 
 impl StakePool {
-    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1;
+    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 32;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey) -> Vec<Vec<u8>> {
         vec![

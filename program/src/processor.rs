@@ -92,6 +92,14 @@ pub fn process_instruction<'a>(
             msg!("Instruction: FundRewards");
             fund_rewards(accounts, amount)
         }
+        StakePoolInstruction::NominateNewAuthority => {
+            msg!("Instruction: NominateNewAuthority");
+            nominate_new_authority(accounts)
+        }
+        StakePoolInstruction::AcceptAuthority => {
+            msg!("Instruction: AcceptAuthority");
+            accept_authority(accounts)
+        }
     }
 }
 
@@ -146,6 +154,7 @@ fn initialize_pool<'a>(
         lockup_period,
         is_paused: false,
         bump,
+        pending_authority: None,
     };
 
     pool_data.save(ctx.accounts.pool)
@@ -602,4 +611,81 @@ fn get_token_account_balance(token_account: &AccountInfo) -> Result<u64, Program
     let account = StateWithExtensions::<TokenAccount>::unpack(&account_data)
         .map_err(|_| StakePoolError::InvalidTokenProgram)?;
     Ok(account.base.amount)
+}
+
+fn nominate_new_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
+    let ctx = NominateNewAuthorityAccounts::context(accounts)?;
+
+    // Verify pool account discriminator before loading (Type Cosplay protection)
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+
+    // Load pool
+    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+
+    // Guards
+    assert_signer("current_authority", ctx.accounts.current_authority)?;
+    assert_same_pubkeys(
+        "current_authority",
+        ctx.accounts.current_authority,
+        &pool_data.authority,
+    )?;
+
+    // Validate new authority is not the same as current authority
+    if ctx.accounts.new_authority.key == &pool_data.authority {
+        msg!("New authority cannot be the same as current authority");
+        return Err(ProgramError::InvalidArgument);
+    }
+
+    // Set pending authority
+    pool_data.pending_authority = Some(*ctx.accounts.new_authority.key);
+
+    msg!(
+        "Nominated new authority: {}. Pending acceptance.",
+        ctx.accounts.new_authority.key
+    );
+
+    pool_data.save(ctx.accounts.pool)
+}
+
+fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
+    let ctx = AcceptAuthorityAccounts::context(accounts)?;
+
+    // Verify pool account discriminator before loading (Type Cosplay protection)
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+
+    // Load pool
+    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+
+    // Guards
+    assert_signer("pending_authority", ctx.accounts.pending_authority)?;
+
+    // Verify there is a pending authority
+    let pending_authority = pool_data
+        .pending_authority
+        .ok_or(StakePoolError::NoPendingAuthority)?;
+
+    // Verify the signer is the pending authority
+    if ctx.accounts.pending_authority.key != &pending_authority {
+        msg!(
+            "Signer {} is not the pending authority {}",
+            ctx.accounts.pending_authority.key,
+            pending_authority
+        );
+        return Err(StakePoolError::InvalidPendingAuthority.into());
+    }
+
+    // Complete the authority transfer
+    let old_authority = pool_data.authority;
+    pool_data.authority = pending_authority;
+    pool_data.pending_authority = None;
+
+    msg!(
+        "Authority transfer complete. Old: {}, New: {}",
+        old_authority,
+        pool_data.authority
+    );
+
+    pool_data.save(ctx.accounts.pool)
 }
