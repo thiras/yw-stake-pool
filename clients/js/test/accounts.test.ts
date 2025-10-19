@@ -19,12 +19,28 @@ test('StakePool codec encodes and decodes correctly', (t) => {
     lockupPeriod: 86400n, // 1 day in seconds
     isPaused: false,
     bump: 255,
+    pendingAuthority: null,
   };
 
   const encoded = codec.encode(stakePool);
   const decoded = codec.decode(encoded);
 
-  t.deepEqual(decoded, stakePool);
+  // Compare all fields except pendingAuthority
+  t.is(decoded.key, stakePool.key);
+  t.is(decoded.authority, stakePool.authority);
+  t.is(decoded.stakeMint, stakePool.stakeMint);
+  t.is(decoded.rewardMint, stakePool.rewardMint);
+  t.is(decoded.stakeVault, stakePool.stakeVault);
+  t.is(decoded.rewardVault, stakePool.rewardVault);
+  t.is(decoded.totalStaked, stakePool.totalStaked);
+  t.is(decoded.rewardRate, stakePool.rewardRate);
+  t.is(decoded.minStakeAmount, stakePool.minStakeAmount);
+  t.is(decoded.lockupPeriod, stakePool.lockupPeriod);
+  t.is(decoded.isPaused, stakePool.isPaused);
+  t.is(decoded.bump, stakePool.bump);
+  
+  // Check pendingAuthority is None
+  t.deepEqual(decoded.pendingAuthority, { __option: 'None' });
 });
 
 test('StakePool has correct reward_rate field', (t) => {
@@ -43,6 +59,7 @@ test('StakePool has correct reward_rate field', (t) => {
     lockupPeriod: 604800n, // 7 days
     isPaused: false,
     bump: 255,
+    pendingAuthority: null,
   };
 
   const encoded = codec.encode(stakePool);

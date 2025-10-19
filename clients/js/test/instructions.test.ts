@@ -60,6 +60,8 @@ test('stake instruction data codec', (t) => {
   const data = {
     amount: 100_000_000n,
     index: 0n,
+    expectedRewardRate: null,
+    expectedLockupPeriod: null,
   };
 
   const encoded = codec.encode(data);
@@ -83,6 +85,8 @@ test('stake with various amounts', (t) => {
     const data = {
       amount,
       index: BigInt(index),
+      expectedRewardRate: null,
+      expectedLockupPeriod: null,
     };
 
     const encoded = codec.encode(data);
@@ -98,6 +102,7 @@ test('unstake instruction data codec', (t) => {
 
   const data = {
     amount: 50_000_000n,
+    expectedRewardRate: null,
   };
 
   const encoded = codec.encode(data);
@@ -112,6 +117,7 @@ test('unstake full vs partial amounts', (t) => {
   // Full unstake
   const fullUnstakeData = {
     amount: 100_000_000n,
+    expectedRewardRate: null,
   };
 
   const fullEncoded = codec.encode(fullUnstakeData);
@@ -122,6 +128,7 @@ test('unstake full vs partial amounts', (t) => {
   // Partial unstake
   const partialUnstakeData = {
     amount: 50_000_000n,
+    expectedRewardRate: null,
   };
 
   const partialEncoded = codec.encode(partialUnstakeData);
@@ -272,6 +279,8 @@ test('instruction data codecs preserve exact values', (t) => {
   const stakeData = {
     amount: 9_876_543_210n,
     index: 42n,
+    expectedRewardRate: null,
+    expectedLockupPeriod: null,
   };
 
   const stakeEncoded = stakeCodec.encode(stakeData);
