@@ -11,9 +11,14 @@ import {
 
 // Configure additional arguments here, e.g.:
 // ['--arg1', '--arg2', ...cliArguments()]
-const formatArgs = cliArguments();
+let formatArgs = cliArguments();
 
 const fix = popArgument(formatArgs, '--fix');
+
+// Filter out file paths that may be passed by lint-staged
+// cargo fmt doesn't accept individual file paths
+formatArgs = formatArgs.filter(arg => !arg.endsWith('.rs') && !arg.includes('/'));
+
 const [cargoArgs, fmtArgs] = partitionArguments(formatArgs, '--');
 const toolchain = getToolchainArgument('format');
 
