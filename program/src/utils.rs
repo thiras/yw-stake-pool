@@ -98,6 +98,11 @@ pub fn close_account<'a>(
     let dest_starting_lamports = receiving_account.lamports();
     let target_lamports = target_account.lamports();
 
+    // SAFETY: Direct lamport manipulation is safe here because:
+    // 1. We've already zeroed the account data above
+    // 2. We're transferring ALL lamports (not partial)
+    // 3. We immediately assign to system program and resize below
+    // This is the correct pattern for secure account closure
     **receiving_account.lamports.borrow_mut() = dest_starting_lamports
         .checked_add(target_lamports)
         .ok_or(StakePoolError::NumericalOverflow)?;
@@ -148,6 +153,11 @@ pub fn transfer_lamports_from_pdas<'a>(
         );
     }
 
+    // SAFETY: Direct lamport manipulation is safe here for PDA-to-PDA transfers because:
+    // 1. Both accounts are owned by this program (PDAs)
+    // 2. We use checked arithmetic to prevent overflow
+    // 3. This is for partial transfers only (not account closure)
+    // 4. We warn if this would zero out an account with data
     **from.lamports.borrow_mut() = remaining_lamports;
     **to.lamports.borrow_mut() = to
         .lamports()
