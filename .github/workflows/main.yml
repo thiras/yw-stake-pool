@@ -90,6 +90,23 @@ jobs:
           cargo-cache-fallback-key: cargo-programs
           solana: true
 
+      - name: Cache SPL Token 2022 Program
+        id: cache-spl-token
+        uses: actions/cache@v4
+        with:
+          path: /tmp/spl_token_2022.so
+          key: ${{ runner.os }}-spl-token-2022-${{ hashFiles('program/tests/spl_token_tests.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-spl-token-2022-
+
+      - name: Download SPL Token 2022 Program
+        if: steps.cache-spl-token.outputs.cache-hit != 'true'
+        run: |
+          echo "📦 Downloading SPL Token 2022 program..."
+          solana program dump TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb /tmp/spl_token_2022.so
+          ls -lh /tmp/spl_token_2022.so
+          echo "✅ SPL Token 2022 program downloaded and cached"
+
       - name: Test Programs
         run: pnpm programs:test
 
