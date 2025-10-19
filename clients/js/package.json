@@ -1,5 +1,5 @@
 {
-  "name": "@your-wallet/stake-pool",
+  "name": "@yourwallet/stake-pool",
   "version": "0.0.0",
   "description": "JavaScript client for the Stake Pool program",
   "sideEffects": false,
