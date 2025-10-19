@@ -117,7 +117,26 @@ pub struct StakeAccount {
 }
 
 impl StakePool {
-    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 32 + 1 + 8;
+    // Size calculation:
+    // - key (Key enum): 1 byte
+    // - authority (Pubkey): 32 bytes
+    // - stake_mint (Pubkey): 32 bytes
+    // - reward_mint (Pubkey): 32 bytes
+    // - stake_vault (Pubkey): 32 bytes
+    // - reward_vault (Pubkey): 32 bytes
+    // - total_staked (u64): 8 bytes
+    // - reward_rate (u64): 8 bytes
+    // - min_stake_amount (u64): 8 bytes
+    // - lockup_period (i64): 8 bytes
+    // - is_paused (bool): 1 byte
+    // - bump (u8): 1 byte
+    // - pending_authority (Option<Pubkey>): 1 byte when None, 33 bytes when Some
+    // - pool_end_date (Option<i64>): 1 byte when None, 9 bytes when Some
+    //
+    // We allocate for the maximum size (both Options as Some) to support future updates
+    // None: 1 + 32*5 + 8*3 + 1*2 + 1 + 1 = 197 bytes
+    // Some: 1 + 32*5 + 8*3 + 1*2 + 33 + 9 = 237 bytes
+    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1 + 33 + 9;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey) -> Vec<Vec<u8>> {
         vec![
@@ -145,10 +164,20 @@ impl StakePool {
     }
 
     pub fn save(&self, account: &AccountInfo) -> ProgramResult {
-        borsh::to_writer(&mut account.data.borrow_mut()[..], self).map_err(|error| {
-            msg!("Error: {}", error);
-            StakePoolError::SerializationError.into()
-        })
+        // Serialize to a vec first to get the exact size
+        let serialized = borsh::to_vec(self).map_err(|error| {
+            msg!("Serialization error: {}", error);
+            ProgramError::from(StakePoolError::SerializationError)
+        })?;
+
+        // Zero-fill the account data
+        let mut data = account.data.borrow_mut();
+        data[..].fill(0);
+
+        // Copy serialized data
+        data[..serialized.len()].copy_from_slice(&serialized);
+
+        Ok(())
     }
 
     /// Calculate rewards for a stake based on fixed reward rate
@@ -220,9 +249,19 @@ impl StakeAccount {
     }
 
     pub fn save(&self, account: &AccountInfo) -> ProgramResult {
-        borsh::to_writer(&mut account.data.borrow_mut()[..], self).map_err(|error| {
-            msg!("Error: {}", error);
-            StakePoolError::SerializationError.into()
-        })
+        // Serialize to a vec first to get the exact size
+        let serialized = borsh::to_vec(self).map_err(|error| {
+            msg!("Serialization error: {}", error);
+            ProgramError::from(StakePoolError::SerializationError)
+        })?;
+
+        // Zero-fill the account data
+        let mut data = account.data.borrow_mut();
+        data[..].fill(0);
+
+        // Copy serialized data
+        data[..serialized.len()].copy_from_slice(&serialized);
+
+        Ok(())
     }
 }
