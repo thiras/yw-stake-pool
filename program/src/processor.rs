@@ -619,28 +619,6 @@ fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResu
     Ok(())
 }
 
-// Helper functions
-fn verify_token_account(token_account: &AccountInfo, expected_mint: &Pubkey) -> ProgramResult {
-    let account_data = token_account.try_borrow_data()?;
-
-    // Support both Token and Token-2022
-    let account = StateWithExtensions::<TokenAccount>::unpack(&account_data)
-        .map_err(|_| StakePoolError::InvalidTokenProgram)?;
-
-    if &account.base.mint != expected_mint {
-        return Err(StakePoolError::InvalidMint.into());
-    }
-
-    Ok(())
-}
-
-fn get_token_account_balance(token_account: &AccountInfo) -> Result<u64, ProgramError> {
-    let account_data = token_account.try_borrow_data()?;
-    let account = StateWithExtensions::<TokenAccount>::unpack(&account_data)
-        .map_err(|_| StakePoolError::InvalidTokenProgram)?;
-    Ok(account.base.amount)
-}
-
 fn nominate_new_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = NominateNewAuthorityAccounts::context(accounts)?;
@@ -716,4 +694,26 @@ fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     );
 
     pool_data.save(ctx.accounts.pool)
+}
+
+// Helper functions
+fn verify_token_account(token_account: &AccountInfo, expected_mint: &Pubkey) -> ProgramResult {
+    let account_data = token_account.try_borrow_data()?;
+
+    // Support both Token and Token-2022
+    let account = StateWithExtensions::<TokenAccount>::unpack(&account_data)
+        .map_err(|_| StakePoolError::InvalidTokenProgram)?;
+
+    if &account.base.mint != expected_mint {
+        return Err(StakePoolError::InvalidMint.into());
+    }
+
+    Ok(())
+}
+
+fn get_token_account_balance(token_account: &AccountInfo) -> Result<u64, ProgramError> {
+    let account_data = token_account.try_borrow_data()?;
+    let account = StateWithExtensions::<TokenAccount>::unpack(&account_data)
+        .map_err(|_| StakePoolError::InvalidTokenProgram)?;
+    Ok(account.base.amount)
 }
