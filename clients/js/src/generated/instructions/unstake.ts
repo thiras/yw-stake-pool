@@ -8,6 +8,8 @@
 
 import {
   combineCodec,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -18,12 +20,14 @@ import {
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
-  type FixedSizeCodec,
-  type FixedSizeDecoder,
-  type FixedSizeEncoder,
+  type Codec,
+  type Decoder,
+  type Encoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
@@ -81,28 +85,37 @@ export type UnstakeInstruction<
     ]
   >;
 
-export type UnstakeInstructionData = { discriminator: number; amount: bigint };
+export type UnstakeInstructionData = {
+  discriminator: number;
+  amount: bigint;
+  expectedRewardRate: Option<bigint>;
+};
 
-export type UnstakeInstructionDataArgs = { amount: number | bigint };
+export type UnstakeInstructionDataArgs = {
+  amount: number | bigint;
+  expectedRewardRate: OptionOrNullable<number | bigint>;
+};
 
-export function getUnstakeInstructionDataEncoder(): FixedSizeEncoder<UnstakeInstructionDataArgs> {
+export function getUnstakeInstructionDataEncoder(): Encoder<UnstakeInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['amount', getU64Encoder()],
+      ['expectedRewardRate', getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({ ...value, discriminator: UNSTAKE_DISCRIMINATOR })
   );
 }
 
-export function getUnstakeInstructionDataDecoder(): FixedSizeDecoder<UnstakeInstructionData> {
+export function getUnstakeInstructionDataDecoder(): Decoder<UnstakeInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['amount', getU64Decoder()],
+    ['expectedRewardRate', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
-export function getUnstakeInstructionDataCodec(): FixedSizeCodec<
+export function getUnstakeInstructionDataCodec(): Codec<
   UnstakeInstructionDataArgs,
   UnstakeInstructionData
 > {
@@ -136,6 +149,7 @@ export type UnstakeInput<
   /** Clock sysvar */
   clock: Address<TAccountClock>;
   amount: UnstakeInstructionDataArgs['amount'];
+  expectedRewardRate: UnstakeInstructionDataArgs['expectedRewardRate'];
 };
 
 export function getUnstakeInstruction<

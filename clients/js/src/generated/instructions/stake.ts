@@ -8,6 +8,10 @@
 
 import {
   combineCodec,
+  getI64Decoder,
+  getI64Encoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -18,12 +22,14 @@ import {
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
-  type FixedSizeCodec,
-  type FixedSizeDecoder,
-  type FixedSizeEncoder,
+  type Codec,
+  type Decoder,
+  type Encoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
@@ -97,33 +103,41 @@ export type StakeInstructionData = {
   discriminator: number;
   amount: bigint;
   index: bigint;
+  expectedRewardRate: Option<bigint>;
+  expectedLockupPeriod: Option<bigint>;
 };
 
 export type StakeInstructionDataArgs = {
   amount: number | bigint;
   index: number | bigint;
+  expectedRewardRate: OptionOrNullable<number | bigint>;
+  expectedLockupPeriod: OptionOrNullable<number | bigint>;
 };
 
-export function getStakeInstructionDataEncoder(): FixedSizeEncoder<StakeInstructionDataArgs> {
+export function getStakeInstructionDataEncoder(): Encoder<StakeInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
       ['amount', getU64Encoder()],
       ['index', getU64Encoder()],
+      ['expectedRewardRate', getOptionEncoder(getU64Encoder())],
+      ['expectedLockupPeriod', getOptionEncoder(getI64Encoder())],
     ]),
     (value) => ({ ...value, discriminator: STAKE_DISCRIMINATOR })
   );
 }
 
-export function getStakeInstructionDataDecoder(): FixedSizeDecoder<StakeInstructionData> {
+export function getStakeInstructionDataDecoder(): Decoder<StakeInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
     ['amount', getU64Decoder()],
     ['index', getU64Decoder()],
+    ['expectedRewardRate', getOptionDecoder(getU64Decoder())],
+    ['expectedLockupPeriod', getOptionDecoder(getI64Decoder())],
   ]);
 }
 
-export function getStakeInstructionDataCodec(): FixedSizeCodec<
+export function getStakeInstructionDataCodec(): Codec<
   StakeInstructionDataArgs,
   StakeInstructionData
 > {
@@ -164,6 +178,8 @@ export type StakeInput<
   systemProgram?: Address<TAccountSystemProgram>;
   amount: StakeInstructionDataArgs['amount'];
   index: StakeInstructionDataArgs['index'];
+  expectedRewardRate: StakeInstructionDataArgs['expectedRewardRate'];
+  expectedLockupPeriod: StakeInstructionDataArgs['expectedLockupPeriod'];
 };
 
 export function getStakeInstruction<

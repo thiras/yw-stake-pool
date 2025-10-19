@@ -39,7 +39,14 @@ pub enum StakePoolInstruction {
     #[account(6, name="token_program", desc = "The token program (Token or Token-2022)")]
     #[account(7, writable, signer, name="payer", desc = "The account paying for rent")]
     #[account(8, name="system_program", desc = "The system program")]
-    Stake { amount: u64, index: u64 },
+    Stake {
+        amount: u64,
+        index: u64,
+        /// Frontrunning protection: expected reward rate (optional)
+        expected_reward_rate: Option<u64>,
+        /// Frontrunning protection: expected lockup period (optional)
+        expected_lockup_period: Option<i64>,
+    },
 
     /// Unstake tokens from the pool
     #[account(0, writable, name="pool", desc = "The stake pool")]
@@ -49,7 +56,11 @@ pub enum StakePoolInstruction {
     #[account(4, writable, name="stake_vault", desc = "Pool's stake vault")]
     #[account(5, name="token_program", desc = "The token program")]
     #[account(6, name="clock", desc = "Clock sysvar")]
-    Unstake { amount: u64 },
+    Unstake {
+        amount: u64,
+        /// Frontrunning protection: expected reward rate (optional)
+        expected_reward_rate: Option<u64>,
+    },
 
     /// Claim rewards
     #[account(0, writable, name="pool", desc = "The stake pool")]

@@ -244,6 +244,18 @@
         {
           "name": "index",
           "type": "u64"
+        },
+        {
+          "name": "expectedRewardRate",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "expectedLockupPeriod",
+          "type": {
+            "option": "i64"
+          }
         }
       ],
       "discriminant": {
@@ -315,6 +327,12 @@
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "expectedRewardRate",
+          "type": {
+            "option": "u64"
+          }
         }
       ],
       "discriminant": {
@@ -716,6 +734,11 @@
       "code": 19,
       "name": "InvalidAccountDiscriminator",
       "msg": "Invalid account discriminator"
+    },
+    {
+      "code": 20,
+      "name": "PoolParametersChanged",
+      "msg": "Pool parameters changed (frontrunning protection)"
     }
   ],
   "metadata": {

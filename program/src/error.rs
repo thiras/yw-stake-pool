@@ -65,6 +65,9 @@ pub enum StakePoolError {
     /// 19 - Invalid account discriminator
     #[error("Invalid account discriminator")]
     InvalidAccountDiscriminator,
+    /// 20 - Pool parameters changed (frontrunning protection)
+    #[error("Pool parameters changed (frontrunning protection)")]
+    PoolParametersChanged,
 }
 
 impl From<StakePoolError> for ProgramError {

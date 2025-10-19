@@ -47,13 +47,27 @@ pub fn process_instruction<'a>(
             msg!("Instruction: InitializeStakeAccount");
             initialize_stake_account(accounts, index)
         }
-        StakePoolInstruction::Stake { amount, index } => {
+        StakePoolInstruction::Stake {
+            amount,
+            index,
+            expected_reward_rate,
+            expected_lockup_period,
+        } => {
             msg!("Instruction: Stake");
-            stake(accounts, amount, index)
+            stake(
+                accounts,
+                amount,
+                index,
+                expected_reward_rate,
+                expected_lockup_period,
+            )
         }
-        StakePoolInstruction::Unstake { amount } => {
+        StakePoolInstruction::Unstake {
+            amount,
+            expected_reward_rate,
+        } => {
             msg!("Instruction: Unstake");
-            unstake(accounts, amount)
+            unstake(accounts, amount, expected_reward_rate)
         }
         StakePoolInstruction::ClaimRewards => {
             msg!("Instruction: ClaimRewards");
@@ -188,7 +202,13 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>], index: u64) -> 
     stake_account_data.save(ctx.accounts.stake_account)
 }
 
-fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> ProgramResult {
+fn stake<'a>(
+    accounts: &'a [AccountInfo<'a>],
+    amount: u64,
+    index: u64,
+    expected_reward_rate: Option<u64>,
+    expected_lockup_period: Option<i64>,
+) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = StakeAccounts::context(accounts)?;
 
@@ -197,6 +217,29 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> Progra
 
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+
+    // Frontrunning protection: Verify expected pool parameters if provided
+    if let Some(expected_rate) = expected_reward_rate {
+        if pool_data.reward_rate != expected_rate {
+            msg!(
+                "Reward rate mismatch: expected {}, got {}",
+                expected_rate,
+                pool_data.reward_rate
+            );
+            return Err(StakePoolError::PoolParametersChanged.into());
+        }
+    }
+
+    if let Some(expected_lockup) = expected_lockup_period {
+        if pool_data.lockup_period != expected_lockup {
+            msg!(
+                "Lockup period mismatch: expected {}, got {}",
+                expected_lockup,
+                pool_data.lockup_period
+            );
+            return Err(StakePoolError::PoolParametersChanged.into());
+        }
+    }
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
@@ -296,7 +339,11 @@ fn stake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64, index: u64) -> Progra
     stake_account_data.save(ctx.accounts.stake_account)
 }
 
-fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
+fn unstake<'a>(
+    accounts: &'a [AccountInfo<'a>],
+    amount: u64,
+    expected_reward_rate: Option<u64>,
+) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = UnstakeAccounts::context(accounts)?;
 
@@ -311,6 +358,18 @@ fn unstake<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
     // Load accounts
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
     let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
+
+    // Frontrunning protection: Verify expected reward rate if provided
+    if let Some(expected_rate) = expected_reward_rate {
+        if pool_data.reward_rate != expected_rate {
+            msg!(
+                "Reward rate mismatch: expected {}, got {}",
+                expected_rate,
+                pool_data.reward_rate
+            );
+            return Err(StakePoolError::PoolParametersChanged.into());
+        }
+    }
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;

@@ -54,6 +54,8 @@ export const STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM = 0x11; // 17
 export const STAKE_POOL_ERROR__INVALID_MINT = 0x12; // 18
 /** InvalidAccountDiscriminator: Invalid account discriminator */
 export const STAKE_POOL_ERROR__INVALID_ACCOUNT_DISCRIMINATOR = 0x13; // 19
+/** PoolParametersChanged: Pool parameters changed (frontrunning protection) */
+export const STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED = 0x14; // 20
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -73,6 +75,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM
   | typeof STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED
   | typeof STAKE_POOL_ERROR__NUMERICAL_OVERFLOW
+  | typeof STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED
   | typeof STAKE_POOL_ERROR__POOL_PAUSED
   | typeof STAKE_POOL_ERROR__SERIALIZATION_ERROR
   | typeof STAKE_POOL_ERROR__UNAUTHORIZED;
@@ -97,6 +100,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM]: `Invalid token program`,
     [STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED]: `Lockup period not expired`,
     [STAKE_POOL_ERROR__NUMERICAL_OVERFLOW]: `Numerical overflow`,
+    [STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED]: `Pool parameters changed (frontrunning protection)`,
     [STAKE_POOL_ERROR__POOL_PAUSED]: `Pool is paused`,
     [STAKE_POOL_ERROR__SERIALIZATION_ERROR]: `Error serializing an account`,
     [STAKE_POOL_ERROR__UNAUTHORIZED]: `Unauthorized`,
