@@ -323,7 +323,11 @@ test('updatePool can toggle enforceLockup', (t) => {
   const enableEncoded = codec.encode(enableData);
   const enableDecoded = codec.decode(enableEncoded);
 
-  t.deepEqual(enableDecoded.enforceLockup, some(true), 'Should enable enforceLockup');
+  t.deepEqual(
+    enableDecoded.enforceLockup,
+    some(true),
+    'Should enable enforceLockup'
+  );
 
   // Disable enforceLockup
   const disableData = {
@@ -338,7 +342,11 @@ test('updatePool can toggle enforceLockup', (t) => {
   const disableEncoded = codec.encode(disableData);
   const disableDecoded = codec.decode(disableEncoded);
 
-  t.deepEqual(disableDecoded.enforceLockup, some(false), 'Should disable enforceLockup');
+  t.deepEqual(
+    disableDecoded.enforceLockup,
+    some(false),
+    'Should disable enforceLockup'
+  );
 
   // Leave enforceLockup unchanged
   const noChangeData = {
@@ -353,7 +361,11 @@ test('updatePool can toggle enforceLockup', (t) => {
   const noChangeEncoded = codec.encode(noChangeData);
   const noChangeDecoded = codec.decode(noChangeEncoded);
 
-  t.deepEqual(noChangeDecoded.enforceLockup, none(), 'enforceLockup should be None when not updated');
+  t.deepEqual(
+    noChangeDecoded.enforceLockup,
+    none(),
+    'enforceLockup should be None when not updated'
+  );
 });
 
 test('instruction data codecs preserve exact values', (t) => {
