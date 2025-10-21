@@ -6,7 +6,8 @@ import { address } from '@solana/kit';
 
 export const config = {
   // RPC endpoint - change based on your environment
-  rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8899', // Local validator
+  // rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8899', // Local validator
+  rpcUrl: process.env.RPC_URL || 'https://api.devnet.solana.com', // Devnet
 
   // Program ID - update with your deployed program ID
   programId: address('8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx'),
