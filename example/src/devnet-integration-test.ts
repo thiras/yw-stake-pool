@@ -124,6 +124,7 @@ async function main() {
       rewardRate: config.defaultPoolConfig.rewardRate,
       minStakeAmount: config.defaultPoolConfig.minStakeAmount,
       lockupPeriod: config.defaultPoolConfig.lockupPeriod,
+      enforceLockup: false,
       poolEndDate: null,
     });
 
@@ -283,6 +284,7 @@ async function main() {
       minStakeAmount: none(), // Don't change
       lockupPeriod: none(), // Don't change
       isPaused: none(), // Don't change
+      enforceLockup: none(), // Don't change
       poolEndDate: null, // Don't change
     });
 

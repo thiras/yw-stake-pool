@@ -65,6 +65,7 @@ async function main() {
       rewardRate: config.defaultPoolConfig.rewardRate,
       minStakeAmount: config.defaultPoolConfig.minStakeAmount,
       lockupPeriod: config.defaultPoolConfig.lockupPeriod,
+      enforceLockup: false,
       poolEndDate: null,
     });
 
@@ -108,6 +109,7 @@ async function main() {
       minStakeAmount: none(),
       lockupPeriod: none(),
       isPaused: none(),
+      enforceLockup: none(),
       poolEndDate: null,
     });
 
@@ -127,6 +129,7 @@ async function main() {
       minStakeAmount: none(),
       lockupPeriod: none(),
       isPaused: some(true),
+      enforceLockup: none(),
       poolEndDate: null,
     });
 
@@ -149,6 +152,7 @@ async function main() {
       minStakeAmount: some(5_000_000n), // 5 tokens
       lockupPeriod: some(604800n), // 7 days
       isPaused: some(false),
+      enforceLockup: none(),
       poolEndDate: null,
     });
 
@@ -170,6 +174,7 @@ async function main() {
       minStakeAmount: none(),
       lockupPeriod: none(),
       isPaused: none(),
+      enforceLockup: none(),
       poolEndDate: some(some(endDate)),
     });
 
