@@ -42,7 +42,7 @@ ${chalk.yellow('Examples:')}
 
   ${chalk.gray('# Transfer specific program on mainnet')}
   pnpm programs:transfer-authority 6tuAX4SL4bXdiFaMKqaVBkGG1vZnUnhVippuVdEUGyJd \\
-    --program-id 8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR \\
+    --program-id 8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx \\
     --cluster mainnet-beta
 
   ${chalk.gray('# Transfer using custom authority keypair')}
