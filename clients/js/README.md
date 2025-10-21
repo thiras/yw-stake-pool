@@ -10,28 +10,28 @@ A TypeScript/JavaScript client library for the YW Stake Pool program on Solana. 
 - ✅ **Full TypeScript Support** - Complete type definitions for all instructions and accounts
 - 🔐 **Type-Safe** - Auto-generated from program IDL with strong typing
 - 📦 **Tree-Shakeable** - ESM and CommonJS support with optimized bundles
-- 🎯 **Web3.js 2.0** - Built for the latest Solana web3.js library
+- 🎯 **Solana Kit** - Built with @solana/kit for modern Solana development
 - 🧪 **Well Tested** - Comprehensive test coverage
 - 📚 **Full API Documentation** - JSDoc comments and TypeDoc generation
 
 ## Installation
 
 ```bash
-npm install @yourwallet/stake-pool @solana/web3.js
+npm install @yourwallet/stake-pool @solana/kit
 ```
 
 ```bash
-yarn add @yourwallet/stake-pool @solana/web3.js
+yarn add @yourwallet/stake-pool @solana/kit
 ```
 
 ```bash
-pnpm add @yourwallet/stake-pool @solana/web3.js
+pnpm add @yourwallet/stake-pool @solana/kit
 ```
 
 ## Quick Start
 
 ```typescript
-import { createSolanaRpc, address, generateKeyPairSigner } from '@solana/web3.js';
+import { createSolanaRpc, address, generateKeyPairSigner } from '@solana/kit';
 import { 
   getInitializePoolInstruction,
   getStakeInstruction,
@@ -289,7 +289,7 @@ try {
 Derive Program Derived Addresses (PDAs) for pools and stake accounts:
 
 ```typescript
-import { getAddressEncoder } from '@solana/web3.js';
+import { getAddressEncoder } from '@solana/kit';
 
 // Pool PDA
 const [poolPda] = await findProgramAddress(
@@ -326,7 +326,7 @@ import {
   setTransactionMessageFeePayerSigner,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
-} from '@solana/web3.js';
+} from '@solana/kit';
 import {
   getInitializeStakeAccountInstruction,
   getStakeInstruction,
@@ -449,4 +449,4 @@ Contributions are welcome! Please read our contributing guidelines before submit
 
 ---
 
-**Built with** ❤️ **using** [Codama](https://github.com/codama-idl/codama) **and** [@solana/web3.js](https://github.com/solana-labs/solana-web3.js)
+**Built with** ❤️ **using** [Codama](https://github.com/codama-idl/codama) **and** [@solana/kit](https://github.com/solana-program/kit)
