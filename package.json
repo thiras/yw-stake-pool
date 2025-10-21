@@ -6,6 +6,8 @@
     "programs:clean": "zx ./scripts/program/clean.mjs",
     "programs:format": "zx ./scripts/program/format.mjs",
     "programs:lint": "zx ./scripts/program/lint.mjs",
+    "programs:deploy": "zx ./scripts/program/deploy.mjs",
+    "programs:deploy:devnet": "zx ./scripts/program/deploy.mjs --cluster devnet --keypair ./program/keypair.json",
     "generate:idls": "zx ./scripts/generate-idls.mjs",
     "solana:check": "zx ./scripts/check-solana-version.mjs",
     "solana:link": "zx ./scripts/link-solana-version.mjs",
