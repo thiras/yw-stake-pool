@@ -145,19 +145,20 @@ if (!programId) {
   if (folders.length > 0) {
     const folder = folders[0];
     const programName = getCargo(folder).package.name.replace(/-/g, '_');
+    // Try to find program keypair - check program folder first, then target/deploy
+    const programKeypairPath = path.join(folder, 'keypair.json');
     const targetKeypairPath = path.join(
       process.cwd(),
       'target',
       'deploy',
       `${programName}-keypair.json`
     );
-    const programKeypairPath = path.join(folder, 'keypair.json');
 
     let programKeypair = null;
-    if (await fs.pathExists(targetKeypairPath)) {
-      programKeypair = targetKeypairPath;
-    } else if (await fs.pathExists(programKeypairPath)) {
+    if (await fs.pathExists(programKeypairPath)) {
       programKeypair = programKeypairPath;
+    } else if (await fs.pathExists(targetKeypairPath)) {
+      programKeypair = targetKeypairPath;
     }
 
     if (programKeypair) {
