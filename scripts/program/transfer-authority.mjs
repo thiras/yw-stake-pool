@@ -1,6 +1,11 @@
 #!/usr/bin/env zx
 import 'zx/globals';
-import { cliArguments, getProgramFolders, getCargo } from '../utils.mjs';
+import {
+  cliArguments,
+  getProgramFolders,
+  getCargo,
+  getKeypairPath,
+} from '../utils.mjs';
 
 /**
  * Transfer Program Upgrade Authority
@@ -80,9 +85,7 @@ function getOption(name, shortName = null) {
 
 const providedProgramId = getOption('program-id', 'p');
 const cluster = getOption('cluster', 'u') || 'devnet';
-const keypairPath =
-  getOption('keypair', 'k') ||
-  path.join(os.homedir(), '.config', 'solana', 'id.json');
+const keypairPath = await getKeypairPath(getOption('keypair', 'k'));
 
 echo(chalk.blue('\n' + '='.repeat(60)));
 echo(chalk.blue('  Transfer Program Upgrade Authority'));

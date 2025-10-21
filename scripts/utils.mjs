@@ -124,3 +124,28 @@ export async function getInstalledSolanaVersion() {
     return '';
   }
 }
+
+/**
+ * Get keypair path from Solana CLI config or default location
+ * Priority: 1. CLI option, 2. solana config get, 3. default location
+ */
+export async function getKeypairPath(cliOption = null) {
+  // If CLI option provided, use it
+  if (cliOption) {
+    return cliOption;
+  }
+
+  // Try to get from solana config
+  try {
+    const configResult = await $`solana config get`.quiet();
+    const match = configResult.stdout.match(/Keypair Path: (.+)/);
+    if (match) {
+      return match[1].trim();
+    }
+  } catch (error) {
+    // Solana CLI not available or config not set, fall through to default
+  }
+
+  // Default location
+  return path.join(os.homedir(), '.config', 'solana', 'id.json');
+}
