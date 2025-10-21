@@ -227,15 +227,22 @@ if (!confirmed) {
 echo(chalk.cyan('\n🔄 Transferring upgrade authority...\n'));
 
 try {
-  const transferArgs = ['program', 'set-upgrade-authority', programId];
+  const transferArgs = [
+    'program',
+    'set-upgrade-authority',
+    programId,
+    '--upgrade-authority',
+    keypairPath,
+  ];
 
   if (makeImmutable) {
     transferArgs.push('--final');
   } else {
     transferArgs.push('--new-upgrade-authority', newAuthorityKey);
+    transferArgs.push('--skip-new-upgrade-authority-signer-check');
   }
 
-  transferArgs.push('--url', cluster, '--keypair', keypairPath);
+  transferArgs.push('--url', cluster);
 
   await $`solana ${transferArgs}`;
 
