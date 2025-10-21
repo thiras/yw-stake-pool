@@ -15,14 +15,11 @@
 import { address, generateKeyPairSigner } from '@solana/kit';
 import {
   getInitializePoolInstruction,
-  getInitializeStakeAccountInstruction,
   getStakeInstruction,
   getClaimRewardsInstruction,
   getUnstakeInstruction,
   getFundRewardsInstruction,
   getUpdatePoolInstruction,
-  getNominateNewAuthorityInstruction,
-  getAcceptAuthorityInstruction,
 } from '@yourwallet/stake-pool';
 import { some, none } from '@solana/kit';
 
@@ -41,7 +38,7 @@ import {
   handleError,
   calculateRewards,
 } from './utils.js';
-import { setupTestTokens } from './setup-tokens';
+import { setupTestTokens } from './setup-tokens.js';
 
 /**
  * Main function to run the complete flow
