@@ -50,10 +50,6 @@ pub fn process_instruction<'a>(
                 pool_end_date,
             )
         }
-        StakePoolInstruction::InitializeStakeAccount { index } => {
-            msg!("Instruction: InitializeStakeAccount");
-            initialize_stake_account(accounts, index)
-        }
         StakePoolInstruction::Stake {
             amount,
             index,
@@ -203,78 +199,6 @@ fn initialize_pool<'a>(
     };
 
     pool_data.save(ctx.accounts.pool)
-}
-
-fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>], index: u64) -> ProgramResult {
-    // Parse accounts using ShankContext-generated struct
-    let ctx = InitializeStakeAccountAccounts::context(accounts)?;
-
-    // Guards
-    let stake_account_seeds =
-        StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key, index);
-    let stake_seeds_refs: Vec<&[u8]> = stake_account_seeds.iter().map(|s| s.as_slice()).collect();
-    let (stake_account_key, bump) = Pubkey::find_program_address(&stake_seeds_refs, &crate::ID);
-
-    assert_same_pubkeys(
-        "stake_account",
-        ctx.accounts.stake_account,
-        &stake_account_key,
-    )?;
-    assert_signer("owner", ctx.accounts.owner)?;
-    assert_signer("payer", ctx.accounts.payer)?;
-    assert_empty("stake_account", ctx.accounts.stake_account)?;
-    assert_writable("stake_account", ctx.accounts.stake_account)?;
-    assert_writable("payer", ctx.accounts.payer)?;
-
-    // Verify pool exists
-    assert_non_empty("pool", ctx.accounts.pool)?;
-
-    // Verify pool account discriminator
-    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
-
-    // Verify program ownership
-    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
-
-    // Note: We cannot enforce sequential indices on-chain without additional state.
-    // Users should track their next available index off-chain.
-    // The PDA derivation ensures each (pool, owner, index) combination is unique.
-
-    // Create stake account
-    let mut seeds_with_bump = stake_account_seeds.clone();
-    seeds_with_bump.push(vec![bump]);
-    let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
-
-    // Diagnostic logging: print payer and target account lamports and pubkeys
-    msg!(
-        "Creating stake account: target={} payer={} target_lamports={} payer_lamports={}",
-        ctx.accounts.stake_account.key,
-        ctx.accounts.payer.key,
-        ctx.accounts.stake_account.lamports(),
-        ctx.accounts.payer.lamports()
-    );
-
-    create_account(
-        ctx.accounts.stake_account,
-        ctx.accounts.payer,
-        ctx.accounts.system_program,
-        StakeAccount::LEN,
-        &crate::ID,
-        Some(&[&seeds_refs]),
-    )?;
-
-    // Initialize stake account with index
-    let stake_account_data = StakeAccount {
-        key: Key::StakeAccount,
-        pool: *ctx.accounts.pool.key,
-        owner: *ctx.accounts.owner.key,
-        index,
-        amount_staked: 0,
-        stake_timestamp: 0,
-        claimed_rewards: 0,
-        bump,
-    };
-
-    stake_account_data.save(ctx.accounts.stake_account)
 }
 
 fn stake<'a>(

@@ -112,61 +112,6 @@
       }
     },
     {
-      "name": "InitializeStakeAccount",
-      "accounts": [
-        {
-          "name": "stakeAccount",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "The stake account PDA"
-          ]
-        },
-        {
-          "name": "pool",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The stake pool"
-          ]
-        },
-        {
-          "name": "owner",
-          "isMut": false,
-          "isSigner": true,
-          "docs": [
-            "The stake account owner"
-          ]
-        },
-        {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "The account paying for rent"
-          ]
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The system program"
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "index",
-          "type": "u64"
-        }
-      ],
-      "discriminant": {
-        "type": "u8",
-        "value": 1
-      }
-    },
-    {
       "name": "Stake",
       "accounts": [
         {
@@ -182,7 +127,7 @@
           "isMut": true,
           "isSigner": false,
           "docs": [
-            "The user's new stake account"
+            "The stake account PDA (will be created)"
           ]
         },
         {
@@ -274,7 +219,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 2
+        "value": 1
       }
     },
     {
@@ -359,7 +304,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 3
+        "value": 2
       }
     },
     {
@@ -433,7 +378,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 4
+        "value": 3
       }
     },
     {
@@ -492,7 +437,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 5
+        "value": 4
       }
     },
     {
@@ -555,7 +500,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 6
+        "value": 5
       }
     },
     {
@@ -589,7 +534,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 7
+        "value": 6
       }
     },
     {
@@ -615,7 +560,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 8
+        "value": 7
       }
     },
     {
@@ -649,7 +594,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 9
+        "value": 8
       }
     }
   ],

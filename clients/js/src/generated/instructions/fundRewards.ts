@@ -33,7 +33,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const FUND_REWARDS_DISCRIMINATOR = 6;
+export const FUND_REWARDS_DISCRIMINATOR = 5;
 
 export function getFundRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(FUND_REWARDS_DISCRIMINATOR);

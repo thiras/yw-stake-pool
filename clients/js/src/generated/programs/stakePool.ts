@@ -18,7 +18,6 @@ import {
   type ParsedCloseStakeAccountInstruction,
   type ParsedFundRewardsInstruction,
   type ParsedInitializePoolInstruction,
-  type ParsedInitializeStakeAccountInstruction,
   type ParsedNominateNewAuthorityInstruction,
   type ParsedStakeInstruction,
   type ParsedUnstakeInstruction,
@@ -35,7 +34,6 @@ export enum StakePoolAccount {
 
 export enum StakePoolInstruction {
   InitializePool,
-  InitializeStakeAccount,
   Stake,
   Unstake,
   ClaimRewards,
@@ -54,30 +52,27 @@ export function identifyStakePoolInstruction(
     return StakePoolInstruction.InitializePool;
   }
   if (containsBytes(data, getU8Encoder().encode(1), 0)) {
-    return StakePoolInstruction.InitializeStakeAccount;
-  }
-  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
     return StakePoolInstruction.Stake;
   }
-  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
     return StakePoolInstruction.Unstake;
   }
-  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
     return StakePoolInstruction.ClaimRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
     return StakePoolInstruction.UpdatePool;
   }
-  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
     return StakePoolInstruction.FundRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
     return StakePoolInstruction.NominateNewAuthority;
   }
-  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
     return StakePoolInstruction.AcceptAuthority;
   }
-  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
     return StakePoolInstruction.CloseStakeAccount;
   }
   throw new Error(
@@ -91,9 +86,6 @@ export type ParsedStakePoolInstruction<
   | ({
       instructionType: StakePoolInstruction.InitializePool;
     } & ParsedInitializePoolInstruction<TProgram>)
-  | ({
-      instructionType: StakePoolInstruction.InitializeStakeAccount;
-    } & ParsedInitializeStakeAccountInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.Stake;
     } & ParsedStakeInstruction<TProgram>)

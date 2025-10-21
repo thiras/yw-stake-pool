@@ -23,17 +23,11 @@ pub enum StakePoolInstruction {
         pool_end_date: Option<i64>,
     },
 
-    /// Initialize a stake account for a user with a specific index
-    #[account(0, writable, name="stake_account", desc = "The stake account PDA")]
-    #[account(1, name="pool", desc = "The stake pool")]
-    #[account(2, signer, name="owner", desc = "The stake account owner")]
-    #[account(3, writable, signer, name="payer", desc = "The account paying for rent")]
-    #[account(4, name="system_program", desc = "The system program")]
-    InitializeStakeAccount { index: u64 },
-
-    /// Stake tokens into the pool (creates a new stake account for each deposit)
+    /// Stake tokens into the pool (creates a new stake account for this deposit)
+    /// Each stake account has independent lockup period and reward tracking
+    /// Multiple deposits create separate accounts (index 0, 1, 2, etc.)
     #[account(0, writable, name="pool", desc = "The stake pool")]
-    #[account(1, writable, name="stake_account", desc = "The user's new stake account")]
+    #[account(1, writable, name="stake_account", desc = "The stake account PDA (will be created)")]
     #[account(2, signer, name="owner", desc = "The stake account owner")]
     #[account(3, writable, name="user_token_account", desc = "User's token account")]
     #[account(4, writable, name="stake_vault", desc = "Pool's stake vault")]

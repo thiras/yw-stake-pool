@@ -37,7 +37,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const UNSTAKE_DISCRIMINATOR = 3;
+export const UNSTAKE_DISCRIMINATOR = 2;
 
 export function getUnstakeDiscriminatorBytes() {
   return getU8Encoder().encode(UNSTAKE_DISCRIMINATOR);
