@@ -309,4 +309,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-MIT - See [LICENSE](./LICENSE) for details.
+Apache License 2.0 - See [LICENSE](./LICENSE) for details.
