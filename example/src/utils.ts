@@ -96,7 +96,8 @@ export async function findStakeAccountPda(
 async function pollForConfirmation(
   rpc: any,
   signature: string,
-  maxAttempts: number = 30
+  maxAttempts: number = 30,
+  intervalMs: number = 1000
 ): Promise<void> {
   for (let i = 0; i < maxAttempts; i++) {
     try {
@@ -105,49 +106,74 @@ async function pollForConfirmation(
           status.value?.[0]?.confirmationStatus === 'finalized') {
         return;
       }
+      if (status.value?.[0]?.err) {
+        throw new Error(`Transaction failed: ${JSON.stringify(status.value[0].err)}`);
+      }
     } catch (error) {
-      // Ignore and retry
+      // Ignore RPC errors and retry
     }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   throw new Error('Transaction confirmation timeout');
 }
 
 /**
- * Airdrop SOL to an address
+ * Airdrop SOL to an address with retry logic
  */
 export async function airdrop(
   rpc: any,
   recipient: Address,
-  amount: bigint = config.airdropAmount
+  amount: bigint = config.airdropAmount,
+  maxRetries: number = 3
 ): Promise<void> {
   console.log(`💰 Airdropping ${amount} lamports to ${recipient}...`);
   
-  try {
-    const signature = await (rpc as any)
-      .requestAirdrop(recipient, lamports(amount))
-      .send();
-    
-    // Poll for confirmation with a shorter timeout for airdrops
-    console.log(`   Waiting for airdrop confirmation...`);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      await pollForConfirmation(rpc, signature, 30); // 30 seconds max
-      console.log(`✅ Airdrop confirmed: ${signature}`);
-    } catch (confirmError) {
-      // Airdrop might have succeeded even if confirmation timed out
-      console.log(`⚠️  Airdrop confirmation timed out, checking balance...`);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const balance = await (rpc as any).getBalance(recipient).send();
-      if (balance.value >= amount / 2n) { // If we have at least half the requested amount
-        console.log(`✅ Airdrop appears successful (balance: ${balance.value} lamports)`);
-      } else {
-        console.warn(`⚠️  Airdrop may have failed, balance: ${balance.value} lamports`);
-        throw confirmError;
+      if (attempt > 1) {
+        console.log(`   Retry attempt ${attempt}/${maxRetries}...`);
+        // Wait longer between retries
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+
+      const signature = await (rpc as any)
+        .requestAirdrop(recipient, lamports(amount))
+        .send();
+      
+      // Poll for confirmation with a longer timeout (60 seconds)
+      console.log(`   Waiting for airdrop confirmation (signature: ${signature.slice(0, 8)}...)...`);
+      try {
+        await pollForConfirmation(rpc, signature, 60, 1000); // 60 attempts, 1s interval = 60s
+        console.log(`✅ Airdrop confirmed: ${signature}`);
+        return; // Success!
+      } catch (confirmError) {
+        // Airdrop might have succeeded even if confirmation timed out
+        console.log(`⚠️  Airdrop confirmation timed out, checking balance...`);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const balance = await (rpc as any).getBalance(recipient).send();
+        if (balance.value >= amount / 2n) { // If we have at least half the requested amount
+          console.log(`✅ Airdrop appears successful (balance: ${balance.value} lamports)`);
+          return; // Success!
+        }
+        console.log(`   Current balance: ${balance.value} lamports`);
+        
+        // If this was the last retry, throw
+        if (attempt === maxRetries) {
+          throw confirmError;
+        }
+        // Otherwise continue to next retry
+        console.log(`   Will retry...`);
+      }
+    } catch (error) {
+      if (attempt === maxRetries) {
+        console.error('❌ Airdrop failed after all retries:', error);
+        console.log('\n💡 Devnet airdrops can be unreliable. You can:');
+        console.log('   1. Try again in a few minutes');
+        console.log('   2. Use a pre-funded keypair with --keypair flag');
+        console.log('   3. Request SOL from: https://faucet.solana.com');
+        throw error;
       }
     }
-  } catch (error) {
-    console.error('❌ Airdrop failed:', error);
-    throw error;
   }
 }
 
