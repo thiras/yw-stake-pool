@@ -433,7 +433,7 @@ Full API documentation is available at: [TypeDoc Documentation](https://yourwall
 ## Program Information
 
 - **Program ID**: `8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx`
-- **Version**: `1.4.0`
+- **Version**: `1.4.1`
 - **Network**: Devnet, Mainnet
 - **Cluster**: Solana
 
