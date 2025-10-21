@@ -211,7 +211,7 @@ The deploy script automatically detects the program ID from your repository keyp
 
 ### Managing authority
 
-The project includes comprehensive authority management tools:
+The project includes tools for managing program upgrade authority:
 
 #### Program Upgrade Authority
 
@@ -230,23 +230,7 @@ pnpm programs:transfer-authority -- --help
 
 This is a **one-step, immediate transfer** using Solana's native authority management. Use with caution!
 
-#### Pool Operational Authority
-
-Transfer pool operational authority using a secure two-step process:
-
-```sh
-# Step 1: Current authority nominates new authority
-pnpm programs:pool:transfer-authority -- --pool <POOL_ADDRESS> --new-authority <ADDRESS>
-
-# Step 2: New authority accepts the nomination
-pnpm programs:pool:accept-authority -- --pool <POOL_ADDRESS>
-
-# View help for each command
-pnpm programs:pool:transfer-authority -- --help
-pnpm programs:pool:accept-authority -- --help
-```
-
-The two-step process prevents accidental authority loss and ensures the new authority has access to their keypair before completing the transfer.
+**Note:** Pool operational authority (for managing pool parameters, funding rewards, etc.) can be transferred using the program's built-in two-step authority transfer instructions (`NominateNewAuthority` and `AcceptAuthority`). See the [Client Library documentation](./clients/js/README.md) for details on using these instructions.
 
 ## Generating IDLs
 
