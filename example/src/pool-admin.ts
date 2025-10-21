@@ -15,7 +15,6 @@ import {
   getUpdatePoolInstruction,
   getFundRewardsInstruction,
   getNominateNewAuthorityInstruction,
-  getAcceptAuthorityInstruction,
 } from '@yourwallet/stake-pool';
 
 import { config, formatAmount, formatRewardRate, formatDuration } from './config.js';
@@ -25,7 +24,6 @@ import {
   findPoolPda,
   logSection,
   logStep,
-  waitForRateLimit,
   handleError,
 } from './utils.js';
 

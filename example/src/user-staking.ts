@@ -24,7 +24,6 @@ import {
   findStakeAccountPda,
   logSection,
   logStep,
-  waitForRateLimit,
   handleError,
   calculateRewards,
   sleep,
