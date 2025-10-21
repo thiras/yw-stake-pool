@@ -9,7 +9,7 @@ export const config = {
   rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8899', // Local validator
 
   // Program ID - update with your deployed program ID
-  programId: address('8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR'),
+  programId: address('8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx'),
 
   // Token program IDs
   tokenProgramId: address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
