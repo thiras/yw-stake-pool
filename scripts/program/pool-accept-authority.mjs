@@ -4,10 +4,10 @@ import { cliArguments, getProgramFolders, getCargo } from '../utils.mjs';
 
 /**
  * Accept Pool Authority Script
- * 
+ *
  * Accepts a pending pool authority transfer. This is step 2 of the two-step
  * authority transfer process. Must be run by the nominated new authority.
- * 
+ *
  * Usage: pnpm programs:pool:accept-authority --pool <POOL_ADDRESS> [OPTIONS]
  */
 
@@ -65,15 +65,19 @@ ${chalk.gray('=').repeat(60)}
 
 // Parse options
 function getOption(name, shortName = null) {
-  const fullIndex = args.findIndex(arg => arg === `--${name}`);
-  const shortIndex = shortName ? args.findIndex(arg => arg === `-${shortName}`) : -1;
+  const fullIndex = args.findIndex((arg) => arg === `--${name}`);
+  const shortIndex = shortName
+    ? args.findIndex((arg) => arg === `-${shortName}`)
+    : -1;
   const index = fullIndex >= 0 ? fullIndex : shortIndex;
   return index >= 0 && args[index + 1] ? args[index + 1] : null;
 }
 
 const poolAddress = getOption('pool', 'p');
 const cluster = getOption('cluster', 'u') || 'devnet';
-const keypairPath = getOption('keypair', 'k') || path.join(os.homedir(), '.config', 'solana', 'id.json');
+const keypairPath =
+  getOption('keypair', 'k') ||
+  path.join(os.homedir(), '.config', 'solana', 'id.json');
 let programId = getOption('program-id');
 
 echo(chalk.blue('\n' + '='.repeat(60)));
@@ -83,7 +87,11 @@ echo(chalk.blue('='.repeat(60) + '\n'));
 // Validate required pool address
 if (!poolAddress) {
   echo(chalk.red('❌ Error: --pool <ADDRESS> is required\n'));
-  echo(chalk.gray('Usage: pnpm programs:pool:accept-authority --pool <POOL_ADDRESS>\n'));
+  echo(
+    chalk.gray(
+      'Usage: pnpm programs:pool:accept-authority --pool <POOL_ADDRESS>\n'
+    )
+  );
   process.exit(1);
 }
 
@@ -111,20 +119,25 @@ try {
 if (!programId) {
   echo(chalk.cyan('Auto-detecting program ID from repository...'));
   const folders = getProgramFolders();
-  
+
   if (folders.length > 0) {
     const folder = folders[0];
     const programName = getCargo(folder).package.name.replace(/-/g, '_');
-    const targetKeypairPath = path.join(process.cwd(), 'target', 'deploy', `${programName}-keypair.json`);
+    const targetKeypairPath = path.join(
+      process.cwd(),
+      'target',
+      'deploy',
+      `${programName}-keypair.json`
+    );
     const programKeypairPath = path.join(folder, 'keypair.json');
-    
+
     let programKeypair = null;
     if (await fs.pathExists(targetKeypairPath)) {
       programKeypair = targetKeypairPath;
     } else if (await fs.pathExists(programKeypairPath)) {
       programKeypair = programKeypairPath;
     }
-    
+
     if (programKeypair) {
       try {
         const result = await $`solana-keygen pubkey ${programKeypair}`;
@@ -135,9 +148,11 @@ if (!programId) {
       }
     }
   }
-  
+
   if (!programId) {
-    echo(chalk.red('❌ Could not determine program ID. Use --program-id option.\n'));
+    echo(
+      chalk.red('❌ Could not determine program ID. Use --program-id option.\n')
+    );
     process.exit(1);
   }
 }
@@ -172,7 +187,11 @@ echo(chalk.gray('  # Import getAcceptAuthorityInstruction'));
 echo(chalk.gray('  # Build and send transaction\n'));
 
 echo(chalk.cyan('Option 2: Use JavaScript Client'));
-echo(chalk.gray('  import { getAcceptAuthorityInstruction } from "@yourwallet/stake-pool";'));
+echo(
+  chalk.gray(
+    '  import { getAcceptAuthorityInstruction } from "@yourwallet/stake-pool";'
+  )
+);
 echo(chalk.gray('  '));
 echo(chalk.gray('  const acceptIx = getAcceptAuthorityInstruction({'));
 echo(chalk.gray(`    pool: address("${poolAddress}"),`));

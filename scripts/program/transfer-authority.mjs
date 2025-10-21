@@ -4,10 +4,10 @@ import { cliArguments, getProgramFolders, getCargo } from '../utils.mjs';
 
 /**
  * Transfer Program Upgrade Authority
- * 
+ *
  * Uses Solana CLI to transfer the upgrade authority of a deployed program
  * to a new public key. This is a direct one-step transfer.
- * 
+ *
  * Usage: pnpm programs:transfer-authority <NEW_AUTHORITY_PUBLIC_KEY> [OPTIONS]
  */
 
@@ -70,15 +70,19 @@ const makeImmutable = newAuthorityKey === '--none';
 
 // Parse options
 function getOption(name, shortName = null) {
-  const fullIndex = args.findIndex(arg => arg === `--${name}`);
-  const shortIndex = shortName ? args.findIndex(arg => arg === `-${shortName}`) : -1;
+  const fullIndex = args.findIndex((arg) => arg === `--${name}`);
+  const shortIndex = shortName
+    ? args.findIndex((arg) => arg === `-${shortName}`)
+    : -1;
   const index = fullIndex >= 0 ? fullIndex : shortIndex;
   return index >= 0 && args[index + 1] ? args[index + 1] : null;
 }
 
 const providedProgramId = getOption('program-id', 'p');
 const cluster = getOption('cluster', 'u') || 'devnet';
-const keypairPath = getOption('keypair', 'k') || path.join(os.homedir(), '.config', 'solana', 'id.json');
+const keypairPath =
+  getOption('keypair', 'k') ||
+  path.join(os.homedir(), '.config', 'solana', 'id.json');
 
 echo(chalk.blue('\n' + '='.repeat(60)));
 echo(chalk.blue('  Transfer Program Upgrade Authority'));
@@ -116,14 +120,16 @@ let programId = providedProgramId;
 if (!programId) {
   echo(chalk.cyan('Determining program ID from repository...'));
   const folders = getProgramFolders();
-  
+
   if (folders.length === 0) {
     echo(chalk.red('❌ No program folders found\n'));
     process.exit(1);
   }
-  
+
   if (folders.length > 1 && !providedProgramId) {
-    echo(chalk.yellow('⚠️  Multiple programs found. Please specify --program-id\n'));
+    echo(
+      chalk.yellow('⚠️  Multiple programs found. Please specify --program-id\n')
+    );
     echo('Available programs:');
     for (const folder of folders) {
       const cargo = getCargo(folder);
@@ -132,22 +138,27 @@ if (!programId) {
     echo('');
     process.exit(1);
   }
-  
+
   const folder = folders[0];
   const cargo = getCargo(folder);
   const programName = cargo.package.name.replace(/-/g, '_');
-  
+
   // Try to find program keypair
-  const targetKeypairPath = path.join(process.cwd(), 'target', 'deploy', `${programName}-keypair.json`);
+  const targetKeypairPath = path.join(
+    process.cwd(),
+    'target',
+    'deploy',
+    `${programName}-keypair.json`
+  );
   const programKeypairPath = path.join(folder, 'keypair.json');
-  
+
   let programKeypair = null;
   if (await fs.pathExists(targetKeypairPath)) {
     programKeypair = targetKeypairPath;
   } else if (await fs.pathExists(programKeypairPath)) {
     programKeypair = programKeypairPath;
   }
-  
+
   if (programKeypair) {
     try {
       const result = await $`solana-keygen pubkey ${programKeypair}`;
@@ -159,7 +170,9 @@ if (!programId) {
       process.exit(1);
     }
   } else {
-    echo(chalk.red('❌ No program keypair found. Use --program-id to specify.\n'));
+    echo(
+      chalk.red('❌ No program keypair found. Use --program-id to specify.\n')
+    );
     process.exit(1);
   }
 }
@@ -214,27 +227,20 @@ if (!confirmed) {
 echo(chalk.cyan('\n🔄 Transferring upgrade authority...\n'));
 
 try {
-  const transferArgs = [
-    'program',
-    'set-upgrade-authority',
-    programId,
-  ];
-  
+  const transferArgs = ['program', 'set-upgrade-authority', programId];
+
   if (makeImmutable) {
     transferArgs.push('--final');
   } else {
     transferArgs.push('--new-upgrade-authority', newAuthorityKey);
   }
-  
-  transferArgs.push(
-    '--url', cluster,
-    '--keypair', keypairPath
-  );
-  
+
+  transferArgs.push('--url', cluster, '--keypair', keypairPath);
+
   await $`solana ${transferArgs}`;
-  
+
   echo(chalk.green('\n✅ Transfer successful!\n'));
-  
+
   if (makeImmutable) {
     echo(chalk.yellow('Program is now IMMUTABLE:'));
     echo(chalk.gray(`  Program ID: ${programId}`));
@@ -247,11 +253,10 @@ try {
     echo(chalk.gray(`  New Authority: ${newAuthorityKey}`));
     echo(chalk.gray(`  Cluster: ${cluster}\n`));
   }
-  
+
   // Show how to verify
   echo(chalk.cyan('Verify the transfer:'));
   echo(chalk.gray(`  solana program show ${programId} --url ${cluster}\n`));
-  
 } catch (error) {
   echo(chalk.red('\n❌ Transfer failed!\n'));
   echo(chalk.red(error.stderr || error.message));

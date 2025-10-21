@@ -4,13 +4,13 @@ import { cliArguments, getProgramFolders, getCargo } from '../utils.mjs';
 
 /**
  * Transfer Pool Authority Script
- * 
+ *
  * Transfers the operational authority of a stake pool using the program's
  * two-step authority transfer process (NominateNewAuthority + AcceptAuthority).
- * 
+ *
  * This is different from program upgrade authority - this controls pool operations
  * like updating parameters, funding rewards, pausing, etc.
- * 
+ *
  * Usage: pnpm programs:pool:transfer-authority <NEW_AUTHORITY_PUBLIC_KEY> [OPTIONS]
  */
 
@@ -91,8 +91,10 @@ if (!newAuthorityKey || newAuthorityKey.startsWith('--')) {
 
 // Parse options
 function getOption(name, shortName = null) {
-  const fullIndex = args.findIndex(arg => arg === `--${name}`);
-  const shortIndex = shortName ? args.findIndex(arg => arg === `-${shortName}`) : -1;
+  const fullIndex = args.findIndex((arg) => arg === `--${name}`);
+  const shortIndex = shortName
+    ? args.findIndex((arg) => arg === `-${shortName}`)
+    : -1;
   const index = fullIndex >= 0 ? fullIndex : shortIndex;
   return index >= 0 && args[index + 1] ? args[index + 1] : null;
 }
@@ -100,7 +102,9 @@ function getOption(name, shortName = null) {
 const poolAddress = getOption('pool', 'p');
 const stakeMint = getOption('stake-mint', 'm');
 const cluster = getOption('cluster', 'u') || 'devnet';
-const keypairPath = getOption('keypair', 'k') || path.join(os.homedir(), '.config', 'solana', 'id.json');
+const keypairPath =
+  getOption('keypair', 'k') ||
+  path.join(os.homedir(), '.config', 'solana', 'id.json');
 let programId = getOption('program-id');
 
 echo(chalk.blue('\n' + '='.repeat(60)));
@@ -137,20 +141,25 @@ try {
 if (!programId) {
   echo(chalk.cyan('Auto-detecting program ID from repository...'));
   const folders = getProgramFolders();
-  
+
   if (folders.length > 0) {
     const folder = folders[0];
     const programName = getCargo(folder).package.name.replace(/-/g, '_');
-    const targetKeypairPath = path.join(process.cwd(), 'target', 'deploy', `${programName}-keypair.json`);
+    const targetKeypairPath = path.join(
+      process.cwd(),
+      'target',
+      'deploy',
+      `${programName}-keypair.json`
+    );
     const programKeypairPath = path.join(folder, 'keypair.json');
-    
+
     let programKeypair = null;
     if (await fs.pathExists(targetKeypairPath)) {
       programKeypair = targetKeypairPath;
     } else if (await fs.pathExists(programKeypairPath)) {
       programKeypair = programKeypairPath;
     }
-    
+
     if (programKeypair) {
       try {
         const result = await $`solana-keygen pubkey ${programKeypair}`;
@@ -161,9 +170,11 @@ if (!programId) {
       }
     }
   }
-  
+
   if (!programId) {
-    echo(chalk.red('❌ Could not determine program ID. Use --program-id option.\n'));
+    echo(
+      chalk.red('❌ Could not determine program ID. Use --program-id option.\n')
+    );
     process.exit(1);
   }
 }
@@ -174,7 +185,11 @@ if (poolAddress) {
   echo(chalk.gray(`  Pool Address: ${poolAddress}`));
 } else if (stakeMint) {
   echo(chalk.gray(`  Stake Mint: ${stakeMint}`));
-  echo(chalk.yellow(`  Pool Address: (will be derived from authority + stake mint)`));
+  echo(
+    chalk.yellow(
+      `  Pool Address: (will be derived from authority + stake mint)`
+    )
+  );
 }
 echo(chalk.gray(`  Program ID: ${programId}`));
 echo(chalk.gray(`  Current Authority: ${currentAuthority}`));
@@ -191,7 +206,7 @@ if (!finalPoolAddress && stakeMint) {
   echo(chalk.gray(`    authority: ${currentAuthority}`));
   echo(chalk.gray(`    stakeMint: ${stakeMint}`));
   echo(chalk.gray(`    programId: ${programId}\n`));
-  
+
   echo(chalk.yellow('  Note: This script shows the configuration.'));
   echo(chalk.yellow('  To execute, use the TypeScript client or frontend.\n'));
 }
@@ -217,7 +232,11 @@ echo(chalk.gray('  # Import getNominateNewAuthorityInstruction'));
 echo(chalk.gray('  # Build and send transaction\n'));
 
 echo(chalk.cyan('Option 2: Use JavaScript Client'));
-echo(chalk.gray('  import { getNominateNewAuthorityInstruction } from "@yourwallet/stake-pool";'));
+echo(
+  chalk.gray(
+    '  import { getNominateNewAuthorityInstruction } from "@yourwallet/stake-pool";'
+  )
+);
 echo(chalk.gray('  '));
 echo(chalk.gray('  const nominateIx = getNominateNewAuthorityInstruction({'));
 echo(chalk.gray(`    pool: ${finalPoolAddress || 'derivedPoolAddress'},`));
@@ -235,7 +254,11 @@ echo(chalk.gray('  Use wallet adapters to sign with current authority\n'));
 echo(chalk.blue('After Nomination:'));
 echo(chalk.gray(`  1. Verify transaction on explorer`));
 echo(chalk.gray(`  2. New authority (${newAuthorityKey}) must accept:`));
-echo(chalk.gray(`     pnpm programs:pool:accept-authority --pool ${finalPoolAddress || '<POOL_ADDRESS>'}\n`));
+echo(
+  chalk.gray(
+    `     pnpm programs:pool:accept-authority --pool ${finalPoolAddress || '<POOL_ADDRESS>'}\n`
+  )
+);
 
 echo(chalk.green('✓ Configuration validated!\n'));
 
