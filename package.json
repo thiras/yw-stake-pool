@@ -1,6 +1,11 @@
 {
   "private": true,
   "scripts": {
+    "clean": "pnpm clean:builds && pnpm clean:deps && pnpm install:all && pnpm rebuild",
+    "clean:builds": "pnpm programs:clean && rm -rf clients/js/dist example/dist && echo '✓ Build artifacts cleaned'",
+    "clean:deps": "rm -rf node_modules clients/js/node_modules example/node_modules && echo '✓ Dependencies cleaned'",
+    "install:all": "pnpm install && cd clients/js && pnpm install && pnpm build && cd ../.. && cd example && pnpm install && cd .. && echo '✓ Dependencies installed and client built'",
+    "rebuild": "pnpm generate && cd clients/js && pnpm build && echo '✓ Client rebuilt'",
     "programs:build": "zx ./scripts/program/build.mjs",
     "programs:test": "zx ./scripts/program/test.mjs",
     "programs:clean": "zx ./scripts/program/clean.mjs",
