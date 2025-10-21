@@ -24,10 +24,10 @@
     "clients:js:publish": "zx ./scripts/client/publish-js.mjs",
     "clients:js:test": "zx ./scripts/client/test-js.mjs",
     "example:build": "cd example && pnpm build",
-    "example:simple": "cd example && pnpm simple --",
-    "example:pool-admin": "cd example && pnpm pool-admin --",
-    "example:user-staking": "cd example && pnpm user-staking --",
-    "example:devnet": "cd example && pnpm devnet-test --",
+    "example:simple": "cd example && pnpm simple",
+    "example:pool-admin": "cd example && pnpm pool-admin",
+    "example:user-staking": "cd example && pnpm user-staking",
+    "example:devnet": "cd example && pnpm devnet-test",
     "prepare": "husky"
   },
   "devDependencies": {
