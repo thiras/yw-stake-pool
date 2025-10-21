@@ -918,10 +918,10 @@ fn close_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Ensure stake account is empty (no staked amount)
     if stake_account_data.amount_staked != 0 {
         msg!(
-            "Cannot close stake account with balance. Amount staked: {}",
+            "Cannot close stake account with non-zero balance. Amount staked: {}",
             stake_account_data.amount_staked
         );
-        return Err(StakePoolError::InsufficientStakedBalance.into());
+        return Err(StakePoolError::ExpectedEmptyAccount.into());
     }
 
     // Close the account and recover rent
