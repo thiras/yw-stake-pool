@@ -15,6 +15,7 @@ import {
 import {
   type ParsedAcceptAuthorityInstruction,
   type ParsedClaimRewardsInstruction,
+  type ParsedCloseStakeAccountInstruction,
   type ParsedFundRewardsInstruction,
   type ParsedInitializePoolInstruction,
   type ParsedInitializeStakeAccountInstruction,
@@ -42,6 +43,7 @@ export enum StakePoolInstruction {
   FundRewards,
   NominateNewAuthority,
   AcceptAuthority,
+  CloseStakeAccount,
 }
 
 export function identifyStakePoolInstruction(
@@ -74,6 +76,9 @@ export function identifyStakePoolInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(8), 0)) {
     return StakePoolInstruction.AcceptAuthority;
+  }
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+    return StakePoolInstruction.CloseStakeAccount;
   }
   throw new Error(
     'The provided instruction could not be identified as a stakePool instruction.'
@@ -109,4 +114,7 @@ export type ParsedStakePoolInstruction<
     } & ParsedNominateNewAuthorityInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.AcceptAuthority;
-    } & ParsedAcceptAuthorityInstruction<TProgram>);
+    } & ParsedAcceptAuthorityInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.CloseStakeAccount;
+    } & ParsedCloseStakeAccountInstruction<TProgram>);

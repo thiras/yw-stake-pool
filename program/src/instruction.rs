@@ -110,4 +110,10 @@ pub enum StakePoolInstruction {
     #[account(0, writable, name="pool", desc = "The stake pool")]
     #[account(1, signer, name="pending_authority", desc = "The pending authority accepting the transfer")]
     AcceptAuthority,
+
+    /// Close an empty stake account and recover rent
+    #[account(0, writable, name="stake_account", desc = "The stake account to close")]
+    #[account(1, signer, name="owner", desc = "The stake account owner")]
+    #[account(2, writable, name="receiver", desc = "Account to receive the rent lamports")]
+    CloseStakeAccount,
 }

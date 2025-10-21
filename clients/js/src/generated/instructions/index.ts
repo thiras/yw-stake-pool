@@ -8,6 +8,7 @@
 
 export * from './acceptAuthority';
 export * from './claimRewards';
+export * from './closeStakeAccount';
 export * from './fundRewards';
 export * from './initializePool';
 export * from './initializeStakeAccount';

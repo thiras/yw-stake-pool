@@ -617,6 +617,40 @@
         "type": "u8",
         "value": 8
       }
+    },
+    {
+      "name": "CloseStakeAccount",
+      "accounts": [
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake account to close"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The stake account owner"
+          ]
+        },
+        {
+          "name": "receiver",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account to receive the rent lamports"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 9
+      }
     }
   ],
   "accounts": [
@@ -656,6 +690,10 @@
             "type": "u64"
           },
           {
+            "name": "totalRewardsOwed",
+            "type": "u64"
+          },
+          {
             "name": "rewardRate",
             "type": "u64"
           },
@@ -685,6 +723,15 @@
             "name": "poolEndDate",
             "type": {
               "option": "i64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
             }
           }
         ]
@@ -872,6 +919,11 @@
       "code": 23,
       "name": "PoolEnded",
       "msg": "Pool has ended (no new stakes allowed)"
+    },
+    {
+      "code": 24,
+      "name": "InvalidParameters",
+      "msg": "Invalid parameters"
     }
   ],
   "metadata": {

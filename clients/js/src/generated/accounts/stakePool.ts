@@ -13,10 +13,14 @@ import {
   decodeAccount,
   fetchEncodedAccount,
   fetchEncodedAccounts,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
   getBooleanDecoder,
   getBooleanEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getI64Decoder,
   getI64Encoder,
   getOptionDecoder,
@@ -39,6 +43,7 @@ import {
   type MaybeEncodedAccount,
   type Option,
   type OptionOrNullable,
+  type ReadonlyUint8Array,
 } from '@solana/kit';
 import { getKeyDecoder, getKeyEncoder, type Key, type KeyArgs } from '../types';
 
@@ -50,6 +55,7 @@ export type StakePool = {
   stakeVault: Address;
   rewardVault: Address;
   totalStaked: bigint;
+  totalRewardsOwed: bigint;
   rewardRate: bigint;
   minStakeAmount: bigint;
   lockupPeriod: bigint;
@@ -57,6 +63,7 @@ export type StakePool = {
   bump: number;
   pendingAuthority: Option<Address>;
   poolEndDate: Option<bigint>;
+  reserved: ReadonlyUint8Array;
 };
 
 export type StakePoolArgs = {
@@ -67,6 +74,7 @@ export type StakePoolArgs = {
   stakeVault: Address;
   rewardVault: Address;
   totalStaked: number | bigint;
+  totalRewardsOwed: number | bigint;
   rewardRate: number | bigint;
   minStakeAmount: number | bigint;
   lockupPeriod: number | bigint;
@@ -74,6 +82,7 @@ export type StakePoolArgs = {
   bump: number;
   pendingAuthority: OptionOrNullable<Address>;
   poolEndDate: OptionOrNullable<number | bigint>;
+  reserved: ReadonlyUint8Array;
 };
 
 export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
@@ -85,6 +94,7 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
     ['stakeVault', getAddressEncoder()],
     ['rewardVault', getAddressEncoder()],
     ['totalStaked', getU64Encoder()],
+    ['totalRewardsOwed', getU64Encoder()],
     ['rewardRate', getU64Encoder()],
     ['minStakeAmount', getU64Encoder()],
     ['lockupPeriod', getI64Encoder()],
@@ -92,6 +102,7 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
     ['bump', getU8Encoder()],
     ['pendingAuthority', getOptionEncoder(getAddressEncoder())],
     ['poolEndDate', getOptionEncoder(getI64Encoder())],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
 }
 
@@ -104,6 +115,7 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['stakeVault', getAddressDecoder()],
     ['rewardVault', getAddressDecoder()],
     ['totalStaked', getU64Decoder()],
+    ['totalRewardsOwed', getU64Decoder()],
     ['rewardRate', getU64Decoder()],
     ['minStakeAmount', getU64Decoder()],
     ['lockupPeriod', getI64Decoder()],
@@ -111,6 +123,7 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['bump', getU8Decoder()],
     ['pendingAuthority', getOptionDecoder(getAddressDecoder())],
     ['poolEndDate', getOptionDecoder(getI64Decoder())],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
