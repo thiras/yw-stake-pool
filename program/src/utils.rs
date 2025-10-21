@@ -8,7 +8,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use solana_sdk_ids::system_program;
-use spl_token_2022::{extension::StateWithExtensions, instruction::transfer_checked};
+use spl_token_2022::{extension::StateWithExtensions, instruction::transfer_checked, state::Mint};
 
 use crate::error::StakePoolError;
 
@@ -17,7 +17,7 @@ use crate::error::StakePoolError;
 pub fn create_account<'a>(
     target_account: &AccountInfo<'a>,
     funding_account: &AccountInfo<'a>,
-    system_program_account: &AccountInfo<'a>,
+    _system_program_account: &AccountInfo<'a>,
     size: usize,
     owner: &Pubkey,
     signer_seeds: Option<&[&[&[u8]]]>,
@@ -35,11 +35,7 @@ pub fn create_account<'a>(
 
     invoke_signed(
         &create_account_ix,
-        &[
-            funding_account.clone(),
-            target_account.clone(),
-            system_program_account.clone(),
-        ],
+        &[funding_account.clone(), target_account.clone()],
         signer_seeds.unwrap_or(&[]),
     )
 }
@@ -168,34 +164,29 @@ pub fn transfer_lamports_from_pdas<'a>(
 }
 
 /// Transfer tokens with support for Token-2022 transfer fees
-/// Note: This function assumes the mint account has 9 decimals
-/// In production, you should pass the mint account and read decimals from it
+/// Safely extracts decimals from the mint account using proper unpacking
 pub fn transfer_tokens_with_fee<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
+    mint: &AccountInfo<'a>,
     authority: &AccountInfo<'a>,
     token_program: &AccountInfo<'a>,
     amount: u64,
     signer_seeds: &[&[&[u8]]],
 ) -> Result<u64, ProgramError> {
-    // Get mint from the token account
-    let from_data = from.try_borrow_data()?;
-    let from_account = StateWithExtensions::<spl_token_2022::state::Account>::unpack(&from_data)
-        .map_err(|_| StakePoolError::InvalidTokenProgram)?;
-    let mint_key = from_account.base.mint;
-    drop(from_data);
+    // Safely unpack the mint account to get decimals
+    let mint_data = mint.try_borrow_data()?;
+    let mint_state = StateWithExtensions::<Mint>::unpack(&mint_data)?;
+    let decimals = mint_state.base.decimals;
+    drop(mint_data);
 
-    // For simplicity, use 9 decimals (standard for most SPL tokens)
-    // In production, you should get this from the mint account
-    let decimals = 9;
-
-    let accounts = vec![from.clone(), to.clone(), authority.clone()];
+    let accounts = vec![from.clone(), to.clone(), mint.clone(), authority.clone()];
 
     // Use transfer_checked for Token-2022 (supports transfer fees automatically)
     let transfer_ix = transfer_checked(
         token_program.key,
         from.key,
-        &mint_key,
+        mint.key,
         to.key,
         authority.key,
         &[],

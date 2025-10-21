@@ -65,15 +65,119 @@ Program Structure:
 
 ## Quick Start
 
-## Project setup
+### Installation
 
-The first thing you'll want to do is install NPM dependencies which will allow you to access all the scripts and tools provided by this template.
+```sh
+# Clone the repository
+git clone https://github.com/yourwalletio/yw-stake-pool.git
+cd yw-stake-pool
+
+# Install dependencies
+pnpm install
+```
+
+### Running Examples
+
+The `example` directory contains comprehensive examples demonstrating all stake pool functionality:
+
+```sh
+# Build the example code
+cd example
+pnpm install
+pnpm build
+
+# Run examples:
+pnpm simple           # Basic instruction creation (no network calls)
+pnpm pool-admin       # Pool management demos
+pnpm user-staking     # User staking workflow demos
+pnpm devnet-test      # Live integration test on Solana devnet
+```
+
+See [example/README.md](./example/README.md) for detailed documentation.
+
+### Development
+
+Build and test the program locally:
+
+```sh
+pnpm programs:build
+pnpm programs:test
+```
+
+### Using the Client Library
+
+Install the JavaScript/TypeScript client:
+
+```sh
+npm install @yourwallet/stake-pool
+# or
+pnpm add @yourwallet/stake-pool
+```
+
+Basic usage:
+
+```typescript
+import { 
+  getInitializePoolInstruction,
+  getStakeInstruction,
+  getClaimRewardsInstruction,
+} from '@yourwallet/stake-pool';
+
+// Initialize a pool
+const initIx = getInitializePoolInstruction({
+  pool: poolAddress,
+  authority: authority,
+  stakeMint,
+  rewardMint,
+  stakeVault,
+  rewardVault,
+  payer: authority,
+  tokenProgram: TOKEN_PROGRAM_ID,
+  systemProgram: SYSTEM_PROGRAM_ID,
+  rent: SYSVAR_RENT_PUBKEY,
+  rewardRate: 100_000_000n,      // 10% APY
+  minStakeAmount: 1_000_000n,    // 1 token (6 decimals)
+  lockupPeriod: 86400n,          // 1 day
+  poolEndDate: null,
+});
+
+// Stake tokens
+const stakeIx = getStakeInstruction({
+  pool: poolAddress,
+  stakeAccount: stakeAccountAddress,
+  owner: user,
+  userTokenAccount,
+  stakeVault,
+  rewardVault,
+  stakeMint,
+  tokenProgram: TOKEN_PROGRAM_ID,
+  payer: user,
+  systemProgram: SYSTEM_PROGRAM_ID,
+  amount: 100_000_000n,  // 100 tokens
+  index: 0n,
+});
+```
+
+See [clients/js/README.md](./clients/js/README.md) for full API documentation.
+
+## Documentation
+
+- **[Example Code](./example/README.md)** - Comprehensive examples with live devnet test
+- **[Client Library](./clients/js/README.md)** - JavaScript/TypeScript API documentation
+- **[Security Audit](./SECURITY_AUDIT.md)** - Detailed security analysis
+- **[Program Documentation](#architecture)** - Architecture and design decisions
+
+## Development
+
+### Project Setup
+
+Install dependencies:
 
 ```sh
 pnpm install
 ```
 
-## Managing programs
+### Managing programs
 
 You'll notice a `program` folder in the root of this repository. This is where your generated Solana program is located.
 
@@ -158,3 +262,11 @@ Next time you build your program and run your validator, these external programs
 pnpm programs:build
 pnpm validator:restart
 ```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT - See [LICENSE](./LICENSE) for details.

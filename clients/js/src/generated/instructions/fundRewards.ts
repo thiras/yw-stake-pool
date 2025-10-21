@@ -45,6 +45,7 @@ export type FundRewardsInstruction<
   TAccountFunder extends string | AccountMeta<string> = string,
   TAccountFunderTokenAccount extends string | AccountMeta<string> = string,
   TAccountRewardVault extends string | AccountMeta<string> = string,
+  TAccountRewardMint extends string | AccountMeta<string> = string,
   TAccountTokenProgram extends
     | string
     | AccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
@@ -66,6 +67,9 @@ export type FundRewardsInstruction<
       TAccountRewardVault extends string
         ? WritableAccount<TAccountRewardVault>
         : TAccountRewardVault,
+      TAccountRewardMint extends string
+        ? ReadonlyAccount<TAccountRewardMint>
+        : TAccountRewardMint,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
@@ -112,6 +116,7 @@ export type FundRewardsInput<
   TAccountFunder extends string = string,
   TAccountFunderTokenAccount extends string = string,
   TAccountRewardVault extends string = string,
+  TAccountRewardMint extends string = string,
   TAccountTokenProgram extends string = string,
 > = {
   /** The stake pool */
@@ -122,6 +127,8 @@ export type FundRewardsInput<
   funderTokenAccount: Address<TAccountFunderTokenAccount>;
   /** Pool's reward vault */
   rewardVault: Address<TAccountRewardVault>;
+  /** The reward token mint */
+  rewardMint: Address<TAccountRewardMint>;
   /** The token program */
   tokenProgram?: Address<TAccountTokenProgram>;
   amount: FundRewardsInstructionDataArgs['amount'];
@@ -132,6 +139,7 @@ export function getFundRewardsInstruction<
   TAccountFunder extends string,
   TAccountFunderTokenAccount extends string,
   TAccountRewardVault extends string,
+  TAccountRewardMint extends string,
   TAccountTokenProgram extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
@@ -140,6 +148,7 @@ export function getFundRewardsInstruction<
     TAccountFunder,
     TAccountFunderTokenAccount,
     TAccountRewardVault,
+    TAccountRewardMint,
     TAccountTokenProgram
   >,
   config?: { programAddress?: TProgramAddress }
@@ -149,6 +158,7 @@ export function getFundRewardsInstruction<
   TAccountFunder,
   TAccountFunderTokenAccount,
   TAccountRewardVault,
+  TAccountRewardMint,
   TAccountTokenProgram
 > {
   // Program address.
@@ -163,6 +173,7 @@ export function getFundRewardsInstruction<
       isWritable: true,
     },
     rewardVault: { value: input.rewardVault ?? null, isWritable: true },
+    rewardMint: { value: input.rewardMint ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -186,6 +197,7 @@ export function getFundRewardsInstruction<
       getAccountMeta(accounts.funder),
       getAccountMeta(accounts.funderTokenAccount),
       getAccountMeta(accounts.rewardVault),
+      getAccountMeta(accounts.rewardMint),
       getAccountMeta(accounts.tokenProgram),
     ],
     data: getFundRewardsInstructionDataEncoder().encode(
@@ -198,6 +210,7 @@ export function getFundRewardsInstruction<
     TAccountFunder,
     TAccountFunderTokenAccount,
     TAccountRewardVault,
+    TAccountRewardMint,
     TAccountTokenProgram
   >);
 }
@@ -216,8 +229,10 @@ export type ParsedFundRewardsInstruction<
     funderTokenAccount: TAccountMetas[2];
     /** Pool's reward vault */
     rewardVault: TAccountMetas[3];
+    /** The reward token mint */
+    rewardMint: TAccountMetas[4];
     /** The token program */
-    tokenProgram: TAccountMetas[4];
+    tokenProgram: TAccountMetas[5];
   };
   data: FundRewardsInstructionData;
 };
@@ -230,7 +245,7 @@ export function parseFundRewardsInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedFundRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -247,6 +262,7 @@ export function parseFundRewardsInstruction<
       funder: getNextAccount(),
       funderTokenAccount: getNextAccount(),
       rewardVault: getNextAccount(),
+      rewardMint: getNextAccount(),
       tokenProgram: getNextAccount(),
     },
     data: getFundRewardsInstructionDataDecoder().decode(instruction.data),

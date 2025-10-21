@@ -198,6 +198,15 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>], index: u64) -> 
     seeds_with_bump.push(vec![bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
 
+    // Diagnostic logging: print payer and target account lamports and pubkeys
+    msg!(
+        "Creating stake account: target={} payer={} target_lamports={} payer_lamports={}",
+        ctx.accounts.stake_account.key,
+        ctx.accounts.payer.key,
+        ctx.accounts.stake_account.lamports(),
+        ctx.accounts.payer.lamports()
+    );
+
     create_account(
         ctx.accounts.stake_account,
         ctx.accounts.payer,
@@ -330,6 +339,15 @@ fn stake<'a>(
     seeds_with_bump.push(vec![bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
 
+    // Diagnostic logging: print payer and target account lamports and pubkeys
+    msg!(
+        "Stake() - creating stake account: target={} payer={} target_lamports={} payer_lamports={}",
+        ctx.accounts.stake_account.key,
+        ctx.accounts.payer.key,
+        ctx.accounts.stake_account.lamports(),
+        ctx.accounts.payer.lamports()
+    );
+
     create_account(
         ctx.accounts.stake_account,
         ctx.accounts.payer,
@@ -343,6 +361,7 @@ fn stake<'a>(
     let transfer_amount = transfer_tokens_with_fee(
         ctx.accounts.user_token_account,
         ctx.accounts.stake_vault,
+        ctx.accounts.stake_mint,
         ctx.accounts.owner,
         ctx.accounts.token_program,
         amount,
@@ -435,6 +454,7 @@ fn unstake<'a>(
     let _transfer_amount = transfer_tokens_with_fee(
         ctx.accounts.stake_vault,
         ctx.accounts.user_token_account,
+        ctx.accounts.stake_mint,
         ctx.accounts.pool,
         ctx.accounts.token_program,
         amount,
@@ -522,6 +542,7 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     transfer_tokens_with_fee(
         ctx.accounts.reward_vault,
         ctx.accounts.user_reward_account,
+        ctx.accounts.reward_mint,
         ctx.accounts.pool,
         ctx.accounts.token_program,
         unclaimed_rewards,
@@ -609,6 +630,7 @@ fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResu
     transfer_tokens_with_fee(
         ctx.accounts.funder_token_account,
         ctx.accounts.reward_vault,
+        ctx.accounts.reward_mint,
         ctx.accounts.funder,
         ctx.accounts.token_program,
         amount,

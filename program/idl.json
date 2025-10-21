@@ -218,6 +218,14 @@
           ]
         },
         {
+          "name": "stakeMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token mint being staked"
+          ]
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false,
@@ -313,6 +321,14 @@
           ]
         },
         {
+          "name": "stakeMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token mint being staked"
+          ]
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false,
@@ -387,6 +403,14 @@
           "isSigner": false,
           "docs": [
             "Pool's reward vault"
+          ]
+        },
+        {
+          "name": "rewardMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The reward token mint"
           ]
         },
         {
@@ -504,6 +528,14 @@
           "isSigner": false,
           "docs": [
             "Pool's reward vault"
+          ]
+        },
+        {
+          "name": "rewardMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The reward token mint"
           ]
         },
         {
@@ -844,7 +876,7 @@
   ],
   "metadata": {
     "origin": "shank",
-    "address": "Bdm2SF3wrRLmo2t9MyGKydLHAgU5Bhxif8wN9HNMYfSH",
+    "address": "8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR",
     "binaryVersion": "0.4.5",
     "libVersion": "^0.4.2"
   }

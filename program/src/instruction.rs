@@ -38,9 +38,10 @@ pub enum StakePoolInstruction {
     #[account(3, writable, name="user_token_account", desc = "User's token account")]
     #[account(4, writable, name="stake_vault", desc = "Pool's stake vault")]
     #[account(5, name="reward_vault", desc = "Pool's reward vault (for checking available rewards)")]
-    #[account(6, name="token_program", desc = "The token program (Token or Token-2022)")]
-    #[account(7, writable, signer, name="payer", desc = "The account paying for rent")]
-    #[account(8, name="system_program", desc = "The system program")]
+    #[account(6, name="stake_mint", desc = "The token mint being staked")]
+    #[account(7, name="token_program", desc = "The token program (Token or Token-2022)")]
+    #[account(8, writable, signer, name="payer", desc = "The account paying for rent")]
+    #[account(9, name="system_program", desc = "The system program")]
     Stake {
         amount: u64,
         index: u64,
@@ -56,8 +57,9 @@ pub enum StakePoolInstruction {
     #[account(2, signer, name="owner", desc = "The stake account owner")]
     #[account(3, writable, name="user_token_account", desc = "User's token account")]
     #[account(4, writable, name="stake_vault", desc = "Pool's stake vault")]
-    #[account(5, name="token_program", desc = "The token program")]
-    #[account(6, name="clock", desc = "Clock sysvar")]
+    #[account(5, name="stake_mint", desc = "The token mint being staked")]
+    #[account(6, name="token_program", desc = "The token program")]
+    #[account(7, name="clock", desc = "Clock sysvar")]
     Unstake {
         amount: u64,
         /// Frontrunning protection: expected reward rate (optional)
@@ -70,8 +72,9 @@ pub enum StakePoolInstruction {
     #[account(2, signer, name="owner", desc = "The stake account owner")]
     #[account(3, writable, name="user_reward_account", desc = "User's reward token account")]
     #[account(4, writable, name="reward_vault", desc = "Pool's reward vault")]
-    #[account(5, name="token_program", desc = "The token program")]
-    #[account(6, name="clock", desc = "Clock sysvar")]
+    #[account(5, name="reward_mint", desc = "The reward token mint")]
+    #[account(6, name="token_program", desc = "The token program")]
+    #[account(7, name="clock", desc = "Clock sysvar")]
     ClaimRewards,
 
     /// Update pool settings (authority only)
@@ -91,7 +94,8 @@ pub enum StakePoolInstruction {
     #[account(1, signer, name="funder", desc = "The account funding rewards")]
     #[account(2, writable, name="funder_token_account", desc = "Funder's reward token account")]
     #[account(3, writable, name="reward_vault", desc = "Pool's reward vault")]
-    #[account(4, name="token_program", desc = "The token program")]
+    #[account(4, name="reward_mint", desc = "The reward token mint")]
+    #[account(5, name="token_program", desc = "The token program")]
     FundRewards { amount: u64 },
 
     /// Nominate a new authority (current authority only)
