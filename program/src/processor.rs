@@ -159,6 +159,10 @@ fn initialize_pool<'a>(
     assert_signer("authority", ctx.accounts.authority)?;
     assert_signer("payer", ctx.accounts.payer)?;
     assert_empty("pool", ctx.accounts.pool)?;
+    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("stake_vault", ctx.accounts.stake_vault)?;
+    assert_writable("reward_vault", ctx.accounts.reward_vault)?;
+    assert_writable("payer", ctx.accounts.payer)?;
 
     // Verify token accounts
     verify_token_account(ctx.accounts.stake_vault, ctx.accounts.stake_mint.key)?;
@@ -219,9 +223,17 @@ fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>], index: u64) -> 
     assert_signer("owner", ctx.accounts.owner)?;
     assert_signer("payer", ctx.accounts.payer)?;
     assert_empty("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("payer", ctx.accounts.payer)?;
 
     // Verify pool exists
     assert_non_empty("pool", ctx.accounts.pool)?;
+
+    // Verify pool account discriminator
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
 
     // Note: We cannot enforce sequential indices on-chain without additional state.
     // Users should track their next available index off-chain.
@@ -284,6 +296,9 @@ fn stake<'a>(
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
@@ -314,11 +329,26 @@ fn stake<'a>(
     assert_signer("owner", ctx.accounts.owner)?;
     assert_signer("payer", ctx.accounts.payer)?;
     assert_empty("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("user_token_account", ctx.accounts.user_token_account)?;
+    assert_writable("stake_vault", ctx.accounts.stake_vault)?;
+    assert_writable("payer", ctx.accounts.payer)?;
+    assert_same_pubkeys(
+        "stake_vault",
+        ctx.accounts.stake_vault,
+        &pool_data.stake_vault,
+    )?;
     assert_same_pubkeys(
         "reward_vault",
         ctx.accounts.reward_vault,
         &pool_data.reward_vault,
     )?;
+    assert_same_pubkeys("stake_mint", ctx.accounts.stake_mint, &pool_data.stake_mint)?;
+
+    // Verify token accounts belong to correct mints
+    verify_token_account(ctx.accounts.user_token_account, &pool_data.stake_mint)?;
+    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint)?;
 
     if pool_data.is_paused {
         return Err(StakePoolError::PoolPaused.into());
@@ -465,6 +495,10 @@ fn unstake<'a>(
         Key::StakeAccount,
     )?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+    assert_program_owner("stake_account", ctx.accounts.stake_account, &crate::ID)?;
+
     // Load accounts
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
     let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
@@ -483,8 +517,22 @@ fn unstake<'a>(
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
+    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("user_token_account", ctx.accounts.user_token_account)?;
+    assert_writable("stake_vault", ctx.accounts.stake_vault)?;
     assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
     assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account_data.pool)?;
+    assert_same_pubkeys(
+        "stake_vault",
+        ctx.accounts.stake_vault,
+        &pool_data.stake_vault,
+    )?;
+    assert_same_pubkeys("stake_mint", ctx.accounts.stake_mint, &pool_data.stake_mint)?;
+
+    // Verify token accounts belong to correct mints
+    verify_token_account(ctx.accounts.user_token_account, &pool_data.stake_mint)?;
+    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint)?;
 
     if stake_account_data.amount_staked < amount {
         return Err(StakePoolError::InsufficientStakedBalance.into());
@@ -612,14 +660,36 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         Key::StakeAccount,
     )?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+    assert_program_owner("stake_account", ctx.accounts.stake_account, &crate::ID)?;
+
     // Load accounts
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
     let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
+    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("user_reward_account", ctx.accounts.user_reward_account)?;
+    assert_writable("reward_vault", ctx.accounts.reward_vault)?;
     assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
     assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account_data.pool)?;
+    assert_same_pubkeys(
+        "reward_vault",
+        ctx.accounts.reward_vault,
+        &pool_data.reward_vault,
+    )?;
+    assert_same_pubkeys(
+        "reward_mint",
+        ctx.accounts.reward_mint,
+        &pool_data.reward_mint,
+    )?;
+
+    // Verify token accounts belong to correct mints
+    verify_token_account(ctx.accounts.user_reward_account, &pool_data.reward_mint)?;
+    verify_token_account(ctx.accounts.reward_vault, &pool_data.reward_mint)?;
 
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
@@ -703,11 +773,15 @@ fn update_pool<'a>(
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("authority", ctx.accounts.authority)?;
+    assert_writable("pool", ctx.accounts.pool)?;
     assert_same_pubkeys("authority", ctx.accounts.authority, &pool_data.authority)?;
 
     // Update fields
@@ -769,16 +843,30 @@ fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResu
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("funder", ctx.accounts.funder)?;
+    assert_writable("funder_token_account", ctx.accounts.funder_token_account)?;
+    assert_writable("reward_vault", ctx.accounts.reward_vault)?;
     assert_same_pubkeys(
         "reward_vault",
         ctx.accounts.reward_vault,
         &pool_data.reward_vault,
     )?;
+    assert_same_pubkeys(
+        "reward_mint",
+        ctx.accounts.reward_mint,
+        &pool_data.reward_mint,
+    )?;
+
+    // Verify token accounts belong to correct mints
+    verify_token_account(ctx.accounts.funder_token_account, &pool_data.reward_mint)?;
+    verify_token_account(ctx.accounts.reward_vault, &pool_data.reward_mint)?;
 
     // Transfer reward tokens to pool
     transfer_tokens_with_fee(
@@ -802,11 +890,15 @@ fn nominate_new_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult 
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("current_authority", ctx.accounts.current_authority)?;
+    assert_writable("pool", ctx.accounts.pool)?;
     assert_same_pubkeys(
         "current_authority",
         ctx.accounts.current_authority,
@@ -837,11 +929,15 @@ fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("pending_authority", ctx.accounts.pending_authority)?;
+    assert_writable("pool", ctx.accounts.pool)?;
 
     // Verify there is a pending authority
     let pending_authority = pool_data
@@ -883,11 +979,16 @@ fn close_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         Key::StakeAccount,
     )?;
 
+    // Verify program ownership
+    assert_program_owner("stake_account", ctx.accounts.stake_account, &crate::ID)?;
+
     // Load stake account
     let stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("receiver", ctx.accounts.receiver)?;
     assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
 
     // Ensure stake account is empty (no staked amount)
