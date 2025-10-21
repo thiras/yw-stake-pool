@@ -82,7 +82,7 @@ try {
   
   console.log('   ✅ Created successfully');
   console.log(`   Accounts: ${stakeIx.accounts?.length || 0}`);
-  console.log(`   Creates account and stakes 1 token`);
+  console.log(`   Creates account and stakes 1 token (1,000,000 base units)`);
 } catch (error) {
   console.log('   ❌ Error:', (error as Error).message);
 }
