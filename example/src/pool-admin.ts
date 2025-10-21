@@ -90,6 +90,7 @@ async function main() {
       funder: admin,
       funderTokenAccount: rewardVault,
       rewardVault,
+      rewardMint,
       tokenProgram: config.tokenProgramId,
       amount: fundAmount,
     });

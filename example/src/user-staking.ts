@@ -100,6 +100,7 @@ async function main() {
       userTokenAccount: userStakeTokenAccount,
       stakeVault,
       rewardVault,
+      stakeMint,
       tokenProgram: config.tokenProgramId,
       payer: user,
       systemProgram: config.systemProgramId,
@@ -136,13 +137,14 @@ async function main() {
       userTokenAccount: userStakeTokenAccount,
       stakeVault,
       rewardVault,
+      stakeMint,
       tokenProgram: config.tokenProgramId,
       payer: user,
       systemProgram: config.systemProgramId,
       amount: stakeAmount,
       index: stakeIndex,
-      expectedRewardRate: rewardRate, // Verify rate hasn't changed
-      expectedLockupPeriod: config.defaultPoolConfig.lockupPeriod, // Verify lockup hasn't changed
+      expectedRewardRate: config.defaultPoolConfig.rewardRate,
+      expectedLockupPeriod: config.defaultPoolConfig.lockupPeriod,
     });
 
     console.log('✅ Protected stake instruction created');
@@ -167,6 +169,7 @@ async function main() {
       owner: user,
       userRewardAccount: userRewardTokenAccount,
       rewardVault,
+      rewardMint,
       tokenProgram: config.tokenProgramId,
       clock: address('SysvarC1ock11111111111111111111111111111111'),
     });
@@ -190,6 +193,7 @@ async function main() {
       owner: user,
       userTokenAccount: userStakeTokenAccount,
       stakeVault,
+      stakeMint,
       tokenProgram: config.tokenProgramId,
       clock: address('SysvarC1ock11111111111111111111111111111111'),
       amount: partialAmount,
@@ -213,6 +217,7 @@ async function main() {
       owner: user,
       userTokenAccount: userStakeTokenAccount,
       stakeVault,
+      stakeMint,
       tokenProgram: config.tokenProgramId,
       clock: address('SysvarC1ock11111111111111111111111111111111'),
       amount: remainingAmount,
@@ -261,6 +266,7 @@ async function main() {
       userTokenAccount: userStakeTokenAccount,
       stakeVault,
       rewardVault,
+      stakeMint,
       tokenProgram: config.tokenProgramId,
       payer: user,
       systemProgram: config.systemProgramId,

@@ -10,7 +10,7 @@
  * 6. Pool management (updates, authority transfer)
  */
 
-import { address } from '@solana/kit';
+import { address, generateKeyPairSigner } from '@solana/kit';
 import {
   getInitializePoolInstruction,
   getInitializeStakeAccountInstruction,
@@ -39,6 +39,7 @@ import {
   handleError,
   calculateRewards,
 } from './utils.js';
+import { setupTestTokens } from './setup-tokens';
 
 /**
  * Main function to run the complete flow
@@ -60,23 +61,42 @@ async function main() {
     // By default, uses your local Solana keypair unless config.useLocalKeypair is false
     const authority = await createFundedKeypair(rpc, 'Authority', config.useLocalKeypair);
 
-    // Create user keypair (staker)
-    // Generate a new keypair for the user to avoid confusion
-    const user = await createFundedKeypair(rpc, 'User', false);
+    // For this example, we'll use the same keypair for both authority and user
+    // This avoids needing to airdrop SOL to a new user account on devnet
+    const user = authority;
+    console.log('📝 Using authority keypair as User for simplified testing');
+    console.log(`   User Address: ${user.address}\n`);
 
     await waitForRateLimit();
 
-    // For this example, we'll use placeholder addresses for mints and token accounts
-    // In a real scenario, you would create actual SPL tokens
-    console.log('\n📝 Note: Using placeholder addresses for tokens');
-    console.log('   In production, create actual SPL tokens using @solana/spl-token');
+    // ========================================================================
+    // Step 1b: Create Real SPL Tokens and Derive Pool PDA
+    // ========================================================================
+    console.log('\n📝 Creating real SPL tokens for testing...');
+    console.log('   This will create mints, vaults, and user token accounts');
 
-    const stakeMint = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-    const rewardMint = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-    const stakeVault = address('11111111111111111111111111111112');
-    const rewardVault = address('11111111111111111111111111111113');
-    const userStakeAccount = address('11111111111111111111111111111114');
-    const userRewardAccount = address('11111111111111111111111111111115');
+    // First, we need to derive the pool PDA to use as the vault owner
+    const stakeMintKeypair = await generateKeyPairSigner();
+    const stakeMint = stakeMintKeypair.address;
+    
+    const [poolAddress] = await findPoolPda(authority.address, stakeMint);
+    console.log(`\n📍 Derived Pool PDA: ${poolAddress}`);
+    console.log('   (Will be used as vault owner)\n');
+
+    const tokens = await setupTestTokens(authority, user, poolAddress, stakeMintKeypair);
+    
+    const rewardMint = tokens.rewardMint;
+    const stakeVault = tokens.stakeVault;
+    const rewardVault = tokens.rewardVault;
+    const authorityRewardAccount = tokens.authorityRewardAccount;
+    const userStakeAccount = tokens.userStakeAccount;
+    const userRewardAccount = tokens.userRewardAccount;
+
+    console.log('\n✅ Token setup complete!');
+    console.log(`   Stake Mint: ${stakeMint}`);
+    console.log(`   Reward Mint: ${rewardMint}`);
+    console.log(`   Stake Vault: ${stakeVault} (owner: pool PDA)`);
+    console.log(`   Reward Vault: ${rewardVault} (owner: pool PDA)`);
 
     // ========================================================================
     // Step 2: Initialize Stake Pool
@@ -88,8 +108,6 @@ async function main() {
     console.log(`  Min Stake: ${formatAmount(config.defaultPoolConfig.minStakeAmount)} tokens`);
     console.log(`  Lockup Period: ${formatDuration(config.defaultPoolConfig.lockupPeriod)}`);
 
-    // Derive pool PDA
-    const [poolAddress] = await findPoolPda(authority.address, stakeMint);
     console.log(`\n📍 Pool Address (PDA): ${poolAddress}`);
 
     // Create and send initialize pool transaction
@@ -126,8 +144,9 @@ async function main() {
     const fundIx = getFundRewardsInstruction({
       pool: poolAddress,
       funder: authority,
-      funderTokenAccount: userRewardAccount,
+      funderTokenAccount: authorityRewardAccount, // Authority's reward account that has the tokens
       rewardVault,
+      rewardMint,
       tokenProgram: config.tokenProgramId,
       amount: fundAmount,
     });
@@ -138,9 +157,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 4: Initialize User Stake Account
+    // Step 4: Stake Tokens
     // ========================================================================
-    logStep(4, 'Initialize User Stake Account');
+    logStep(4, 'Stake Tokens');
 
     const stakeIndex = 0n;
     const [stakeAccountAddress] = await findStakeAccountPda(
@@ -151,27 +170,9 @@ async function main() {
 
     console.log(`📍 Stake Account Address (PDA): ${stakeAccountAddress}`);
 
-    const initStakeAccountIx = getInitializeStakeAccountInstruction({
-      stakeAccount: stakeAccountAddress,
-      pool: poolAddress,
-      owner: user,
-      payer: user,
-      systemProgram: config.systemProgramId,
-      index: stakeIndex,
-    });
-
-    const initStakeSig = await buildAndSendTransaction(rpc, [initStakeAccountIx], user);
-    logTransaction(initStakeSig, 'Stake Account Initialized');
-
-    await waitForRateLimit();
-
-    // ========================================================================
-    // Step 5: Stake Tokens
-    // ========================================================================
-    logStep(5, 'Stake Tokens');
-
     const stakeAmount = config.exampleAmounts.stake;
     console.log(`🔒 Staking ${formatAmount(stakeAmount)} tokens`);
+    console.log(`   (Note: Stake instruction creates the stake account automatically)\n`);
 
     const stakeIx = getStakeInstruction({
       pool: poolAddress,
@@ -179,6 +180,7 @@ async function main() {
       owner: user,
       userTokenAccount: userStakeAccount,
       stakeVault,
+      stakeMint,
       rewardVault,
       tokenProgram: config.tokenProgramId,
       payer: user,
@@ -203,9 +205,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 6: Wait for Lockup Period (simulated)
+    // Step 5: Wait for Lockup Period (simulated)
     // ========================================================================
-    logStep(6, 'Wait for Lockup Period');
+    logStep(5, 'Wait for Lockup Period');
 
     console.log(`⏳ Lockup period: ${formatDuration(config.defaultPoolConfig.lockupPeriod)}`);
     console.log('   (In this example, we simulate the wait)');
@@ -217,9 +219,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 7: Claim Rewards
+    // Step 6: Claim Rewards
     // ========================================================================
-    logStep(7, 'Claim Rewards');
+    logStep(6, 'Claim Rewards');
 
     console.log('💎 Claiming accrued rewards');
 
@@ -229,6 +231,7 @@ async function main() {
       owner: user,
       userRewardAccount,
       rewardVault,
+      rewardMint,
       tokenProgram: config.tokenProgramId,
       clock: address('SysvarC1ock11111111111111111111111111111111'),
     });
@@ -240,9 +243,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 8: Partial Unstake
+    // Step 7: Partial Unstake
     // ========================================================================
-    logStep(8, 'Partial Unstake');
+    logStep(7, 'Partial Unstake');
 
     const unstakeAmount = config.exampleAmounts.unstake;
     console.log(`🔓 Unstaking ${formatAmount(unstakeAmount)} tokens (partial)`);
@@ -253,6 +256,7 @@ async function main() {
       owner: user,
       userTokenAccount: userStakeAccount,
       stakeVault,
+      stakeMint,
       tokenProgram: config.tokenProgramId,
       clock: address('SysvarC1ock11111111111111111111111111111111'),
       amount: unstakeAmount,
@@ -266,9 +270,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 9: Update Pool Parameters
+    // Step 8: Update Pool Parameters
     // ========================================================================
-    logStep(9, 'Update Pool Parameters');
+    logStep(8, 'Update Pool Parameters');
 
     const newRewardRate = 150_000_000n; // 15%
     console.log(`⚙️  Updating pool reward rate to ${formatRewardRate(newRewardRate)}`);
@@ -289,30 +293,35 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 10: Transfer Pool Authority (Two-Step)
+    // Step 9: Transfer Pool Authority (Two-Step)
     // ========================================================================
-    logStep(10, 'Transfer Pool Authority (Two-Step Process)');
+    logStep(9, 'Transfer Pool Authority (Two-Step Process)');
 
-    const newAuthority = await createFundedKeypair(rpc, 'New Authority', false);
+    console.log('⚠️  Note: Authority transfer requires a funded new authority account');
+    console.log('   Skipping this step to avoid devnet airdrop issues');
+    console.log('   In production, generate a new keypair and fund it before transfer\n');
 
-    console.log('Step 10a: Nominate new authority');
-    const nominateIx = getNominateNewAuthorityInstruction({
-      pool: poolAddress,
-      currentAuthority: authority,
-      newAuthority: newAuthority.address,
-    });
-    
-    const nominateSig = await buildAndSendTransaction(rpc, [nominateIx], authority);
-    logTransaction(nominateSig, 'Authority Nominated');
-
-    console.log('\nStep 10b: Accept authority (must be called by new authority)');
-    const acceptIx = getAcceptAuthorityInstruction({
-      pool: poolAddress,
-      pendingAuthority: newAuthority,
-    });
-    
-    const acceptSig = await buildAndSendTransaction(rpc, [acceptIx], newAuthority);
-    logTransaction(acceptSig, 'Authority Transfer Accepted');
+    // Uncomment below to test authority transfer with a new keypair
+    // const newAuthority = await createFundedKeypair(rpc, 'New Authority', false);
+    //
+    // console.log('Step 10a: Nominate new authority');
+    // const nominateIx = getNominateNewAuthorityInstruction({
+    //   pool: poolAddress,
+    //   currentAuthority: authority,
+    //   newAuthority: newAuthority.address,
+    // });
+    // 
+    // const nominateSig = await buildAndSendTransaction(rpc, [nominateIx], authority);
+    // logTransaction(nominateSig, 'Authority Nominated');
+    //
+    // console.log('\nStep 10b: Accept authority (must be called by new authority)');
+    // const acceptIx = getAcceptAuthorityInstruction({
+    //   pool: poolAddress,
+    //   pendingAuthority: newAuthority,
+    // });
+    // 
+    // const acceptSig = await buildAndSendTransaction(rpc, [acceptIx], newAuthority);
+    // logTransaction(acceptSig, 'Authority Transfer Accepted');
 
     // ========================================================================
     // Summary
@@ -323,13 +332,11 @@ async function main() {
     console.log('📋 Transaction Summary:');
     console.log(`   1. ✅ Pool Initialized - ${initPoolSig}`);
     console.log(`   2. ✅ Rewards Funded - ${fundSig}`);
-    console.log(`   3. ✅ Stake Account Created - ${initStakeSig}`);
-    console.log(`   4. ✅ Tokens Staked - ${stakeSig}`);
-    console.log(`   5. ✅ Rewards Claimed - ${claimSig}`);
-    console.log(`   6. ✅ Tokens Unstaked - ${unstakeSig}`);
-    console.log(`   7. ✅ Pool Updated - ${updateSig}`);
-    console.log(`   8. ✅ Authority Nominated - ${nominateSig}`);
-    console.log(`   9. ✅ Authority Accepted - ${acceptSig}\n`);
+    console.log(`   3. ✅ Tokens Staked - ${stakeSig}`);
+    console.log(`   4. ✅ Rewards Claimed - ${claimSig}`);
+    console.log(`   5. ✅ Tokens Unstaked - ${unstakeSig}`);
+    console.log(`   6. ✅ Pool Updated - ${updateSig}`);
+    console.log(`   (Authority transfer skipped - see Step 9 for details)\n`);
 
     console.log('� View transactions on Solana Explorer:');
     console.log(`   https://explorer.solana.com/address/${poolAddress}?cluster=custom\n`);

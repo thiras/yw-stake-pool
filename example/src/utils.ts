@@ -91,6 +91,29 @@ export async function findStakeAccountPda(
 }
 
 /**
+ * Poll for transaction confirmation
+ */
+async function pollForConfirmation(
+  rpc: any,
+  signature: string,
+  maxAttempts: number = 30
+): Promise<void> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const status = await rpc.getSignatureStatuses([signature]).send();
+      if (status.value?.[0]?.confirmationStatus === 'confirmed' ||
+          status.value?.[0]?.confirmationStatus === 'finalized') {
+        return;
+      }
+    } catch (error) {
+      // Ignore and retry
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error('Transaction confirmation timeout');
+}
+
+/**
  * Airdrop SOL to an address
  */
 export async function airdrop(
@@ -105,9 +128,23 @@ export async function airdrop(
       .requestAirdrop(recipient, lamports(amount))
       .send();
     
-    // Wait for confirmation
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log(`✅ Airdrop confirmed: ${signature}`);
+    // Poll for confirmation with a shorter timeout for airdrops
+    console.log(`   Waiting for airdrop confirmation...`);
+    try {
+      await pollForConfirmation(rpc, signature, 30); // 30 seconds max
+      console.log(`✅ Airdrop confirmed: ${signature}`);
+    } catch (confirmError) {
+      // Airdrop might have succeeded even if confirmation timed out
+      console.log(`⚠️  Airdrop confirmation timed out, checking balance...`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const balance = await (rpc as any).getBalance(recipient).send();
+      if (balance.value >= amount / 2n) { // If we have at least half the requested amount
+        console.log(`✅ Airdrop appears successful (balance: ${balance.value} lamports)`);
+      } else {
+        console.warn(`⚠️  Airdrop may have failed, balance: ${balance.value} lamports`);
+        throw confirmError;
+      }
+    }
   } catch (error) {
     console.error('❌ Airdrop failed:', error);
     throw error;
@@ -124,11 +161,19 @@ export async function buildAndSendTransaction(
   signers: (KeyPairSigner & TransactionSigner)[] = []
 ): Promise<string> {
   console.log(`📤 Building transaction with ${instructions.length} instruction(s)...`);
+  
+  // Combine payer with explicit signers, removing duplicates by address
+  const allSigners = [payer, ...signers];
+  const uniqueSigners = Array.from(
+    new Map(allSigners.map(s => [s.address, s])).values()
+  );
+  
+  console.log(`   Signers: ${uniqueSigners.length} (payer + ${signers.length} additional)`);
 
   // Get latest blockhash
   const { value: latestBlockhash } = await (rpc as any).getLatestBlockhash().send();
 
-  // Build transaction message
+  // Build transaction message with all instructions
   const transactionMessage = pipe(
     createTransactionMessage({ version: 0 }),
     (tx) => setTransactionMessageFeePayerSigner(payer, tx),
@@ -136,7 +181,7 @@ export async function buildAndSendTransaction(
     (tx) => ({ ...tx, instructions })
   );
 
-  // Sign transaction
+  // Sign transaction with all signers (payer + additional)
   console.log('✍️  Signing transaction...');
   const signedTransaction = await signTransactionMessageWithSigners(
     transactionMessage
@@ -148,14 +193,37 @@ export async function buildAndSendTransaction(
 
   // Send and confirm transaction
   console.log('📡 Sending and confirming transaction...');
-  const rpcSubscriptions = createRpcSubscriptions();
   
-  await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(
-    signedTransaction as any, // Type assertion to bypass complex lifetime constraint
-    { commitment: 'confirmed' }
-  );
-
-  console.log(`✅ Transaction confirmed!`);
+  try {
+    const rpcSubscriptions = createRpcSubscriptions();
+    await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(
+      signedTransaction as any,
+      { commitment: 'confirmed' }
+    );
+    console.log(`✅ Transaction confirmed!`);
+  } catch (error: any) {
+    // WebSocket might fail on some RPCs, try polling instead
+    if (error.message?.includes('WebSocket')) {
+      console.log(`⚠️  WebSocket failed, polling for confirmation...`);
+      await pollForConfirmation(rpc, signature);
+      console.log(`✅ Transaction confirmed (via polling)!`);
+    } else {
+      // For other errors, try to get transaction logs for debugging
+      try {
+        const txDetails = await rpc.getTransaction(signature, {
+          encoding: 'json',
+          maxSupportedTransactionVersion: 0,
+        }).send();
+        if (txDetails?.meta?.logMessages) {
+          console.error('Program logs:');
+          txDetails.meta.logMessages.forEach((log: string) => console.error(`  ${log}`));
+        }
+      } catch {
+        // Ignore if we can't fetch logs
+      }
+      throw error;
+    }
+  }
 
   return signature;
 }
@@ -309,7 +377,7 @@ export async function createFundedKeypair(
 export function logTransaction(signature: string, description: string): void {
   console.log(`\n✨ ${description}`);
   console.log(`   Signature: ${signature}`);
-  console.log(`   Explorer: https://explorer.solana.com/tx/${signature}?cluster=custom`);
+  console.log(`   Explorer: https://explorer.solana.com/tx/${signature}?cluster=devnet`);
 }
 
 /**
