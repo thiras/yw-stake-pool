@@ -92,6 +92,7 @@ impl TestEnvironment {
         reward_rate: u64,
         min_stake_amount: u64,
         lockup_period: i64,
+        enforce_lockup: bool,
         pool_end_date: Option<i64>,
     ) {
         let init_pool_ix = Instruction {
@@ -112,6 +113,7 @@ impl TestEnvironment {
                 reward_rate,
                 min_stake_amount,
                 lockup_period,
+                enforce_lockup,
                 pool_end_date,
             }
             .try_to_vec()
@@ -142,6 +144,7 @@ fn test_pool_initialization() {
         100_000_000, // 10% reward rate
         1_000_000,   // 1 token minimum
         86400,       // 1 day lockup
+        false,       // don't enforce lockup (allow early unstake with penalty)
         None,        // no end date
     );
 
@@ -157,7 +160,7 @@ fn test_pool_initialization() {
 #[ignore = "Requires SPL Token 2022 program"]
 fn test_update_pool_parameters() {
     let mut env = TestEnvironment::new();
-    env.initialize_pool(100_000_000, 1_000_000, 86400, None);
+    env.initialize_pool(100_000_000, 1_000_000, 86400, false, None);
 
     // Update pool settings
     let update_ix = Instruction {
@@ -171,6 +174,7 @@ fn test_update_pool_parameters() {
             min_stake_amount: Some(5_000_000),
             lockup_period: Some(172800),
             is_paused: Some(false),
+            enforce_lockup: None,
             pool_end_date: None,
         }
         .try_to_vec()
@@ -197,7 +201,7 @@ fn test_update_pool_parameters() {
 #[ignore = "Requires SPL Token 2022 program"]
 fn test_authority_transfer() {
     let mut env = TestEnvironment::new();
-    env.initialize_pool(100_000_000, 1_000_000, 0, None);
+    env.initialize_pool(100_000_000, 1_000_000, 0, false, None);
 
     let new_authority = Keypair::new();
     env.svm

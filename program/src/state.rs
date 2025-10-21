@@ -88,6 +88,8 @@ pub struct StakePool {
     pub lockup_period: i64,
     /// Whether the pool is paused
     pub is_paused: bool,
+    /// Whether to enforce lockup period (prevent early withdrawals)
+    pub enforce_lockup: bool,
     /// Bump seed for PDA derivation
     pub bump: u8,
     /// Pending authority for two-step authority transfer (None if no transfer pending)
@@ -135,15 +137,16 @@ impl StakePool {
     // - min_stake_amount (u64): 8 bytes
     // - lockup_period (i64): 8 bytes
     // - is_paused (bool): 1 byte
+    // - enforce_lockup (bool): 1 byte
     // - bump (u8): 1 byte
     // - pending_authority (Option<Pubkey>): 1 byte when None, 33 bytes when Some
     // - pool_end_date (Option<i64>): 1 byte when None, 9 bytes when Some
     // - _reserved: 32 bytes
     //
     // We allocate for the maximum size (both Options as Some) to support future updates
-    // None: 1 + 32*5 + 8*4 + 1*2 + 1 + 1 + 32 = 237 bytes
-    // Some: 1 + 32*5 + 8*4 + 1*2 + 33 + 9 + 32 = 277 bytes
-    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 33 + 9 + 32;
+    // None: 1 + 32*5 + 8*4 + 1*3 + 1 + 1 + 32 = 238 bytes
+    // Some: 1 + 32*5 + 8*4 + 1*3 + 33 + 9 + 32 = 278 bytes
+    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 32;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey) -> Vec<Vec<u8>> {
         vec![

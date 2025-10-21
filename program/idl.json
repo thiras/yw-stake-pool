@@ -100,6 +100,10 @@
           "type": "i64"
         },
         {
+          "name": "enforceLockup",
+          "type": "bool"
+        },
+        {
           "name": "poolEndDate",
           "type": {
             "option": "i64"
@@ -427,6 +431,12 @@
           }
         },
         {
+          "name": "enforceLockup",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
           "name": "poolEndDate",
           "type": {
             "option": {
@@ -652,6 +662,10 @@
           },
           {
             "name": "isPaused",
+            "type": "bool"
+          },
+          {
+            "name": "enforceLockup",
             "type": "bool"
           },
           {

@@ -60,6 +60,7 @@ export type StakePool = {
   minStakeAmount: bigint;
   lockupPeriod: bigint;
   isPaused: boolean;
+  enforceLockup: boolean;
   bump: number;
   pendingAuthority: Option<Address>;
   poolEndDate: Option<bigint>;
@@ -79,6 +80,7 @@ export type StakePoolArgs = {
   minStakeAmount: number | bigint;
   lockupPeriod: number | bigint;
   isPaused: boolean;
+  enforceLockup: boolean;
   bump: number;
   pendingAuthority: OptionOrNullable<Address>;
   poolEndDate: OptionOrNullable<number | bigint>;
@@ -99,6 +101,7 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
     ['minStakeAmount', getU64Encoder()],
     ['lockupPeriod', getI64Encoder()],
     ['isPaused', getBooleanEncoder()],
+    ['enforceLockup', getBooleanEncoder()],
     ['bump', getU8Encoder()],
     ['pendingAuthority', getOptionEncoder(getAddressEncoder())],
     ['poolEndDate', getOptionEncoder(getI64Encoder())],
@@ -120,6 +123,7 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['minStakeAmount', getU64Decoder()],
     ['lockupPeriod', getI64Decoder()],
     ['isPaused', getBooleanDecoder()],
+    ['enforceLockup', getBooleanDecoder()],
     ['bump', getU8Decoder()],
     ['pendingAuthority', getOptionDecoder(getAddressDecoder())],
     ['poolEndDate', getOptionDecoder(getI64Decoder())],

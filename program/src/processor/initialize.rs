@@ -19,6 +19,7 @@ pub fn initialize_pool<'a>(
     reward_rate: u64,
     min_stake_amount: u64,
     lockup_period: i64,
+    enforce_lockup: bool,
     pool_end_date: Option<i64>,
 ) -> ProgramResult {
     // Validate parameters
@@ -94,6 +95,7 @@ pub fn initialize_pool<'a>(
         min_stake_amount,
         lockup_period,
         is_paused: false,
+        enforce_lockup,
         bump,
         pending_authority: None,
         pool_end_date,

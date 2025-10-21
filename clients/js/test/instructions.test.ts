@@ -15,6 +15,7 @@ test('initializePool instruction data codec with reward_rate', (t) => {
     rewardRate: 100_000_000n, // 10%
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n, // 1 day
+    enforceLockup: false,
     poolEndDate: null,
   };
 
@@ -24,6 +25,7 @@ test('initializePool instruction data codec with reward_rate', (t) => {
   t.is(decoded.rewardRate, 100_000_000n);
   t.is(decoded.minStakeAmount, 1_000_000n);
   t.is(decoded.lockupPeriod, 86400n);
+  t.is(decoded.enforceLockup, false);
 });
 
 test('initializePool with different reward_rate values', (t) => {
@@ -42,6 +44,7 @@ test('initializePool with different reward_rate values', (t) => {
       rewardRate: rate,
       minStakeAmount: 1_000_000n,
       lockupPeriod: 86400n,
+      enforceLockup: false,
       poolEndDate: null,
     };
 
@@ -160,6 +163,7 @@ test('updatePool instruction data codec with reward_rate', (t) => {
     minStakeAmount: some(2_000_000n),
     lockupPeriod: some(172800n), // 2 days
     isPaused: some(false),
+    enforceLockup: null,
     poolEndDate: null,
   };
 
@@ -181,6 +185,7 @@ test('updatePool can toggle pause state', (t) => {
     minStakeAmount: null,
     lockupPeriod: null,
     isPaused: some(true),
+    enforceLockup: null,
     poolEndDate: null,
   };
 
@@ -195,6 +200,7 @@ test('updatePool can toggle pause state', (t) => {
     minStakeAmount: null,
     lockupPeriod: null,
     isPaused: some(false),
+    enforceLockup: null,
     poolEndDate: null,
   };
 
@@ -219,6 +225,7 @@ test('updatePool with different reward_rate values', (t) => {
       minStakeAmount: null,
       lockupPeriod: some(lockupPeriod),
       isPaused: null,
+      enforceLockup: null,
       poolEndDate: null,
     };
 
@@ -239,6 +246,7 @@ test('updatePool with partial updates', (t) => {
     minStakeAmount: null,
     lockupPeriod: null,
     isPaused: null,
+    enforceLockup: null,
     poolEndDate: null,
   };
 
@@ -256,6 +264,7 @@ test('updatePool with partial updates', (t) => {
     minStakeAmount: null,
     lockupPeriod: some(259200n),
     isPaused: null,
+    enforceLockup: null,
     poolEndDate: null,
   };
 
@@ -266,6 +275,87 @@ test('updatePool with partial updates', (t) => {
   t.deepEqual(decoded2.lockupPeriod, some(259200n));
 });
 
+test('initializePool with enforceLockup flag', (t) => {
+  const codec = getInitializePoolInstructionDataCodec();
+
+  // Test with enforceLockup = true
+  const strictData = {
+    rewardRate: 100_000_000n,
+    minStakeAmount: 1_000_000n,
+    lockupPeriod: 86400n,
+    enforceLockup: true,
+    poolEndDate: null,
+  };
+
+  const strictEncoded = codec.encode(strictData);
+  const strictDecoded = codec.decode(strictEncoded);
+
+  t.is(strictDecoded.enforceLockup, true, 'enforceLockup should be true');
+
+  // Test with enforceLockup = false
+  const flexibleData = {
+    rewardRate: 100_000_000n,
+    minStakeAmount: 1_000_000n,
+    lockupPeriod: 86400n,
+    enforceLockup: false,
+    poolEndDate: null,
+  };
+
+  const flexibleEncoded = codec.encode(flexibleData);
+  const flexibleDecoded = codec.decode(flexibleEncoded);
+
+  t.is(flexibleDecoded.enforceLockup, false, 'enforceLockup should be false');
+});
+
+test('updatePool can toggle enforceLockup', (t) => {
+  const codec = getUpdatePoolInstructionDataCodec();
+
+  // Enable enforceLockup
+  const enableData = {
+    rewardRate: null,
+    minStakeAmount: null,
+    lockupPeriod: null,
+    isPaused: null,
+    enforceLockup: some(true),
+    poolEndDate: null,
+  };
+
+  const enableEncoded = codec.encode(enableData);
+  const enableDecoded = codec.decode(enableEncoded);
+
+  t.deepEqual(enableDecoded.enforceLockup, some(true), 'Should enable enforceLockup');
+
+  // Disable enforceLockup
+  const disableData = {
+    rewardRate: null,
+    minStakeAmount: null,
+    lockupPeriod: null,
+    isPaused: null,
+    enforceLockup: some(false),
+    poolEndDate: null,
+  };
+
+  const disableEncoded = codec.encode(disableData);
+  const disableDecoded = codec.decode(disableEncoded);
+
+  t.deepEqual(disableDecoded.enforceLockup, some(false), 'Should disable enforceLockup');
+
+  // Leave enforceLockup unchanged
+  const noChangeData = {
+    rewardRate: some(200_000_000n),
+    minStakeAmount: null,
+    lockupPeriod: null,
+    isPaused: null,
+    enforceLockup: null,
+    poolEndDate: null,
+  };
+
+  const noChangeEncoded = codec.encode(noChangeData);
+  const noChangeDecoded = codec.decode(noChangeEncoded);
+
+  t.deepEqual(noChangeDecoded.enforceLockup, none(), 'enforceLockup should be None when not updated');
+});
+
 test('instruction data codecs preserve exact values', (t) => {
   // Test that bigint values are preserved exactly through encode/decode
 
@@ -274,6 +364,7 @@ test('instruction data codecs preserve exact values', (t) => {
     rewardRate: 123_456_789n,
     minStakeAmount: 987_654_321n,
     lockupPeriod: 555_555n,
+    enforceLockup: true,
     poolEndDate: null,
   };
 
@@ -283,6 +374,7 @@ test('instruction data codecs preserve exact values', (t) => {
   t.is(initPoolDecoded.rewardRate, 123_456_789n);
   t.is(initPoolDecoded.minStakeAmount, 987_654_321n);
   t.is(initPoolDecoded.lockupPeriod, 555_555n);
+  t.is(initPoolDecoded.enforceLockup, true);
 
   const stakeCodec = getStakeInstructionDataCodec();
   const stakeData = {
