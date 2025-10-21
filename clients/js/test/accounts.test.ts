@@ -14,6 +14,7 @@ test('StakePool codec encodes and decodes correctly', (t) => {
     stakeVault: address('11111111111111111111111111111111'),
     rewardVault: address('11111111111111111111111111111111'),
     totalStaked: 1_000_000_000n,
+    totalRewardsOwed: 0n,
     rewardRate: 100_000_000n, // 10% (100_000_000 / 1e9)
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n, // 1 day in seconds
@@ -21,6 +22,7 @@ test('StakePool codec encodes and decodes correctly', (t) => {
     bump: 255,
     pendingAuthority: null,
     poolEndDate: null,
+    reserved: new Uint8Array(32),
   };
 
   const encoded = codec.encode(stakePool);
@@ -55,6 +57,7 @@ test('StakePool has correct reward_rate field', (t) => {
     stakeVault: address('11111111111111111111111111111111'),
     rewardVault: address('11111111111111111111111111111111'),
     totalStaked: 0n,
+    totalRewardsOwed: 0n,
     rewardRate: 250_000_000n, // 25% reward rate
     minStakeAmount: 1_000_000n,
     lockupPeriod: 604800n, // 7 days
@@ -62,6 +65,7 @@ test('StakePool has correct reward_rate field', (t) => {
     bump: 255,
     pendingAuthority: null,
     poolEndDate: null,
+    reserved: new Uint8Array(32),
   };
 
   const encoded = codec.encode(stakePool);

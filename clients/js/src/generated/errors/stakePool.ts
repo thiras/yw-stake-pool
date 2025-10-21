@@ -62,6 +62,8 @@ export const STAKE_POOL_ERROR__NO_PENDING_AUTHORITY = 0x15; // 21
 export const STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY = 0x16; // 22
 /** PoolEnded: Pool has ended (no new stakes allowed) */
 export const STAKE_POOL_ERROR__POOL_ENDED = 0x17; // 23
+/** InvalidParameters: Invalid parameters */
+export const STAKE_POOL_ERROR__INVALID_PARAMETERS = 0x18; // 24
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -76,6 +78,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__INVALID_ACCOUNT_DISCRIMINATOR
   | typeof STAKE_POOL_ERROR__INVALID_ACCOUNT_KEY
   | typeof STAKE_POOL_ERROR__INVALID_MINT
+  | typeof STAKE_POOL_ERROR__INVALID_PARAMETERS
   | typeof STAKE_POOL_ERROR__INVALID_PDA
   | typeof STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER
@@ -104,6 +107,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__INVALID_ACCOUNT_DISCRIMINATOR]: `Invalid account discriminator`,
     [STAKE_POOL_ERROR__INVALID_ACCOUNT_KEY]: `Invalid account key`,
     [STAKE_POOL_ERROR__INVALID_MINT]: `Invalid mint`,
+    [STAKE_POOL_ERROR__INVALID_PARAMETERS]: `Invalid parameters`,
     [STAKE_POOL_ERROR__INVALID_PDA]: `Invalid PDA derivation`,
     [STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY]: `Invalid pending authority`,
     [STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER]: `Invalid program owner`,

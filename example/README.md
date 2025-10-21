@@ -107,11 +107,11 @@ pnpm pool-admin
 
 Demonstrates typical user interactions with instruction creation:
 
-- Initialize stake accounts
 - Stake tokens (basic and with frontrunning protection)
+  - Automatically creates stake accounts if they don't exist
 - Claim accrued rewards
 - Partial and full unstaking
-- Multiple stake accounts
+- Multiple stake accounts with different indices
 
 **Best for:** Users and frontend developers.
 
@@ -220,7 +220,7 @@ export const config = {
   rpcUrl: 'https://solana-devnet.g.alchemy.com/v2/YOUR_KEY', // Devnet
   
   // Program ID (deployed on devnet)
-  programId: '8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR',
+  programId: '8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx',
   
   // Pool parameters
   defaultPoolConfig: {
@@ -318,6 +318,7 @@ const instruction = getInitializePoolInstruction({
 ```typescript
 import { getStakeInstruction } from '@yourwallet/stake-pool';
 
+// Stake instruction automatically creates the stake account if it doesn't exist
 const instruction = getStakeInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountAddress,
@@ -330,7 +331,7 @@ const instruction = getStakeInstruction({
   payer: user,
   systemProgram: SYSTEM_PROGRAM_ID,
   amount: 100_000_000n, // 100 tokens
-  index: 0n,
+  index: 0n,             // Increment for multiple deposits per user
   expectedRewardRate: null,      // Optional frontrunning protection
   expectedLockupPeriod: null,    // Optional frontrunning protection
 });

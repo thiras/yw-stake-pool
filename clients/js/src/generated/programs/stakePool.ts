@@ -15,9 +15,9 @@ import {
 import {
   type ParsedAcceptAuthorityInstruction,
   type ParsedClaimRewardsInstruction,
+  type ParsedCloseStakeAccountInstruction,
   type ParsedFundRewardsInstruction,
   type ParsedInitializePoolInstruction,
-  type ParsedInitializeStakeAccountInstruction,
   type ParsedNominateNewAuthorityInstruction,
   type ParsedStakeInstruction,
   type ParsedUnstakeInstruction,
@@ -25,7 +25,7 @@ import {
 } from '../instructions';
 
 export const STAKE_POOL_PROGRAM_ADDRESS =
-  '8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR' as Address<'8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR'>;
+  '8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx' as Address<'8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx'>;
 
 export enum StakePoolAccount {
   StakePool,
@@ -34,7 +34,6 @@ export enum StakePoolAccount {
 
 export enum StakePoolInstruction {
   InitializePool,
-  InitializeStakeAccount,
   Stake,
   Unstake,
   ClaimRewards,
@@ -42,6 +41,7 @@ export enum StakePoolInstruction {
   FundRewards,
   NominateNewAuthority,
   AcceptAuthority,
+  CloseStakeAccount,
 }
 
 export function identifyStakePoolInstruction(
@@ -52,28 +52,28 @@ export function identifyStakePoolInstruction(
     return StakePoolInstruction.InitializePool;
   }
   if (containsBytes(data, getU8Encoder().encode(1), 0)) {
-    return StakePoolInstruction.InitializeStakeAccount;
-  }
-  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
     return StakePoolInstruction.Stake;
   }
-  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
     return StakePoolInstruction.Unstake;
   }
-  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
     return StakePoolInstruction.ClaimRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
     return StakePoolInstruction.UpdatePool;
   }
-  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
     return StakePoolInstruction.FundRewards;
   }
-  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
     return StakePoolInstruction.NominateNewAuthority;
   }
-  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
     return StakePoolInstruction.AcceptAuthority;
+  }
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+    return StakePoolInstruction.CloseStakeAccount;
   }
   throw new Error(
     'The provided instruction could not be identified as a stakePool instruction.'
@@ -81,14 +81,11 @@ export function identifyStakePoolInstruction(
 }
 
 export type ParsedStakePoolInstruction<
-  TProgram extends string = '8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR',
+  TProgram extends string = '8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx',
 > =
   | ({
       instructionType: StakePoolInstruction.InitializePool;
     } & ParsedInitializePoolInstruction<TProgram>)
-  | ({
-      instructionType: StakePoolInstruction.InitializeStakeAccount;
-    } & ParsedInitializeStakeAccountInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.Stake;
     } & ParsedStakeInstruction<TProgram>)
@@ -109,4 +106,7 @@ export type ParsedStakePoolInstruction<
     } & ParsedNominateNewAuthorityInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.AcceptAuthority;
-    } & ParsedAcceptAuthorityInstruction<TProgram>);
+    } & ParsedAcceptAuthorityInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.CloseStakeAccount;
+    } & ParsedCloseStakeAccountInstruction<TProgram>);

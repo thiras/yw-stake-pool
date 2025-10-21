@@ -77,6 +77,9 @@ pub enum StakePoolError {
     /// 23 - Pool has ended (no new stakes allowed)
     #[error("Pool has ended (no new stakes allowed)")]
     PoolEnded,
+    /// 24 - Invalid parameters
+    #[error("Invalid parameters")]
+    InvalidParameters,
 }
 
 impl From<StakePoolError> for ProgramError {

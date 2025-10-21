@@ -466,6 +466,7 @@ fn test_stake_pool_serialized_size() {
         stake_vault: Pubkey::new_unique(),
         reward_vault: Pubkey::new_unique(),
         total_staked: 0,
+        total_rewards_owed: 0,
         reward_rate: 10_000_000_000,
         min_stake_amount: 1000,
         lockup_period: 0,
@@ -473,6 +474,7 @@ fn test_stake_pool_serialized_size() {
         bump: 255,
         pending_authority: None,
         pool_end_date: None,
+        _reserved: [0; 32],
     };
 
     // Serialize it
@@ -498,6 +500,7 @@ fn test_stake_pool_serialized_size() {
         stake_vault: Pubkey::new_unique(),
         reward_vault: Pubkey::new_unique(),
         total_staked: 0,
+        total_rewards_owed: 0,
         reward_rate: 10_000_000_000,
         min_stake_amount: 1000,
         lockup_period: 0,
@@ -505,6 +508,7 @@ fn test_stake_pool_serialized_size() {
         bump: 255,
         pending_authority: Some(Pubkey::new_unique()),
         pool_end_date: Some(12345678),
+        _reserved: [0; 32],
     };
 
     let serialized_with_optionals = pool_with_optionals.try_to_vec().unwrap();

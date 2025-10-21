@@ -40,7 +40,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const UPDATE_POOL_DISCRIMINATOR = 5;
+export const UPDATE_POOL_DISCRIMINATOR = 4;
 
 export function getUpdatePoolDiscriminatorBytes() {
   return getU8Encoder().encode(UPDATE_POOL_DISCRIMINATOR);

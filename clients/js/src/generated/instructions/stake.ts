@@ -40,7 +40,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const STAKE_DISCRIMINATOR = 2;
+export const STAKE_DISCRIMINATOR = 1;
 
 export function getStakeDiscriminatorBytes() {
   return getU8Encoder().encode(STAKE_DISCRIMINATOR);
@@ -165,7 +165,7 @@ export type StakeInput<
 > = {
   /** The stake pool */
   pool: Address<TAccountPool>;
-  /** The user's new stake account */
+  /** The stake account PDA (will be created) */
   stakeAccount: Address<TAccountStakeAccount>;
   /** The stake account owner */
   owner: TransactionSigner<TAccountOwner>;
@@ -306,7 +306,7 @@ export type ParsedStakeInstruction<
   accounts: {
     /** The stake pool */
     pool: TAccountMetas[0];
-    /** The user's new stake account */
+    /** The stake account PDA (will be created) */
     stakeAccount: TAccountMetas[1];
     /** The stake account owner */
     owner: TAccountMetas[2];

@@ -78,6 +78,8 @@ pub struct StakePool {
     pub reward_vault: Pubkey,
     /// Total amount staked in the pool
     pub total_staked: u64,
+    /// Total rewards owed to all stakers (to prevent over-allocation)
+    pub total_rewards_owed: u64,
     /// Fixed reward rate as a percentage (scaled by 1e9, e.g., 10_000_000_000 = 10% reward after lockup)
     pub reward_rate: u64,
     /// Minimum stake amount
@@ -93,6 +95,9 @@ pub struct StakePool {
     /// Optional pool end date (Unix timestamp). If set, no new stakes allowed after this time.
     /// None means the pool runs indefinitely.
     pub pool_end_date: Option<i64>,
+    /// Reserved space for future use. Not currently used.
+    /// This field allows for future upgrades without breaking compatibility.
+    pub _reserved: [u8; 32],
 }
 
 /// Individual user stake account (one per deposit)
@@ -125,6 +130,7 @@ impl StakePool {
     // - stake_vault (Pubkey): 32 bytes
     // - reward_vault (Pubkey): 32 bytes
     // - total_staked (u64): 8 bytes
+    // - total_rewards_owed (u64): 8 bytes
     // - reward_rate (u64): 8 bytes
     // - min_stake_amount (u64): 8 bytes
     // - lockup_period (i64): 8 bytes
@@ -132,11 +138,12 @@ impl StakePool {
     // - bump (u8): 1 byte
     // - pending_authority (Option<Pubkey>): 1 byte when None, 33 bytes when Some
     // - pool_end_date (Option<i64>): 1 byte when None, 9 bytes when Some
+    // - _reserved: 32 bytes
     //
     // We allocate for the maximum size (both Options as Some) to support future updates
-    // None: 1 + 32*5 + 8*3 + 1*2 + 1 + 1 = 197 bytes
-    // Some: 1 + 32*5 + 8*3 + 1*2 + 33 + 9 = 237 bytes
-    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1 + 33 + 9;
+    // None: 1 + 32*5 + 8*4 + 1*2 + 1 + 1 + 32 = 237 bytes
+    // Some: 1 + 32*5 + 8*4 + 1*2 + 33 + 9 + 32 = 277 bytes
+    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 33 + 9 + 32;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey) -> Vec<Vec<u8>> {
         vec![

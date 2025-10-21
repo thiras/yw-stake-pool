@@ -31,7 +31,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const CLAIM_REWARDS_DISCRIMINATOR = 4;
+export const CLAIM_REWARDS_DISCRIMINATOR = 3;
 
 export function getClaimRewardsDiscriminatorBytes() {
   return getU8Encoder().encode(CLAIM_REWARDS_DISCRIMINATOR);

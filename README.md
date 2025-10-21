@@ -192,6 +192,62 @@ pnpm programs:format
 pnpm programs:lint
 ```
 
+### Deploying programs
+
+Deploy your program to a Solana cluster:
+
+```sh
+# Deploy to devnet (default)
+pnpm programs:deploy
+
+# Deploy to specific cluster
+pnpm programs:deploy -- --cluster mainnet-beta
+
+# Deploy with custom upgrade authority
+pnpm programs:deploy -- --keypair /path/to/authority.json
+```
+
+The deploy script automatically detects the program ID from your repository keypairs.
+
+### Managing authority
+
+The project includes comprehensive authority management tools:
+
+#### Program Upgrade Authority
+
+Transfer or revoke program upgrade authority using Solana CLI:
+
+```sh
+# Transfer upgrade authority to a new address
+pnpm programs:transfer-authority -- --new-authority <ADDRESS>
+
+# Make program immutable (irreversible!)
+pnpm programs:transfer-authority -- --none
+
+# View help and options
+pnpm programs:transfer-authority -- --help
+```
+
+This is a **one-step, immediate transfer** using Solana's native authority management. Use with caution!
+
+#### Pool Operational Authority
+
+Transfer pool operational authority using a secure two-step process:
+
+```sh
+# Step 1: Current authority nominates new authority
+pnpm programs:pool:transfer-authority -- --pool <POOL_ADDRESS> --new-authority <ADDRESS>
+
+# Step 2: New authority accepts the nomination
+pnpm programs:pool:accept-authority -- --pool <POOL_ADDRESS>
+
+# View help for each command
+pnpm programs:pool:transfer-authority -- --help
+pnpm programs:pool:accept-authority -- --help
+```
+
+The two-step process prevents accidental authority loss and ensures the new authority has access to their keypair before completing the transfer.
+
 ## Generating IDLs
 
 You may use the following command to generate the IDLs for your programs.

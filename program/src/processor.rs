@@ -14,7 +14,7 @@ use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
 use crate::instruction::StakePoolInstruction;
 use crate::state::{Key, StakeAccount, StakePool};
-use crate::utils::{create_account, transfer_tokens_with_fee};
+use crate::utils::{close_account, create_account, transfer_tokens_with_fee};
 
 pub fn process_instruction<'a>(
     _program_id: &Pubkey,
@@ -49,10 +49,6 @@ pub fn process_instruction<'a>(
                 lockup_period,
                 pool_end_date,
             )
-        }
-        StakePoolInstruction::InitializeStakeAccount { index } => {
-            msg!("Instruction: InitializeStakeAccount");
-            initialize_stake_account(accounts, index)
         }
         StakePoolInstruction::Stake {
             amount,
@@ -109,6 +105,10 @@ pub fn process_instruction<'a>(
             msg!("Instruction: AcceptAuthority");
             accept_authority(accounts)
         }
+        StakePoolInstruction::CloseStakeAccount => {
+            msg!("Instruction: CloseStakeAccount");
+            close_stake_account(accounts)
+        }
     }
 }
 
@@ -119,6 +119,30 @@ fn initialize_pool<'a>(
     lockup_period: i64,
     pool_end_date: Option<i64>,
 ) -> ProgramResult {
+    // Validate parameters
+    if reward_rate > 1_000_000_000_000 {
+        // > 1000% reward rate seems unreasonable
+        msg!("Reward rate too high: {}", reward_rate);
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+
+    if lockup_period < 0 {
+        msg!("Lockup period cannot be negative: {}", lockup_period);
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+
+    if let Some(end_date) = pool_end_date {
+        let current_time = Clock::get()?.unix_timestamp;
+        if end_date <= current_time {
+            msg!(
+                "Pool end date must be in the future. Current: {}, End date: {}",
+                current_time,
+                end_date
+            );
+            return Err(StakePoolError::InvalidParameters.into());
+        }
+    }
+
     // Use ShankContext to parse accounts
     let ctx = InitializePoolAccounts::context(accounts)?;
 
@@ -131,6 +155,10 @@ fn initialize_pool<'a>(
     assert_signer("authority", ctx.accounts.authority)?;
     assert_signer("payer", ctx.accounts.payer)?;
     assert_empty("pool", ctx.accounts.pool)?;
+    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("stake_vault", ctx.accounts.stake_vault)?;
+    assert_writable("reward_vault", ctx.accounts.reward_vault)?;
+    assert_writable("payer", ctx.accounts.payer)?;
 
     // Verify token accounts
     verify_token_account(ctx.accounts.stake_vault, ctx.accounts.stake_mint.key)?;
@@ -159,6 +187,7 @@ fn initialize_pool<'a>(
         stake_vault: *ctx.accounts.stake_vault.key,
         reward_vault: *ctx.accounts.reward_vault.key,
         total_staked: 0,
+        total_rewards_owed: 0,
         reward_rate,
         min_stake_amount,
         lockup_period,
@@ -166,69 +195,10 @@ fn initialize_pool<'a>(
         bump,
         pending_authority: None,
         pool_end_date,
+        _reserved: [0; 32],
     };
 
     pool_data.save(ctx.accounts.pool)
-}
-
-fn initialize_stake_account<'a>(accounts: &'a [AccountInfo<'a>], index: u64) -> ProgramResult {
-    // Parse accounts using ShankContext-generated struct
-    let ctx = InitializeStakeAccountAccounts::context(accounts)?;
-
-    // Guards
-    let stake_account_seeds =
-        StakeAccount::seeds(ctx.accounts.pool.key, ctx.accounts.owner.key, index);
-    let stake_seeds_refs: Vec<&[u8]> = stake_account_seeds.iter().map(|s| s.as_slice()).collect();
-    let (stake_account_key, bump) = Pubkey::find_program_address(&stake_seeds_refs, &crate::ID);
-
-    assert_same_pubkeys(
-        "stake_account",
-        ctx.accounts.stake_account,
-        &stake_account_key,
-    )?;
-    assert_signer("owner", ctx.accounts.owner)?;
-    assert_signer("payer", ctx.accounts.payer)?;
-    assert_empty("stake_account", ctx.accounts.stake_account)?;
-
-    // Verify pool exists
-    assert_non_empty("pool", ctx.accounts.pool)?;
-
-    // Create stake account
-    let mut seeds_with_bump = stake_account_seeds.clone();
-    seeds_with_bump.push(vec![bump]);
-    let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
-
-    // Diagnostic logging: print payer and target account lamports and pubkeys
-    msg!(
-        "Creating stake account: target={} payer={} target_lamports={} payer_lamports={}",
-        ctx.accounts.stake_account.key,
-        ctx.accounts.payer.key,
-        ctx.accounts.stake_account.lamports(),
-        ctx.accounts.payer.lamports()
-    );
-
-    create_account(
-        ctx.accounts.stake_account,
-        ctx.accounts.payer,
-        ctx.accounts.system_program,
-        StakeAccount::LEN,
-        &crate::ID,
-        Some(&[&seeds_refs]),
-    )?;
-
-    // Initialize stake account with index
-    let stake_account_data = StakeAccount {
-        key: Key::StakeAccount,
-        pool: *ctx.accounts.pool.key,
-        owner: *ctx.accounts.owner.key,
-        index,
-        amount_staked: 0,
-        stake_timestamp: 0,
-        claimed_rewards: 0,
-        bump,
-    };
-
-    stake_account_data.save(ctx.accounts.stake_account)
 }
 
 fn stake<'a>(
@@ -238,11 +208,20 @@ fn stake<'a>(
     expected_reward_rate: Option<u64>,
     expected_lockup_period: Option<i64>,
 ) -> ProgramResult {
+    // Validate amount
+    if amount == 0 {
+        msg!("Stake amount must be greater than zero");
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+
     // Parse accounts using ShankContext-generated struct
     let ctx = StakeAccounts::context(accounts)?;
 
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
 
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
@@ -274,11 +253,26 @@ fn stake<'a>(
     assert_signer("owner", ctx.accounts.owner)?;
     assert_signer("payer", ctx.accounts.payer)?;
     assert_empty("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("user_token_account", ctx.accounts.user_token_account)?;
+    assert_writable("stake_vault", ctx.accounts.stake_vault)?;
+    assert_writable("payer", ctx.accounts.payer)?;
+    assert_same_pubkeys(
+        "stake_vault",
+        ctx.accounts.stake_vault,
+        &pool_data.stake_vault,
+    )?;
     assert_same_pubkeys(
         "reward_vault",
         ctx.accounts.reward_vault,
         &pool_data.reward_vault,
     )?;
+    assert_same_pubkeys("stake_mint", ctx.accounts.stake_mint, &pool_data.stake_mint)?;
+
+    // Verify token accounts belong to correct mints
+    verify_token_account(ctx.accounts.user_token_account, &pool_data.stake_mint)?;
+    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint)?;
 
     if pool_data.is_paused {
         return Err(StakePoolError::PoolPaused.into());
@@ -308,13 +302,20 @@ fn stake<'a>(
         .checked_div(1_000_000_000)
         .ok_or(StakePoolError::NumericalOverflow)? as u64;
 
-    // Check if reward vault has sufficient balance to cover the expected rewards
+    // Check if reward vault has sufficient balance to cover total rewards owed plus this new stake
     let reward_vault_balance = get_token_account_balance(ctx.accounts.reward_vault)?;
-    if reward_vault_balance < expected_rewards {
+    let total_required = pool_data
+        .total_rewards_owed
+        .checked_add(expected_rewards)
+        .ok_or(StakePoolError::NumericalOverflow)?;
+
+    if reward_vault_balance < total_required {
         msg!(
-            "Insufficient rewards in pool. Required: {}, Available: {}",
-            expected_rewards,
-            reward_vault_balance
+            "Insufficient rewards in pool. Required (total): {}, Available: {}, Already owed: {}, New stake needs: {}",
+            total_required,
+            reward_vault_balance,
+            pool_data.total_rewards_owed,
+            expected_rewards
         );
         return Err(StakePoolError::InsufficientRewards.into());
     }
@@ -368,10 +369,15 @@ fn stake<'a>(
         &[],
     )?;
 
-    // Update pool total staked
+    // Update pool total staked and rewards owed
     pool_data.total_staked = pool_data
         .total_staked
         .checked_add(transfer_amount)
+        .ok_or(StakePoolError::NumericalOverflow)?;
+
+    pool_data.total_rewards_owed = pool_data
+        .total_rewards_owed
+        .checked_add(expected_rewards)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
     // Initialize new stake account with the deposit
@@ -396,6 +402,12 @@ fn unstake<'a>(
     amount: u64,
     expected_reward_rate: Option<u64>,
 ) -> ProgramResult {
+    // Validate amount
+    if amount == 0 {
+        msg!("Unstake amount must be greater than zero");
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+
     // Parse accounts using ShankContext-generated struct
     let ctx = UnstakeAccounts::context(accounts)?;
 
@@ -406,6 +418,10 @@ fn unstake<'a>(
         ctx.accounts.stake_account,
         Key::StakeAccount,
     )?;
+
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+    assert_program_owner("stake_account", ctx.accounts.stake_account, &crate::ID)?;
 
     // Load accounts
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
@@ -425,8 +441,22 @@ fn unstake<'a>(
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
+    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("user_token_account", ctx.accounts.user_token_account)?;
+    assert_writable("stake_vault", ctx.accounts.stake_vault)?;
     assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
     assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account_data.pool)?;
+    assert_same_pubkeys(
+        "stake_vault",
+        ctx.accounts.stake_vault,
+        &pool_data.stake_vault,
+    )?;
+    assert_same_pubkeys("stake_mint", ctx.accounts.stake_mint, &pool_data.stake_mint)?;
+
+    // Verify token accounts belong to correct mints
+    verify_token_account(ctx.accounts.user_token_account, &pool_data.stake_mint)?;
+    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint)?;
 
     if stake_account_data.amount_staked < amount {
         return Err(StakePoolError::InsufficientStakedBalance.into());
@@ -435,15 +465,59 @@ fn unstake<'a>(
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
 
-    // Allow unstaking anytime, but warn if lockup not complete (no rewards will be given)
+    // Check lockup period - allow unstaking anytime but warn if not complete
     let time_staked = clock
         .unix_timestamp
         .checked_sub(stake_account_data.stake_timestamp)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    if time_staked < pool_data.lockup_period {
-        msg!("Warning: Unstaking before lockup period complete. No rewards will be earned.");
+    let lockup_complete = time_staked >= pool_data.lockup_period;
+
+    if !lockup_complete {
+        msg!("Warning: Unstaking before lockup period complete. Forfeiting proportional rewards.");
     }
+
+    // Calculate how much of the stake is being removed (as a fraction)
+    let total_staked_before = stake_account_data.amount_staked;
+    let remaining_stake = total_staked_before
+        .checked_sub(amount)
+        .ok_or(StakePoolError::NumericalOverflow)?;
+
+    // Calculate total potential rewards for the original stake
+    let total_potential_rewards = if lockup_complete {
+        pool_data.calculate_rewards(
+            total_staked_before,
+            stake_account_data.stake_timestamp,
+            clock.unix_timestamp,
+        )?
+    } else {
+        0 // No rewards if lockup not complete
+    };
+
+    // Calculate proportional rewards being forfeited
+    let forfeited_rewards = if remaining_stake == 0 {
+        // Full unstake - forfeit all unclaimed rewards
+        total_potential_rewards
+            .checked_sub(stake_account_data.claimed_rewards)
+            .ok_or(StakePoolError::NumericalOverflow)?
+    } else {
+        // Partial unstake - forfeit proportional amount of unclaimed rewards
+        let unstake_fraction = (amount as u128)
+            .checked_mul(1_000_000_000)
+            .ok_or(StakePoolError::NumericalOverflow)?
+            .checked_div(total_staked_before as u128)
+            .ok_or(StakePoolError::NumericalOverflow)? as u64;
+
+        let unclaimed_rewards = total_potential_rewards
+            .checked_sub(stake_account_data.claimed_rewards)
+            .ok_or(StakePoolError::NumericalOverflow)?;
+
+        (unclaimed_rewards as u128)
+            .checked_mul(unstake_fraction as u128)
+            .ok_or(StakePoolError::NumericalOverflow)?
+            .checked_div(1_000_000_000)
+            .ok_or(StakePoolError::NumericalOverflow)? as u64
+    };
 
     // Transfer tokens back (with PDA signer)
     let pool_seeds = StakePool::seeds(&pool_data.authority, &pool_data.stake_mint);
@@ -451,7 +525,7 @@ fn unstake<'a>(
     seeds_with_bump.push(vec![pool_data.bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
 
-    let _transfer_amount = transfer_tokens_with_fee(
+    let actual_amount = transfer_tokens_with_fee(
         ctx.accounts.stake_vault,
         ctx.accounts.user_token_account,
         ctx.accounts.stake_mint,
@@ -461,24 +535,37 @@ fn unstake<'a>(
         &[&seeds_refs],
     )?;
 
-    // Update balances
+    // Update balances with actual transferred amount
     stake_account_data.amount_staked = stake_account_data
         .amount_staked
-        .checked_sub(amount)
+        .checked_sub(actual_amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
     pool_data.total_staked = pool_data
         .total_staked
-        .checked_sub(amount)
+        .checked_sub(actual_amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    // If fully unstaking, reset claimed rewards
-    // For partial unstakes, claimed_rewards remains to track what's already been claimed
+    // Update rewards owed to reflect forfeited rewards
+    pool_data.total_rewards_owed = pool_data
+        .total_rewards_owed
+        .checked_sub(forfeited_rewards)
+        .ok_or(StakePoolError::NumericalOverflow)?;
+
+    // If fully unstaking, reset claimed rewards and timestamp
+    // For partial unstakes, keep the original timestamp and adjust expectations
     if stake_account_data.amount_staked == 0 {
         stake_account_data.claimed_rewards = 0;
         stake_account_data.stake_timestamp = 0;
         msg!("Full unstake - stake account reset");
     }
+
+    msg!(
+        "Unstaked {} tokens (actual: {}), forfeited {} reward tokens",
+        amount,
+        actual_amount,
+        forfeited_rewards
+    );
 
     // Save state
     pool_data.save(ctx.accounts.pool)?;
@@ -497,14 +584,36 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         Key::StakeAccount,
     )?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+    assert_program_owner("stake_account", ctx.accounts.stake_account, &crate::ID)?;
+
     // Load accounts
-    let pool_data = StakePool::load(ctx.accounts.pool)?;
+    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
     let mut stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
 
     // Guards
     assert_signer("owner", ctx.accounts.owner)?;
+    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("user_reward_account", ctx.accounts.user_reward_account)?;
+    assert_writable("reward_vault", ctx.accounts.reward_vault)?;
     assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
     assert_same_pubkeys("pool", ctx.accounts.pool, &stake_account_data.pool)?;
+    assert_same_pubkeys(
+        "reward_vault",
+        ctx.accounts.reward_vault,
+        &pool_data.reward_vault,
+    )?;
+    assert_same_pubkeys(
+        "reward_mint",
+        ctx.accounts.reward_mint,
+        &pool_data.reward_mint,
+    )?;
+
+    // Verify token accounts belong to correct mints
+    verify_token_account(ctx.accounts.user_reward_account, &pool_data.reward_mint)?;
+    verify_token_account(ctx.accounts.reward_vault, &pool_data.reward_mint)?;
 
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
@@ -555,7 +664,14 @@ fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         .checked_add(unclaimed_rewards)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    // Save updated stake account
+    // Update pool's total rewards owed (these rewards have now been paid out)
+    pool_data.total_rewards_owed = pool_data
+        .total_rewards_owed
+        .checked_sub(unclaimed_rewards)
+        .ok_or(StakePoolError::NumericalOverflow)?;
+
+    // Save updated accounts
+    pool_data.save(ctx.accounts.pool)?;
     stake_account_data.save(ctx.accounts.stake_account)?;
 
     msg!(
@@ -581,27 +697,57 @@ fn update_pool<'a>(
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("authority", ctx.accounts.authority)?;
+    assert_writable("pool", ctx.accounts.pool)?;
     assert_same_pubkeys("authority", ctx.accounts.authority, &pool_data.authority)?;
 
     // Update fields
     if let Some(rate) = reward_rate {
+        if rate > 1_000_000_000_000 {
+            msg!("Reward rate too high: {}", rate);
+            return Err(StakePoolError::InvalidParameters.into());
+        }
         pool_data.reward_rate = rate;
     }
     if let Some(min_amount) = min_stake_amount {
         pool_data.min_stake_amount = min_amount;
     }
     if let Some(lockup) = lockup_period {
+        if lockup < 0 {
+            msg!("Lockup period cannot be negative: {}", lockup);
+            return Err(StakePoolError::InvalidParameters.into());
+        }
         pool_data.lockup_period = lockup;
     }
     if let Some(paused) = is_paused {
         pool_data.is_paused = paused;
     }
     if let Some(end_date) = pool_end_date {
+        // Prevent extending pool after end date has passed
+        let current_time = Clock::get()?.unix_timestamp;
+        if let Some(existing_end) = pool_data.pool_end_date {
+            if current_time >= existing_end {
+                // Pool has already ended
+                if let Some(new_end) = end_date {
+                    if new_end > existing_end {
+                        msg!(
+                            "Cannot extend pool after end date has passed. Current: {}, Existing end: {}, Attempted new end: {}",
+                            current_time,
+                            existing_end,
+                            new_end
+                        );
+                        return Err(StakePoolError::PoolEnded.into());
+                    }
+                }
+            }
+        }
         pool_data.pool_end_date = end_date;
     }
 
@@ -609,22 +755,42 @@ fn update_pool<'a>(
 }
 
 fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> ProgramResult {
+    // Validate amount
+    if amount == 0 {
+        msg!("Fund amount must be greater than zero");
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+
     // Parse accounts using ShankContext-generated struct
     let ctx = FundRewardsAccounts::context(accounts)?;
 
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("funder", ctx.accounts.funder)?;
+    assert_writable("funder_token_account", ctx.accounts.funder_token_account)?;
+    assert_writable("reward_vault", ctx.accounts.reward_vault)?;
     assert_same_pubkeys(
         "reward_vault",
         ctx.accounts.reward_vault,
         &pool_data.reward_vault,
     )?;
+    assert_same_pubkeys(
+        "reward_mint",
+        ctx.accounts.reward_mint,
+        &pool_data.reward_mint,
+    )?;
+
+    // Verify token accounts belong to correct mints
+    verify_token_account(ctx.accounts.funder_token_account, &pool_data.reward_mint)?;
+    verify_token_account(ctx.accounts.reward_vault, &pool_data.reward_mint)?;
 
     // Transfer reward tokens to pool
     transfer_tokens_with_fee(
@@ -648,11 +814,15 @@ fn nominate_new_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult 
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("current_authority", ctx.accounts.current_authority)?;
+    assert_writable("pool", ctx.accounts.pool)?;
     assert_same_pubkeys(
         "current_authority",
         ctx.accounts.current_authority,
@@ -683,11 +853,15 @@ fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Verify pool account discriminator before loading (Type Cosplay protection)
     assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
 
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
     // Guards
     assert_signer("pending_authority", ctx.accounts.pending_authority)?;
+    assert_writable("pool", ctx.accounts.pool)?;
 
     // Verify there is a pending authority
     let pending_authority = pool_data
@@ -716,6 +890,50 @@ fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     );
 
     pool_data.save(ctx.accounts.pool)
+}
+
+fn close_stake_account<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
+    let ctx = CloseStakeAccountAccounts::context(accounts)?;
+
+    // Verify stake account discriminator before loading (Type Cosplay protection)
+    assert_account_key(
+        "stake_account",
+        ctx.accounts.stake_account,
+        Key::StakeAccount,
+    )?;
+
+    // Verify program ownership
+    assert_program_owner("stake_account", ctx.accounts.stake_account, &crate::ID)?;
+
+    // Load stake account
+    let stake_account_data = StakeAccount::load(ctx.accounts.stake_account)?;
+
+    // Guards
+    assert_signer("owner", ctx.accounts.owner)?;
+    assert_writable("stake_account", ctx.accounts.stake_account)?;
+    assert_writable("receiver", ctx.accounts.receiver)?;
+    assert_same_pubkeys("owner", ctx.accounts.owner, &stake_account_data.owner)?;
+
+    // Ensure stake account is empty (no staked amount)
+    if stake_account_data.amount_staked != 0 {
+        msg!(
+            "Cannot close stake account with non-zero balance. Amount staked: {}",
+            stake_account_data.amount_staked
+        );
+        return Err(StakePoolError::ExpectedEmptyAccount.into());
+    }
+
+    // Close the account and recover rent
+    close_account(ctx.accounts.stake_account, ctx.accounts.receiver)?;
+
+    msg!(
+        "Closed stake account {} and returned rent to {}",
+        ctx.accounts.stake_account.key,
+        ctx.accounts.receiver.key
+    );
+
+    Ok(())
 }
 
 // Helper functions

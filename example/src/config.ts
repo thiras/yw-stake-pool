@@ -3,13 +3,15 @@
  */
 
 import { address } from '@solana/kit';
+import { STAKE_POOL_PROGRAM_ADDRESS } from '@yourwallet/stake-pool';
 
 export const config = {
   // RPC endpoint - change based on your environment
-  rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8899', // Local validator
+  // rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8899', // Local validator
+  rpcUrl: process.env.RPC_URL || 'https://api.devnet.solana.com', // Devnet
 
-  // Program ID - update with your deployed program ID
-  programId: address('8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR'),
+  // Program ID - automatically imported from the generated client
+  programId: STAKE_POOL_PROGRAM_ADDRESS,
 
   // Token program IDs
   tokenProgramId: address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),

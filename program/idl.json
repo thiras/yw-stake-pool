@@ -112,61 +112,6 @@
       }
     },
     {
-      "name": "InitializeStakeAccount",
-      "accounts": [
-        {
-          "name": "stakeAccount",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "The stake account PDA"
-          ]
-        },
-        {
-          "name": "pool",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The stake pool"
-          ]
-        },
-        {
-          "name": "owner",
-          "isMut": false,
-          "isSigner": true,
-          "docs": [
-            "The stake account owner"
-          ]
-        },
-        {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "The account paying for rent"
-          ]
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The system program"
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "index",
-          "type": "u64"
-        }
-      ],
-      "discriminant": {
-        "type": "u8",
-        "value": 1
-      }
-    },
-    {
       "name": "Stake",
       "accounts": [
         {
@@ -182,7 +127,7 @@
           "isMut": true,
           "isSigner": false,
           "docs": [
-            "The user's new stake account"
+            "The stake account PDA (will be created)"
           ]
         },
         {
@@ -274,7 +219,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 2
+        "value": 1
       }
     },
     {
@@ -359,7 +304,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 3
+        "value": 2
       }
     },
     {
@@ -433,7 +378,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 4
+        "value": 3
       }
     },
     {
@@ -492,7 +437,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 5
+        "value": 4
       }
     },
     {
@@ -555,7 +500,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 6
+        "value": 5
       }
     },
     {
@@ -589,7 +534,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 7
+        "value": 6
       }
     },
     {
@@ -609,6 +554,40 @@
           "isSigner": true,
           "docs": [
             "The pending authority accepting the transfer"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 7
+      }
+    },
+    {
+      "name": "CloseStakeAccount",
+      "accounts": [
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake account to close"
+          ]
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The stake account owner"
+          ]
+        },
+        {
+          "name": "receiver",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account to receive the rent lamports"
           ]
         }
       ],
@@ -656,6 +635,10 @@
             "type": "u64"
           },
           {
+            "name": "totalRewardsOwed",
+            "type": "u64"
+          },
+          {
             "name": "rewardRate",
             "type": "u64"
           },
@@ -685,6 +668,15 @@
             "name": "poolEndDate",
             "type": {
               "option": "i64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
             }
           }
         ]
@@ -872,11 +864,16 @@
       "code": 23,
       "name": "PoolEnded",
       "msg": "Pool has ended (no new stakes allowed)"
+    },
+    {
+      "code": 24,
+      "name": "InvalidParameters",
+      "msg": "Invalid parameters"
     }
   ],
   "metadata": {
     "origin": "shank",
-    "address": "8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR",
+    "address": "8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx",
     "binaryVersion": "0.4.5",
     "libVersion": "^0.4.2"
   }

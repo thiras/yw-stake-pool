@@ -61,6 +61,7 @@ console.log();
 
 // 2. Stake Instruction
 console.log('2️⃣  Stake Instruction');
+console.log('   (Creates stake account automatically if it doesn\'t exist)');
 try {
   const stakeIx = getStakeInstruction({
     pool: poolAddress,
@@ -81,7 +82,7 @@ try {
   
   console.log('   ✅ Created successfully');
   console.log(`   Accounts: ${stakeIx.accounts?.length || 0}`);
-  console.log(`   Stake Amount: 100 tokens`);
+  console.log(`   Creates account and stakes 1 token (1,000,000 base units)`);
 } catch (error) {
   console.log('   ❌ Error:', (error as Error).message);
 }
