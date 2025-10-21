@@ -37,3 +37,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-pool support
 - Two-step authority transfer
 - Comprehensive security features
+
+## [1.2.0] - 2025-10-19
+
+### Added
+- **Two-Step Authority Transfer**: Secure authority transfer mechanism
+  - `NominateNewAuthority` instruction for current authority to nominate new authority
+  - `AcceptAuthority` instruction for new authority to accept transfer
+  - `pending_authority` field added to `StakePool` state
+  - Protects against key compromise and misconfiguration scenarios
+  - Custom errors: `NoPendingAuthority`, `InvalidPendingAuthority`
+
+### Changed
+- `StakePool` state size increased to accommodate `pending_authority` field
+
+## [1.1.0] - 2025-10-19
+
+### Added
+- **Frontrunning Protection**: Optional parameters to lock in expected pool conditions
+  - `expected_reward_rate` parameter in `Stake` and `Unstake` instructions
+  - `expected_lockup_period` parameter in `Stake` instruction
+  - `PoolParametersChanged` error to revert transactions when parameters mismatch
+  - Backward compatible (protection is optional)
+
+### Changed
+- `Stake` instruction signature updated with optional frontrunning protection parameters
+- `Unstake` instruction signature updated with optional `expected_reward_rate` parameter
+
+---
+
+## [1.1.0] - 2025-10-19
+
+### Added
+- **Frontrunning Protection**: Optional parameters to lock in expected pool conditions
+  - `expected_reward_rate` parameter in `Stake` and `Unstake` instructions
+  - `expected_lockup_period` parameter in `Stake` instruction
+  - `PoolParametersChanged` error to revert transactions when parameters mismatch
+  - Backward compatible (protection is optional)
+
+### Changed
+- `Stake` instruction signature updated with optional frontrunning protection parameters
+- `Unstake` instruction signature updated with optional `expected_reward_rate` parameter
