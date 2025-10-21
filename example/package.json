@@ -1,0 +1,27 @@
+{
+  "name": "stake-pool-example",
+  "version": "1.0.0",
+  "description": "Example usage of @yourwallet/stake-pool JavaScript client",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "simple": "tsx src/simple-example.ts",
+    "complete-flow": "tsx src/complete-flow.ts",
+    "pool-admin": "tsx src/pool-admin.ts",
+    "user-staking": "tsx src/user-staking.ts"
+  },
+  "dependencies": {
+    "@solana/kit": "^4.0.0",
+    "@yourwallet/stake-pool": "file:../clients/js"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.7.0",
+    "typescript": "^5.5.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
