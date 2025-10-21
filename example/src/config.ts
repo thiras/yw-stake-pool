@@ -6,8 +6,7 @@ import { address } from '@solana/kit';
 
 export const config = {
   // RPC endpoint - change based on your environment
-  // rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8899', // Local validator
-  rpcUrl: 'https://solana-devnet.g.alchemy.com/v2/QHcIFKfQh9Ab1NGwuDVlS', // For devnet
+  rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8899', // Local validator
 
   // Program ID - update with your deployed program ID
   programId: address('8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR'),
