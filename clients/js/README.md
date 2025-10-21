@@ -433,49 +433,9 @@ Full API documentation is available at: [TypeDoc Documentation](https://yourwall
 ## Program Information
 
 - **Program ID**: `8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx`
-- **Version**: `1.4.1`
+- **Version**: `1.5.0`
 - **Network**: Devnet, Mainnet
 - **Cluster**: Solana
-
-## Breaking Changes in v1.4.0
-
-This version includes important updates to instruction accounts:
-
-### Updated Instructions
-
-All token transfer instructions now require the **mint account** to be passed explicitly for proper Token-2022 support and decimal handling:
-
-- **`getStakeInstruction()`** - Now requires `stakeMint` and `rewardVault` parameters
-- **`getUnstakeInstruction()`** - Now requires `stakeMint` parameter  
-- **`getClaimRewardsInstruction()`** - Now requires `rewardMint` parameter
-- **`getFundRewardsInstruction()`** - Now requires `rewardMint` parameter
-
-### Migration Guide
-
-If you're upgrading from v1.3.x, update your instruction calls:
-
-```typescript
-// Before (v1.3.x)
-const stakeIx = getStakeInstruction({
-  pool, stakeAccount, owner,
-  userTokenAccount, stakeVault,
-  tokenProgram, amount, index
-});
-
-// After (v1.4.0)
-const stakeIx = getStakeInstruction({
-  pool, stakeAccount, owner,
-  userTokenAccount, stakeVault,
-  rewardVault,        // NEW: Required
-  stakeMint,          // NEW: Required
-  tokenProgram, payer, amount, index
-});
-```
-
-These changes ensure proper support for:
-- Token-2022 transfer fees
-- Correct decimal handling
-- Enhanced transfer validation
 
 ## Security
 
