@@ -95,10 +95,8 @@ pub struct StakePool {
     /// Optional pool end date (Unix timestamp). If set, no new stakes allowed after this time.
     /// None means the pool runs indefinitely.
     pub pool_end_date: Option<i64>,
-    /// Next available stake account index for each user (used for validation)
-    /// Maps user pubkey to their next available index
-    /// Note: This is not stored on-chain; users must track their indices
-    /// We validate that indices are used sequentially per user
+    /// Reserved space for future use. Not currently used.
+    /// This field allows for future upgrades without breaking compatibility.
     pub _reserved: [u8; 32],
 }
 
