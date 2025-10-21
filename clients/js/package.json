@@ -1,6 +1,6 @@
 {
   "name": "@yourwallet/stake-pool",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "JavaScript client for the Stake Pool program",
   "sideEffects": false,
   "module": "./dist/src/index.mjs",
