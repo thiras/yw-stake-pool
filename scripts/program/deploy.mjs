@@ -68,19 +68,19 @@ for (const folder of getProgramFolders()) {
   let programKeypair = null;
 
   if (!programId) {
-    // Try to find program keypair
+    // Try to find program keypair - check program folder first, then target/deploy
+    const programKeypairPath = path.join(folder, 'keypair.json');
     const targetKeypairPath = path.join(
       workingDirectory,
       'target',
       'deploy',
       `${programName}-keypair.json`
     );
-    const programKeypairPath = path.join(folder, 'keypair.json');
 
-    if (await fs.pathExists(targetKeypairPath)) {
-      programKeypair = targetKeypairPath;
-    } else if (await fs.pathExists(programKeypairPath)) {
+    if (await fs.pathExists(programKeypairPath)) {
       programKeypair = programKeypairPath;
+    } else if (await fs.pathExists(targetKeypairPath)) {
+      programKeypair = targetKeypairPath;
     }
 
     // Get program ID from keypair if found
