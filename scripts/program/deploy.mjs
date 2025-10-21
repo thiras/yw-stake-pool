@@ -128,7 +128,7 @@ for (const folder of getProgramFolders()) {
 
     // Add upgrade authority keypair if provided
     if (keypairPath) {
-      deployArgs.push('--keypair', keypairPath);
+      deployArgs.push('--upgrade-authority', keypairPath);
     }
 
     // Add any additional args
