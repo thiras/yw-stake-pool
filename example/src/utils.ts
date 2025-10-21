@@ -12,6 +12,9 @@ import {
   setTransactionMessageFeePayerSigner,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
+  sendAndConfirmTransactionFactory,
+  getSignatureFromTransaction,
+  getProgramDerivedAddress,
   pipe,
   KeyPairSigner,
   TransactionSigner,
@@ -48,15 +51,16 @@ export async function findPoolPda(
   programId: Address = config.programId
 ): Promise<[Address, number]> {
   const encoder = getAddressEncoder();
-  const seeds: any[] = [
-    Buffer.from('stake_pool'),
-    encoder.encode(authority),
-    encoder.encode(stakeMint),
-  ];
-
-  // Note: This is a simplified version. In production, use proper PDA derivation
-  // For now, we'll use a placeholder that matches the on-chain program
-  const [pda, bump] = await findProgramAddress(seeds, programId);
+  
+  const [pda, bump] = await getProgramDerivedAddress({
+    programAddress: programId,
+    seeds: [
+      'stake_pool',
+      encoder.encode(authority),
+      encoder.encode(stakeMint),
+    ],
+  });
+  
   return [pda, bump];
 }
 
@@ -70,39 +74,20 @@ export async function findStakeAccountPda(
   programId: Address = config.programId
 ): Promise<[Address, number]> {
   const encoder = getAddressEncoder();
-  const indexBuffer = Buffer.alloc(8);
-  indexBuffer.writeBigUInt64LE(index);
+  const indexBuffer = new Uint8Array(8);
+  new DataView(indexBuffer.buffer).setBigUint64(0, index, true); // little-endian
 
-  const seeds: any[] = [
-    Buffer.from('stake_account'),
-    encoder.encode(pool),
-    encoder.encode(owner),
-    indexBuffer,
-  ];
+  const [pda, bump] = await getProgramDerivedAddress({
+    programAddress: programId,
+    seeds: [
+      'stake_account',
+      encoder.encode(pool),
+      encoder.encode(owner),
+      indexBuffer,
+    ],
+  });
 
-  const [pda, bump] = await findProgramAddress(seeds, programId);
   return [pda, bump];
-}
-
-/**
- * Helper to find program address (PDA)
- * NOTE: This is a simplified placeholder. In production, use proper PDA derivation
- * from @solana/addresses or similar library
- */
-async function findProgramAddress(
-  seeds: any[],
-  programId: Address
-): Promise<[Address, number]> {
-  // Placeholder implementation
-  // In a real implementation, you would:
-  // 1. Hash the seeds + bump + program ID
-  // 2. Check if the result is on the ed25519 curve
-  // 3. If not, try the next bump
-  
-  // For now, return a placeholder
-  console.warn('⚠️  Using placeholder PDA derivation. Replace with proper implementation.');
-  const pda = address('11111111111111111111111111111111');
-  return [pda, 255];
 }
 
 /**
@@ -144,7 +129,6 @@ export async function buildAndSendTransaction(
   const { value: latestBlockhash } = await (rpc as any).getLatestBlockhash().send();
 
   // Build transaction message
-  const allSigners = [payer, ...signers];
   const transactionMessage = pipe(
     createTransactionMessage({ version: 0 }),
     (tx) => setTransactionMessageFeePayerSigner(payer, tx),
@@ -158,53 +142,22 @@ export async function buildAndSendTransaction(
     transactionMessage
   );
 
-  // Send transaction
-  console.log('📡 Sending transaction...');
-  const signature = await (rpc as any)
-    .sendTransaction(signedTransaction, {
-      encoding: 'base64',
-      maxRetries: 3n,
-      skipPreflight: false,
-    })
-    .send();
+  // Get signature before sending
+  const signature = getSignatureFromTransaction(signedTransaction);
+  console.log(`📝 Transaction signature: ${signature}`);
 
-  console.log(`✅ Transaction sent: ${signature}`);
+  // Send and confirm transaction
+  console.log('📡 Sending and confirming transaction...');
+  const rpcSubscriptions = createRpcSubscriptions();
+  
+  await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(
+    signedTransaction as any, // Type assertion to bypass complex lifetime constraint
+    { commitment: 'confirmed' }
+  );
 
-  // Wait for confirmation
-  await confirmTransaction(rpc, signature);
+  console.log(`✅ Transaction confirmed!`);
 
   return signature;
-}
-
-/**
- * Confirm a transaction
- */
-async function confirmTransaction(
-  rpc: any,
-  signature: string,
-  maxRetries: number = 30
-): Promise<void> {
-  console.log('⏳ Confirming transaction...');
-
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const status = await (rpc as any)
-        .getSignatureStatuses([signature])
-        .send();
-
-      if (status.value[0]?.confirmationStatus === 'confirmed' ||
-          status.value[0]?.confirmationStatus === 'finalized') {
-        console.log('✅ Transaction confirmed!');
-        return;
-      }
-    } catch (error) {
-      // Ignore and retry
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-
-  throw new Error('Transaction confirmation timeout');
 }
 
 /**

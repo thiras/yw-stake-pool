@@ -92,7 +92,7 @@ async function main() {
     const [poolAddress] = await findPoolPda(authority.address, stakeMint);
     console.log(`\n📍 Pool Address (PDA): ${poolAddress}`);
 
-    // Create initialize pool instruction
+    // Create and send initialize pool transaction
     const initPoolIx = getInitializePoolInstruction({
       pool: poolAddress,
       authority: authority,
@@ -110,8 +110,8 @@ async function main() {
       poolEndDate: null,
     });
 
-    console.log('\n📝 Note: Transaction simulation - actual on-chain execution requires proper setup');
-    console.log('   Instructions created successfully!');
+    const initPoolSig = await buildAndSendTransaction(rpc, [initPoolIx], authority);
+    logTransaction(initPoolSig, 'Pool Initialized');
 
     await waitForRateLimit();
 
@@ -132,7 +132,8 @@ async function main() {
       amount: fundAmount,
     });
 
-    console.log('✅ Fund rewards instruction created');
+    const fundSig = await buildAndSendTransaction(rpc, [fundIx], authority);
+    logTransaction(fundSig, 'Reward Vault Funded');
 
     await waitForRateLimit();
 
@@ -159,7 +160,8 @@ async function main() {
       index: stakeIndex,
     });
 
-    console.log('✅ Initialize stake account instruction created');
+    const initStakeSig = await buildAndSendTransaction(rpc, [initStakeAccountIx], user);
+    logTransaction(initStakeSig, 'Stake Account Initialized');
 
     await waitForRateLimit();
 
@@ -187,8 +189,6 @@ async function main() {
       expectedLockupPeriod: null, // Optional: set to prevent frontrunning
     });
 
-    console.log('✅ Stake instruction created');
-
     // Calculate expected rewards
     const expectedRewards = calculateRewards(
       stakeAmount,
@@ -196,6 +196,9 @@ async function main() {
       true
     );
     console.log(`\n📊 Expected rewards after lockup: ${formatAmount(expectedRewards)} tokens`);
+
+    const stakeSig = await buildAndSendTransaction(rpc, [stakeIx], user);
+    logTransaction(stakeSig, 'Tokens Staked');
 
     await waitForRateLimit();
 
@@ -230,8 +233,9 @@ async function main() {
       clock: address('SysvarC1ock11111111111111111111111111111111'),
     });
 
-    console.log('✅ Claim rewards instruction created');
     console.log(`   User should receive ~${formatAmount(expectedRewards)} tokens`);
+    const claimSig = await buildAndSendTransaction(rpc, [claimIx], user);
+    logTransaction(claimSig, 'Rewards Claimed');
 
     await waitForRateLimit();
 
@@ -255,8 +259,9 @@ async function main() {
       expectedRewardRate: null, // Optional: set to prevent frontrunning
     });
 
-    console.log('✅ Unstake instruction created');
     console.log(`   Remaining staked: ${formatAmount(stakeAmount - unstakeAmount)} tokens`);
+    const unstakeSig = await buildAndSendTransaction(rpc, [unstakeIx], user);
+    logTransaction(unstakeSig, 'Tokens Unstaked');
 
     await waitForRateLimit();
 
@@ -278,7 +283,8 @@ async function main() {
       poolEndDate: null, // Don't change
     });
 
-    console.log('✅ Update pool instruction created');
+    const updateSig = await buildAndSendTransaction(rpc, [updatePoolIx], authority);
+    logTransaction(updateSig, 'Pool Parameters Updated');
 
     await waitForRateLimit();
 
@@ -295,35 +301,43 @@ async function main() {
       currentAuthority: authority,
       newAuthority: newAuthority.address,
     });
-    console.log('✅ Nominate authority instruction created');
+    
+    const nominateSig = await buildAndSendTransaction(rpc, [nominateIx], authority);
+    logTransaction(nominateSig, 'Authority Nominated');
 
     console.log('\nStep 10b: Accept authority (must be called by new authority)');
     const acceptIx = getAcceptAuthorityInstruction({
       pool: poolAddress,
       pendingAuthority: newAuthority,
     });
-    console.log('✅ Accept authority instruction created');
+    
+    const acceptSig = await buildAndSendTransaction(rpc, [acceptIx], newAuthority);
+    logTransaction(acceptSig, 'Authority Transfer Accepted');
 
     // ========================================================================
     // Summary
     // ========================================================================
     logSection('Example Complete!');
 
-    console.log('✨ All instructions created successfully!\n');
-    console.log('📋 Summary of Operations:');
-    console.log('   1. ✅ Initialized stake pool');
-    console.log('   2. ✅ Funded reward vault');
-    console.log('   3. ✅ Created user stake account');
-    console.log('   4. ✅ Staked tokens');
-    console.log('   5. ✅ Claimed rewards');
-    console.log('   6. ✅ Partial unstake');
-    console.log('   7. ✅ Updated pool parameters');
-    console.log('   8. ✅ Transferred authority\n');
+    console.log('✨ All transactions executed successfully on devnet!\n');
+    console.log('📋 Transaction Summary:');
+    console.log(`   1. ✅ Pool Initialized - ${initPoolSig}`);
+    console.log(`   2. ✅ Rewards Funded - ${fundSig}`);
+    console.log(`   3. ✅ Stake Account Created - ${initStakeSig}`);
+    console.log(`   4. ✅ Tokens Staked - ${stakeSig}`);
+    console.log(`   5. ✅ Rewards Claimed - ${claimSig}`);
+    console.log(`   6. ✅ Tokens Unstaked - ${unstakeSig}`);
+    console.log(`   7. ✅ Pool Updated - ${updateSig}`);
+    console.log(`   8. ✅ Authority Nominated - ${nominateSig}`);
+    console.log(`   9. ✅ Authority Accepted - ${acceptSig}\n`);
+
+    console.log('� View transactions on Solana Explorer:');
+    console.log(`   https://explorer.solana.com/address/${poolAddress}?cluster=custom\n`);
 
     console.log('📝 Next Steps:');
-    console.log('   - Deploy the program to devnet or mainnet');
     console.log('   - Create actual SPL tokens for staking and rewards');
-    console.log('   - Send these instructions on-chain');
+    console.log('   - Update token mint addresses in config');
+    console.log('   - Test with real token transfers');
     console.log('   - Integrate with your frontend application\n');
 
     console.log('📚 Resources:');
