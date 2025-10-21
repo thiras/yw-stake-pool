@@ -78,12 +78,7 @@ jobs:
       - name: Save Build Target Directory
         uses: actions/cache/save@v4
         with:
-          path: |
-            target/
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+          path: target/
           key: ${{ runner.os }}-cargo-build-target-${{ github.sha }}
 
   test_programs:
@@ -94,22 +89,20 @@ jobs:
       - name: Git Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          solana: true
-
       - name: Restore Build Target Directory
         uses: actions/cache/restore@v4
         with:
-          path: |
-            target/
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+          path: target/
           key: ${{ runner.os }}-cargo-build-target-${{ github.sha }}
-          fail-on-cache-miss: true
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-target-
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          cargo-cache-key: cargo-program-tests
+          cargo-cache-fallback-key: cargo-programs
+          solana: true
 
       - name: Cache SPL Token 2022 Program
         id: cache-spl-token
