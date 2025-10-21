@@ -85,15 +85,6 @@ ${chalk.gray('=').repeat(60)}
   process.exit(args.length === 0 ? 1 : 0);
 }
 
-// Parse arguments
-const newAuthorityKey = args[0];
-
-// Validate new authority public key
-if (!newAuthorityKey || newAuthorityKey.startsWith('--')) {
-  echo(chalk.red('❌ Error: New authority public key is required\n'));
-  process.exit(1);
-}
-
 // Parse options
 function getOption(name, shortName = null) {
   const fullIndex = args.findIndex((arg) => arg === `--${name}`);
@@ -109,6 +100,39 @@ const stakeMint = getOption('stake-mint', 'm');
 const cluster = getOption('cluster', 'u') || 'devnet';
 const keypairPath = await getKeypairPath(getOption('keypair', 'k'));
 let programId = getOption('program-id');
+
+// Parse new authority key - can be first arg or last arg (after all flags)
+let newAuthorityKey = null;
+
+// Find the first non-flag argument
+for (let i = 0; i < args.length; i++) {
+  if (!args[i].startsWith('--') && !args[i].startsWith('-')) {
+    // Check if this is not a value for a preceding flag
+    const prevArg = i > 0 ? args[i - 1] : null;
+    if (!prevArg || (!prevArg.startsWith('--') && !prevArg.startsWith('-'))) {
+      newAuthorityKey = args[i];
+      break;
+    }
+  }
+}
+
+// If still not found, check if there's a non-flag argument after all flags
+if (!newAuthorityKey) {
+  const lastArg = args[args.length - 1];
+  if (lastArg && !lastArg.startsWith('--') && !lastArg.startsWith('-')) {
+    // Make sure it's not a value for a flag
+    const beforeLast = args.length > 1 ? args[args.length - 2] : null;
+    if (!beforeLast || (!beforeLast.startsWith('--') && !beforeLast.startsWith('-'))) {
+      newAuthorityKey = lastArg;
+    }
+  }
+}
+
+// Validate new authority public key
+if (!newAuthorityKey || newAuthorityKey.startsWith('--')) {
+  echo(chalk.red('❌ Error: New authority public key is required\n'));
+  process.exit(1);
+}
 
 echo(chalk.blue('\n' + '='.repeat(60)));
 echo(chalk.blue('  Transfer Stake Pool Authority'));
