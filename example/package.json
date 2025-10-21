@@ -8,9 +8,9 @@
     "start": "pnpm build && node dist/index.js",
     "dev": "tsx src/index.ts",
     "simple": "tsx src/simple-example.ts",
-    "devnet-test": "pnpm build && tsx src/devnet-integration-test.ts",
-    "pool-admin": "pnpm build && tsx src/pool-admin.ts",
-    "user-staking": "pnpm build && tsx src/user-staking.ts"
+    "devnet-test": "pnpm build && tsx src/devnet-integration-test.ts --",
+    "pool-admin": "pnpm build && tsx src/pool-admin.ts --",
+    "user-staking": "pnpm build && tsx src/user-staking.ts --"
   },
   "dependencies": {
     "@solana/kit": "^4.0.0",
