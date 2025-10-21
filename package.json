@@ -9,7 +9,7 @@
     "programs:deploy": "zx ./scripts/program/deploy.mjs",
     "programs:deploy:devnet": "zx ./scripts/program/deploy.mjs --cluster devnet",
     "programs:transfer-authority": "zx ./scripts/program/transfer-authority.mjs",
-        "programs:pool:transfer-authority": "zx scripts/program/pool-transfer-authority.mjs",
+    "programs:pool:transfer-authority": "zx scripts/program/pool-transfer-authority.mjs",
     "programs:pool:accept-authority": "zx scripts/program/pool-accept-authority.mjs",
     "generate:idls": "zx ./scripts/generate-idls.mjs",
     "solana:check": "zx ./scripts/check-solana-version.mjs",
