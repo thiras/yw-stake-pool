@@ -1,5 +1,8 @@
 # Security Audit Report
 
+> **⚠️ AI-ASSISTED AUDIT NOTICE**  
+> This security audit was conducted with assistance from AI tools (GitHub Copilot, Claude). While comprehensive analysis was performed against industry-standard vulnerability classes and best practices, this should **NOT** replace a professional third-party security audit by certified auditors. Use at your own risk. For production deployment, we strongly recommend obtaining an independent audit from reputable security firms such as Trail of Bits, OtterSec, Neodyme, or similar.
+
 **Program**: YW Stake Pool  
 **Program ID**: `8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx`  
 **Audit Date**: October 22, 2025  
