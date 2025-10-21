@@ -9,7 +9,7 @@ use solana_sdk::pubkey::Pubkey;
 use your_wallet_stake_pool::state::{StakeAccount, StakePool};
 
 /// Program ID constant
-pub const PROGRAM_ID: &str = "Bdm2SF3wrRLmo2t9MyGKydLHAgU5Bhxif8wN9HNMYfSH";
+pub const PROGRAM_ID: &str = "8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR";
 
 // ============================================================================
 // Program Loading
