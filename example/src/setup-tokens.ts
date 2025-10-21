@@ -245,11 +245,10 @@ export async function setupTestTokens(
   console.log('  Setting Up Test Tokens');
   console.log('='.repeat(60));
 
-  // Use the provided stake mint keypair
+  // 1. Create Stake Mint (using provided keypair for PDA derivation)
   const stakeMint = stakeMintKeypair.address;
-  console.log(`\n🪙 Using pre-generated Stake Mint: ${stakeMint}`);
+  console.log(`\n🪙 Creating Stake Mint: ${stakeMint}`);
   
-  // Create the stake mint account
   const space = BigInt(82);
   const rentLamports = await rpc.getMinimumBalanceForRentExemption(space).send();
   const encoder = getAddressEncoder();
@@ -271,37 +270,39 @@ export async function setupTestTokens(
   };
 
   const initMintIx = createInitializeMintInstruction(stakeMint, 6, authority.address, null);
-
   await buildAndSendTransaction(rpc, [createAccountIx, initMintIx], authority, [stakeMintKeypair]);
-  console.log(`✅ Stake mint created: ${stakeMint}`);
+  console.log(`✅ Stake mint created`);
   await waitForRateLimit();
 
-  // Create reward token mint
+  // 2. Create Reward Mint
   const rewardMint = await createMint(rpc, authority, authority.address, 6);
   await waitForRateLimit();
 
-  // Create stake vault (pool's stake token account) - OWNED BY POOL PDA
+  // 3. Create Vaults (owned by Pool PDA - program will have authority via PDA seeds)
+  console.log(`\n🏦 Creating vaults (owned by Pool PDA: ${poolPda})`);
   const stakeVault = await createTokenAccount(rpc, authority, stakeMint, poolPda);
   await waitForRateLimit();
 
-  // Create reward vault (pool's reward token account) - OWNED BY POOL PDA
   const rewardVault = await createTokenAccount(rpc, authority, rewardMint, poolPda);
   await waitForRateLimit();
 
-  // Create authority's reward token account (for funding the vault)
-  const authorityRewardAccount = await createTokenAccount(rpc, authority, rewardMint, authority.address);
-  await waitForRateLimit();
-
-  // Create user's stake token account
+  // 4. Create User Token Accounts (owned by user)
+  console.log(`\n👤 Creating user token accounts (owned by: ${user.address})`);
   const userStakeAccount = await createTokenAccount(rpc, authority, stakeMint, user.address);
   await waitForRateLimit();
 
-  // Create user's reward token account
   const userRewardAccount = await createTokenAccount(rpc, authority, rewardMint, user.address);
   await waitForRateLimit();
 
-  // Mint some tokens to user for testing
-  console.log('\n💰 Funding accounts for testing...');
+  // 5. Create Authority's Reward Account (for funding the reward vault)
+  console.log(`\n👑 Creating authority reward account (for funding vault)`);
+  const authorityRewardAccount = await createTokenAccount(rpc, authority, rewardMint, authority.address);
+  await waitForRateLimit();
+
+  // 6. Fund accounts with initial tokens
+  console.log('\n💰 Minting initial tokens...');
+  console.log('   - User stake account: 1,000 tokens');
+  console.log('   - Authority reward account: 10,000 tokens (for funding vault)');
   
   await mintTokensTo(rpc, authority, stakeMint, userStakeAccount, 1_000_000_000n); // 1000 tokens
   await waitForRateLimit();
