@@ -11,7 +11,6 @@
 
 import { address } from '@solana/kit';
 import {
-  getInitializeStakeAccountInstruction,
   getStakeInstruction,
   getClaimRewardsInstruction,
   getUnstakeInstruction,
@@ -57,9 +56,9 @@ async function main() {
     const rewardVault = address('11111111111111111111111111111113');
 
     // ========================================================================
-    // Example 1: Initialize Stake Account
+    // Example 1: Stake Tokens (Creates Account Automatically)
     // ========================================================================
-    logStep(1, 'Initialize Stake Account');
+    logStep(1, 'Stake Tokens');
 
     const stakeIndex = 0n; // First stake account for this user
     const [stakeAccountAddress] = await findStakeAccountPda(
@@ -70,26 +69,11 @@ async function main() {
 
     console.log(`📍 Stake Account PDA: ${stakeAccountAddress}`);
     console.log(`   Index: ${stakeIndex}`);
-
-    const initStakeIx = getInitializeStakeAccountInstruction({
-      stakeAccount: stakeAccountAddress,
-      pool: poolAddress,
-      owner: user,
-      payer: user,
-      systemProgram: config.systemProgramId,
-      index: stakeIndex,
-    });
-
-    console.log('✅ Initialize stake account instruction created');
-    console.log('   💡 Users can have multiple stake accounts with different indices');
-
-    // ========================================================================
-    // Example 2: Stake Tokens
-    // ========================================================================
-    logStep(2, 'Stake Tokens');
+    console.log('   💡 Stake instruction creates the account automatically if it doesn\'t exist');
 
     const stakeAmount = 100_000_000n; // 100 tokens
-    console.log(`🔒 Staking ${formatAmount(stakeAmount)} tokens`);
+    console.log(`\n🔒 Staking ${formatAmount(stakeAmount)} tokens`);
+    console.log('   This will create the stake account and transfer tokens in one transaction');
 
     const stakeIx = getStakeInstruction({
       pool: poolAddress,
@@ -120,9 +104,9 @@ async function main() {
     console.log(`   Expected Rewards: ${formatAmount(expectedRewards)} tokens`);
 
     // ========================================================================
-    // Example 3: Stake with Frontrunning Protection
+    // Example 2: Stake with Frontrunning Protection
     // ========================================================================
-    logStep(3, 'Stake with Frontrunning Protection');
+    logStep(2, 'Stake with Frontrunning Protection');
 
     console.log('🛡️  Using expected parameters to prevent frontrunning');
     console.log('   If pool params change before tx lands, it will fail');
@@ -149,9 +133,9 @@ async function main() {
     console.log('   ✓ Expected lockup period will be verified');
 
     // ========================================================================
-    // Example 4: Wait for Lockup & Claim Rewards
+    // Example 3: Wait for Lockup & Claim Rewards
     // ========================================================================
-    logStep(4, 'Wait for Lockup & Claim Rewards');
+    logStep(3, 'Wait for Lockup & Claim Rewards');
 
     console.log('⏳ In production, wait for lockup period to pass');
     console.log(`   Lockup: ${config.defaultPoolConfig.lockupPeriod}s`);
@@ -174,9 +158,9 @@ async function main() {
     console.log(`   Expected rewards: ${formatAmount(expectedRewards)} tokens`);
 
     // ========================================================================
-    // Example 5: Partial Unstake
+    // Example 4: Partial Unstake
     // ========================================================================
-    logStep(5, 'Partial Unstake');
+    logStep(4, 'Partial Unstake');
 
     const partialAmount = 40_000_000n; // 40 tokens
     console.log(`🔓 Partial unstake: ${formatAmount(partialAmount)} tokens`);
@@ -198,9 +182,9 @@ async function main() {
     console.log('✅ Partial unstake instruction created');
 
     // ========================================================================
-    // Example 6: Full Unstake
+    // Example 5: Full Unstake
     // ========================================================================
-    logStep(6, 'Full Unstake');
+    logStep(5, 'Full Unstake');
 
     const remainingAmount = stakeAmount - partialAmount;
     console.log(`🔓 Full unstake: ${formatAmount(remainingAmount)} tokens`);
@@ -222,12 +206,12 @@ async function main() {
     console.log('   After this, stake account will have 0 tokens staked');
 
     // ========================================================================
-    // Example 7: Multiple Stake Accounts
+    // Example 6: Multiple Stake Accounts (Advanced)
     // ========================================================================
-    logStep(7, 'Multiple Stake Accounts (Advanced)');
+    logStep(6, 'Multiple Stake Accounts (Advanced)');
 
     console.log('💡 Users can create multiple stake accounts with different indices');
-    console.log('   This allows for separate stakes with different strategies\n');
+    console.log('   Each stake instruction creates a new account automatically\n');
 
     // Second stake account
     const stakeIndex2 = 1n;
@@ -239,19 +223,10 @@ async function main() {
 
     console.log(`📍 Stake Account #2: ${stakeAccountAddress2}`);
 
-    const initStake2Ix = getInitializeStakeAccountInstruction({
-      stakeAccount: stakeAccountAddress2,
-      pool: poolAddress,
-      owner: user,
-      payer: user,
-      systemProgram: config.systemProgramId,
-      index: stakeIndex2,
-    });
-
-    console.log('✅ Second stake account instruction created');
-
-    // Stake in second account
+    // Stake in second account (will create the account automatically)
     const stake2Amount = 200_000_000n; // 200 tokens
+    console.log(`🔒 Staking ${formatAmount(stake2Amount)} tokens to second account`);
+    
     const stake2Ix = getStakeInstruction({
       pool: poolAddress,
       stakeAccount: stakeAccountAddress2,
@@ -269,7 +244,8 @@ async function main() {
       expectedLockupPeriod: null,
     });
 
-    console.log(`✅ Stake to second account: ${formatAmount(stake2Amount)} tokens`);
+    console.log('✅ Second stake account instruction created');
+    console.log('   Account will be created and funded in one transaction');
 
     // ========================================================================
     // Summary
@@ -277,15 +253,15 @@ async function main() {
     logSection('User Staking Examples Complete!');
 
     console.log('📋 Operations Demonstrated:');
-    console.log('   1. ✅ Initialize stake account');
-    console.log('   2. ✅ Stake tokens (basic)');
-    console.log('   3. ✅ Stake with frontrunning protection');
-    console.log('   4. ✅ Claim rewards after lockup');
-    console.log('   5. ✅ Partial unstake');
-    console.log('   6. ✅ Full unstake');
-    console.log('   7. ✅ Multiple stake accounts\n');
+    console.log('   1. ✅ Stake tokens (creates account automatically)');
+    console.log('   2. ✅ Stake with frontrunning protection');
+    console.log('   3. ✅ Claim rewards after lockup');
+    console.log('   4. ✅ Partial unstake');
+    console.log('   5. ✅ Full unstake');
+    console.log('   6. ✅ Multiple stake accounts\n');
 
     console.log('💡 Tips for Users:');
+    console.log('   - Stake instruction creates accounts automatically - no separate initialization needed');
     console.log('   - Wait for lockup period before claiming rewards');
     console.log('   - Use frontrunning protection for added security');
     console.log('   - Partial unstake lets you access some funds early');
