@@ -25,6 +25,7 @@ import {
   findStakeAccountPda,
   logSection,
   logStep,
+  waitForRateLimit,
   handleError,
   calculateRewards,
   sleep,
@@ -37,11 +38,13 @@ async function main() {
     const rpc = createRpc();
     console.log(`🌐 Connected to: ${config.rpcUrl}\n`);
 
-    // Create user keypair
-    const user = await createFundedKeypair(rpc, 'User');
+    // Create user keypair (uses local keypair by default)
+    const user = await createFundedKeypair(rpc, 'User', config.useLocalKeypair);
+    await waitForRateLimit();
 
     // Assume pool already exists (created by admin)
-    const poolAuthority = await createFundedKeypair(rpc, 'Pool Authority');
+    // Generate a separate authority keypair for pool reference
+    const poolAuthority = await createFundedKeypair(rpc, 'Pool Authority', false);
     const stakeMint = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const rewardMint = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     
@@ -80,6 +83,7 @@ async function main() {
 
     console.log('✅ Initialize stake account instruction created');
     console.log('   💡 Users can have multiple stake accounts with different indices');
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 2: Stake Tokens
@@ -115,6 +119,7 @@ async function main() {
     console.log(`   Amount: ${formatAmount(stakeAmount)} tokens`);
     console.log(`   Reward Rate: ${formatRewardRate(rewardRate)}`);
     console.log(`   Expected Rewards: ${formatAmount(expectedRewards)} tokens`);
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 3: Stake with Frontrunning Protection
@@ -143,6 +148,7 @@ async function main() {
     console.log('✅ Protected stake instruction created');
     console.log('   ✓ Expected reward rate will be verified');
     console.log('   ✓ Expected lockup period will be verified');
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 4: Wait for Lockup & Claim Rewards
@@ -167,6 +173,7 @@ async function main() {
 
     console.log('✅ Claim rewards instruction created');
     console.log(`   Expected rewards: ${formatAmount(expectedRewards)} tokens`);
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 5: Partial Unstake
@@ -190,6 +197,7 @@ async function main() {
     });
 
     console.log('✅ Partial unstake instruction created');
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 6: Full Unstake
@@ -213,6 +221,7 @@ async function main() {
 
     console.log('✅ Full unstake instruction created');
     console.log('   After this, stake account will have 0 tokens staked');
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 7: Multiple Stake Accounts

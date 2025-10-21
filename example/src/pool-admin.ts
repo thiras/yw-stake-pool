@@ -25,6 +25,7 @@ import {
   findPoolPda,
   logSection,
   logStep,
+  waitForRateLimit,
   handleError,
 } from './utils.js';
 
@@ -35,8 +36,9 @@ async function main() {
     const rpc = createRpc();
     console.log(`🌐 Connected to: ${config.rpcUrl}\n`);
 
-    // Create admin keypair
-    const admin = await createFundedKeypair(rpc, 'Pool Admin');
+    // Create admin keypair (uses local keypair by default)
+    const admin = await createFundedKeypair(rpc, 'Pool Admin', config.useLocalKeypair);
+    await waitForRateLimit();
 
     // Placeholder addresses (in production, use real SPL tokens)
     const stakeMint = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
@@ -73,6 +75,7 @@ async function main() {
     console.log(`   Reward Rate: ${formatRewardRate(config.defaultPoolConfig.rewardRate)}`);
     console.log(`   Min Stake: ${formatAmount(config.defaultPoolConfig.minStakeAmount)}`);
     console.log(`   Lockup: ${formatDuration(config.defaultPoolConfig.lockupPeriod)}`);
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 2: Fund Reward Vault
@@ -92,6 +95,7 @@ async function main() {
     });
 
     console.log('✅ Fund rewards instruction created');
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 3: Update Pool - Change Reward Rate
@@ -112,6 +116,7 @@ async function main() {
     });
 
     console.log('✅ Update reward rate instruction created');
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 4: Update Pool - Pause
@@ -131,9 +136,10 @@ async function main() {
     });
 
     console.log('✅ Pause pool instruction created');
+    await waitForRateLimit();
 
     // ========================================================================
-    // Example 5: Update Pool - Change Multiple Parameters
+    // Example 5: Update Pool - Multiple Parameters
     // ========================================================================
     logStep(5, 'Update Pool - Multiple Parameters');
 
@@ -153,6 +159,7 @@ async function main() {
     });
 
     console.log('✅ Multi-parameter update instruction created');
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 6: Set Pool End Date
@@ -174,13 +181,14 @@ async function main() {
     });
 
     console.log('✅ Set end date instruction created');
+    await waitForRateLimit();
 
     // ========================================================================
     // Example 7: Transfer Authority (Two-Step)
     // ========================================================================
     logStep(7, 'Transfer Authority (Two-Step Process)');
 
-    const newAdmin = await createFundedKeypair(rpc, 'New Admin');
+    const newAdmin = await createFundedKeypair(rpc, 'New Admin', false);
 
     console.log('\n7a. Current admin nominates new authority');
     const nominateIx = getNominateNewAuthorityInstruction({

@@ -17,9 +17,13 @@ import {
   TransactionSigner,
   getAddressEncoder,
   lamports,
+  createKeyPairSignerFromBytes,
 } from '@solana/kit';
 import type { Rpc, SolanaRpcApi, Commitment } from '@solana/kit';
 import { config } from './config.js';
+import { readFileSync, existsSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
 
 /**
  * Create RPC client
@@ -212,6 +216,18 @@ export async function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Wait between operations to avoid RPC rate limits
+ * Uses configured delay from config
+ */
+export async function waitForRateLimit(): Promise<void> {
+  const delay = config.rateLimitDelay;
+  if (delay > 0) {
+    console.log(`⏱️  Waiting ${delay}ms for rate limit...`);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+}
+
+/**
  * Calculate expected rewards
  */
 export function calculateRewards(
@@ -249,15 +265,88 @@ export function logStep(step: number, description: string): void {
 }
 
 /**
- * Create a test keypair with airdrop
+ * Load keypair from filesystem
+ * Tries the following locations in order:
+ * 1. Path specified in SOLANA_KEYPAIR_PATH env var
+ * 2. ~/.config/solana/id.json (default Solana CLI location)
+ * 3. ./keypair.json (local file)
+ */
+export async function loadKeypair(customPath?: string): Promise<KeyPairSigner> {
+  const paths = [
+    customPath,
+    process.env.SOLANA_KEYPAIR_PATH,
+    join(homedir(), '.config', 'solana', 'id.json'),
+    './keypair.json',
+  ].filter(Boolean) as string[];
+
+  for (const path of paths) {
+    if (existsSync(path)) {
+      try {
+        const keypairData = JSON.parse(readFileSync(path, 'utf-8'));
+        const secretKey = new Uint8Array(keypairData);
+        const keypair = await createKeyPairSignerFromBytes(secretKey);
+        console.log(`🔑 Loaded keypair from: ${path}`);
+        console.log(`   Address: ${keypair.address}`);
+        return keypair;
+      } catch (error) {
+        console.warn(`⚠️  Failed to load keypair from ${path}: ${(error as Error).message}`);
+      }
+    }
+  }
+
+  throw new Error(
+    'No keypair found. Please ensure you have a Solana keypair at:\n' +
+    '  - ~/.config/solana/id.json (default), or\n' +
+    '  - Set SOLANA_KEYPAIR_PATH environment variable, or\n' +
+    '  - Create ./keypair.json in the example directory\n' +
+    'You can generate one with: solana-keygen new'
+  );
+}
+
+/**
+ * Create or load a keypair with optional airdrop
+ * If useLocalKeypair is true, loads from filesystem, otherwise generates new one
  */
 export async function createFundedKeypair(
   rpc: any,
-  name: string = 'keypair'
+  name: string = 'keypair',
+  useLocalKeypair: boolean = true,
+  customKeypairPath?: string
 ): Promise<KeyPairSigner> {
-  const keypair = await generateKeyPairSigner();
-  console.log(`🔑 Generated ${name}: ${keypair.address}`);
-  await airdrop(rpc, keypair.address);
+  let keypair: KeyPairSigner;
+
+  if (useLocalKeypair) {
+    try {
+      keypair = await loadKeypair(customKeypairPath);
+      console.log(`📝 Using local keypair as ${name}`);
+    } catch (error) {
+      console.log(`⚠️  ${(error as Error).message}`);
+      console.log(`🔄 Falling back to generating new keypair for ${name}...`);
+      keypair = await generateKeyPairSigner();
+      console.log(`🔑 Generated ${name}: ${keypair.address}`);
+      await airdrop(rpc, keypair.address);
+      return keypair;
+    }
+  } else {
+    keypair = await generateKeyPairSigner();
+    console.log(`🔑 Generated ${name}: ${keypair.address}`);
+    await airdrop(rpc, keypair.address);
+    return keypair;
+  }
+
+  // Check balance and airdrop if needed
+  try {
+    const balance = await (rpc as any).getBalance(keypair.address).send();
+    console.log(`   Balance: ${balance.value} lamports`);
+    
+    if (balance.value < 100_000_000n) { // Less than 0.1 SOL
+      console.log(`   💰 Balance low, requesting airdrop...`);
+      await airdrop(rpc, keypair.address);
+    }
+  } catch (error) {
+    console.warn(`⚠️  Could not check balance: ${(error as Error).message}`);
+  }
+
   return keypair;
 }
 

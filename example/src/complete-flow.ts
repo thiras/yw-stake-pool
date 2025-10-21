@@ -35,6 +35,7 @@ import {
   logStep,
   logTransaction,
   sleep,
+  waitForRateLimit,
   handleError,
   calculateRewards,
 } from './utils.js';
@@ -56,10 +57,14 @@ async function main() {
     logStep(1, 'Setup - Create Keypairs and Test Tokens');
 
     // Create authority keypair (pool operator)
-    const authority = await createFundedKeypair(rpc, 'Authority');
+    // By default, uses your local Solana keypair unless config.useLocalKeypair is false
+    const authority = await createFundedKeypair(rpc, 'Authority', config.useLocalKeypair);
 
     // Create user keypair (staker)
-    const user = await createFundedKeypair(rpc, 'User');
+    // Generate a new keypair for the user to avoid confusion
+    const user = await createFundedKeypair(rpc, 'User', false);
+
+    await waitForRateLimit();
 
     // For this example, we'll use placeholder addresses for mints and token accounts
     // In a real scenario, you would create actual SPL tokens
@@ -108,6 +113,8 @@ async function main() {
     console.log('\n📝 Note: Transaction simulation - actual on-chain execution requires proper setup');
     console.log('   Instructions created successfully!');
 
+    await waitForRateLimit();
+
     // ========================================================================
     // Step 3: Fund Reward Vault
     // ========================================================================
@@ -126,6 +133,8 @@ async function main() {
     });
 
     console.log('✅ Fund rewards instruction created');
+
+    await waitForRateLimit();
 
     // ========================================================================
     // Step 4: Initialize User Stake Account
@@ -151,6 +160,8 @@ async function main() {
     });
 
     console.log('✅ Initialize stake account instruction created');
+
+    await waitForRateLimit();
 
     // ========================================================================
     // Step 5: Stake Tokens
@@ -186,6 +197,8 @@ async function main() {
     );
     console.log(`\n📊 Expected rewards after lockup: ${formatAmount(expectedRewards)} tokens`);
 
+    await waitForRateLimit();
+
     // ========================================================================
     // Step 6: Wait for Lockup Period (simulated)
     // ========================================================================
@@ -197,6 +210,8 @@ async function main() {
 
     // Simulate wait (in real scenario, this would be actual time passage)
     await sleep(2000);
+
+    await waitForRateLimit();
 
     // ========================================================================
     // Step 7: Claim Rewards
@@ -217,6 +232,8 @@ async function main() {
 
     console.log('✅ Claim rewards instruction created');
     console.log(`   User should receive ~${formatAmount(expectedRewards)} tokens`);
+
+    await waitForRateLimit();
 
     // ========================================================================
     // Step 8: Partial Unstake
@@ -241,6 +258,8 @@ async function main() {
     console.log('✅ Unstake instruction created');
     console.log(`   Remaining staked: ${formatAmount(stakeAmount - unstakeAmount)} tokens`);
 
+    await waitForRateLimit();
+
     // ========================================================================
     // Step 9: Update Pool Parameters
     // ========================================================================
@@ -261,12 +280,14 @@ async function main() {
 
     console.log('✅ Update pool instruction created');
 
+    await waitForRateLimit();
+
     // ========================================================================
     // Step 10: Transfer Pool Authority (Two-Step)
     // ========================================================================
     logStep(10, 'Transfer Pool Authority (Two-Step Process)');
 
-    const newAuthority = await createFundedKeypair(rpc, 'New Authority');
+    const newAuthority = await createFundedKeypair(rpc, 'New Authority', false);
 
     console.log('Step 10a: Nominate new authority');
     const nominateIx = getNominateNewAuthorityInstruction({

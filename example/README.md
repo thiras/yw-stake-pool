@@ -198,7 +198,58 @@ export const config = {
   rewardRate: 100_000_000n,      // 10% APY
   minStakeAmount: 1_000_000n,    // 1 token (6 decimals)
   lockupPeriod: 86400n,          // 1 day in seconds
-};
+  
+  // Keypair configuration
+  useLocalKeypair: true,         // Use your local Solana keypair
+  // customKeypairPath: '/path/to/keypair.json', // Optional custom path
+  
+  // Rate limiting (for public RPC endpoints)
+  rateLimitDelay: 1500,          // Milliseconds between operations
+```
+
+### Rate Limiting
+
+**Public RPC endpoints** (like `api.devnet.solana.com`) have rate limits. All examples include automatic rate limiting to prevent `429 Too Many Requests` errors.
+
+- **Default**: 1500ms (1.5 seconds) between operations
+- **Local validator**: Set to `0` to disable
+- **Premium RPC**: Adjust based on your provider's limits
+
+See [RATE_LIMITING.md](./RATE_LIMITING.md) for details.
+```
+
+### Using Your Local Keypair
+
+**By default, the examples use your local Solana keypair** located at `~/.config/solana/id.json`. This is the same keypair used by the Solana CLI.
+
+**Benefits:**
+- No need for airdrops if you already have SOL
+- Use your existing devnet/mainnet keypair
+- Consistent identity across examples
+
+**Keypair Loading Priority:**
+1. Custom path (if specified in config or `SOLANA_KEYPAIR_PATH` env var)
+2. `~/.config/solana/id.json` (default Solana CLI location)
+3. `./keypair.json` (local file in example directory)
+4. Falls back to generating new keypair if none found
+
+**To use a different keypair:**
+
+```typescript
+// Option 1: Set environment variable
+export SOLANA_KEYPAIR_PATH=/path/to/your/keypair.json
+
+// Option 2: Set in config.ts
+customKeypairPath: '/path/to/your/keypair.json'
+
+// Option 3: Disable local keypair usage
+useLocalKeypair: false  // Will generate new keypairs
+```
+
+**Check your current keypair:**
+```bash
+solana address
+solana balance
 ```
 
 ## Testing on Local Validator

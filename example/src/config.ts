@@ -7,7 +7,7 @@ import { address } from '@solana/kit';
 export const config = {
   // RPC endpoint - change based on your environment
   // rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8899', // Local validator
-  rpcUrl: 'https://api.devnet.solana.com', // For devnet
+  rpcUrl: 'https://solana-devnet.g.alchemy.com/v2/QHcIFKfQh9Ab1NGwuDVlS', // For devnet
 
   // Program ID - update with your deployed program ID
   programId: address('8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR'),
@@ -33,6 +33,19 @@ export const config = {
 
   // Airdrop amount for testing (in lamports)
   airdropAmount: 2_000_000_000n, // 2 SOL
+
+  // Keypair configuration
+  // Set to true to use your local Solana keypair (~/.config/solana/id.json)
+  // Set to false to generate new keypairs for testing
+  useLocalKeypair: true,
+
+  // Optional: specify custom keypair path
+  // customKeypairPath: '/path/to/your/keypair.json',
+
+  // Rate limiting
+  // Delay between operations to avoid RPC rate limits (in milliseconds)
+  // Set to 0 to disable delays (not recommended for public RPC endpoints)
+  rateLimitDelay: 10000, // 10 seconds between operations
 } as const;
 
 // Time constants
