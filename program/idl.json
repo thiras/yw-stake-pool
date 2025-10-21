@@ -218,6 +218,14 @@
           ]
         },
         {
+          "name": "stakeMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token mint being staked"
+          ]
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false,
@@ -313,6 +321,14 @@
           ]
         },
         {
+          "name": "stakeMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The token mint being staked"
+          ]
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false,
@@ -387,6 +403,14 @@
           "isSigner": false,
           "docs": [
             "Pool's reward vault"
+          ]
+        },
+        {
+          "name": "rewardMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The reward token mint"
           ]
         },
         {
@@ -504,6 +528,14 @@
           "isSigner": false,
           "docs": [
             "Pool's reward vault"
+          ]
+        },
+        {
+          "name": "rewardMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The reward token mint"
           ]
         },
         {

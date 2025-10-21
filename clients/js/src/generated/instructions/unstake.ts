@@ -50,6 +50,7 @@ export type UnstakeInstruction<
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountUserTokenAccount extends string | AccountMeta<string> = string,
   TAccountStakeVault extends string | AccountMeta<string> = string,
+  TAccountStakeMint extends string | AccountMeta<string> = string,
   TAccountTokenProgram extends
     | string
     | AccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
@@ -75,6 +76,9 @@ export type UnstakeInstruction<
       TAccountStakeVault extends string
         ? WritableAccount<TAccountStakeVault>
         : TAccountStakeVault,
+      TAccountStakeMint extends string
+        ? ReadonlyAccount<TAccountStakeMint>
+        : TAccountStakeMint,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
@@ -131,6 +135,7 @@ export type UnstakeInput<
   TAccountOwner extends string = string,
   TAccountUserTokenAccount extends string = string,
   TAccountStakeVault extends string = string,
+  TAccountStakeMint extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountClock extends string = string,
 > = {
@@ -144,6 +149,8 @@ export type UnstakeInput<
   userTokenAccount: Address<TAccountUserTokenAccount>;
   /** Pool's stake vault */
   stakeVault: Address<TAccountStakeVault>;
+  /** The token mint being staked */
+  stakeMint: Address<TAccountStakeMint>;
   /** The token program */
   tokenProgram?: Address<TAccountTokenProgram>;
   /** Clock sysvar */
@@ -158,6 +165,7 @@ export function getUnstakeInstruction<
   TAccountOwner extends string,
   TAccountUserTokenAccount extends string,
   TAccountStakeVault extends string,
+  TAccountStakeMint extends string,
   TAccountTokenProgram extends string,
   TAccountClock extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
@@ -168,6 +176,7 @@ export function getUnstakeInstruction<
     TAccountOwner,
     TAccountUserTokenAccount,
     TAccountStakeVault,
+    TAccountStakeMint,
     TAccountTokenProgram,
     TAccountClock
   >,
@@ -179,6 +188,7 @@ export function getUnstakeInstruction<
   TAccountOwner,
   TAccountUserTokenAccount,
   TAccountStakeVault,
+  TAccountStakeMint,
   TAccountTokenProgram,
   TAccountClock
 > {
@@ -195,6 +205,7 @@ export function getUnstakeInstruction<
       isWritable: true,
     },
     stakeVault: { value: input.stakeVault ?? null, isWritable: true },
+    stakeMint: { value: input.stakeMint ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     clock: { value: input.clock ?? null, isWritable: false },
   };
@@ -220,6 +231,7 @@ export function getUnstakeInstruction<
       getAccountMeta(accounts.owner),
       getAccountMeta(accounts.userTokenAccount),
       getAccountMeta(accounts.stakeVault),
+      getAccountMeta(accounts.stakeMint),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.clock),
     ],
@@ -234,6 +246,7 @@ export function getUnstakeInstruction<
     TAccountOwner,
     TAccountUserTokenAccount,
     TAccountStakeVault,
+    TAccountStakeMint,
     TAccountTokenProgram,
     TAccountClock
   >);
@@ -255,10 +268,12 @@ export type ParsedUnstakeInstruction<
     userTokenAccount: TAccountMetas[3];
     /** Pool's stake vault */
     stakeVault: TAccountMetas[4];
+    /** The token mint being staked */
+    stakeMint: TAccountMetas[5];
     /** The token program */
-    tokenProgram: TAccountMetas[5];
+    tokenProgram: TAccountMetas[6];
     /** Clock sysvar */
-    clock: TAccountMetas[6];
+    clock: TAccountMetas[7];
   };
   data: UnstakeInstructionData;
 };
@@ -271,7 +286,7 @@ export function parseUnstakeInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedUnstakeInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -289,6 +304,7 @@ export function parseUnstakeInstruction<
       owner: getNextAccount(),
       userTokenAccount: getNextAccount(),
       stakeVault: getNextAccount(),
+      stakeMint: getNextAccount(),
       tokenProgram: getNextAccount(),
       clock: getNextAccount(),
     },

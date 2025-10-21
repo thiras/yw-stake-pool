@@ -54,6 +54,7 @@ export type StakeInstruction<
   TAccountUserTokenAccount extends string | AccountMeta<string> = string,
   TAccountStakeVault extends string | AccountMeta<string> = string,
   TAccountRewardVault extends string | AccountMeta<string> = string,
+  TAccountStakeMint extends string | AccountMeta<string> = string,
   TAccountTokenProgram extends
     | string
     | AccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
@@ -85,6 +86,9 @@ export type StakeInstruction<
       TAccountRewardVault extends string
         ? ReadonlyAccount<TAccountRewardVault>
         : TAccountRewardVault,
+      TAccountStakeMint extends string
+        ? ReadonlyAccount<TAccountStakeMint>
+        : TAccountStakeMint,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
@@ -154,6 +158,7 @@ export type StakeInput<
   TAccountUserTokenAccount extends string = string,
   TAccountStakeVault extends string = string,
   TAccountRewardVault extends string = string,
+  TAccountStakeMint extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountPayer extends string = string,
   TAccountSystemProgram extends string = string,
@@ -170,6 +175,8 @@ export type StakeInput<
   stakeVault: Address<TAccountStakeVault>;
   /** Pool's reward vault (for checking available rewards) */
   rewardVault: Address<TAccountRewardVault>;
+  /** The token mint being staked */
+  stakeMint: Address<TAccountStakeMint>;
   /** The token program (Token or Token-2022) */
   tokenProgram?: Address<TAccountTokenProgram>;
   /** The account paying for rent */
@@ -189,6 +196,7 @@ export function getStakeInstruction<
   TAccountUserTokenAccount extends string,
   TAccountStakeVault extends string,
   TAccountRewardVault extends string,
+  TAccountStakeMint extends string,
   TAccountTokenProgram extends string,
   TAccountPayer extends string,
   TAccountSystemProgram extends string,
@@ -201,6 +209,7 @@ export function getStakeInstruction<
     TAccountUserTokenAccount,
     TAccountStakeVault,
     TAccountRewardVault,
+    TAccountStakeMint,
     TAccountTokenProgram,
     TAccountPayer,
     TAccountSystemProgram
@@ -214,6 +223,7 @@ export function getStakeInstruction<
   TAccountUserTokenAccount,
   TAccountStakeVault,
   TAccountRewardVault,
+  TAccountStakeMint,
   TAccountTokenProgram,
   TAccountPayer,
   TAccountSystemProgram
@@ -232,6 +242,7 @@ export function getStakeInstruction<
     },
     stakeVault: { value: input.stakeVault ?? null, isWritable: true },
     rewardVault: { value: input.rewardVault ?? null, isWritable: false },
+    stakeMint: { value: input.stakeMint ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     payer: { value: input.payer ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
@@ -263,6 +274,7 @@ export function getStakeInstruction<
       getAccountMeta(accounts.userTokenAccount),
       getAccountMeta(accounts.stakeVault),
       getAccountMeta(accounts.rewardVault),
+      getAccountMeta(accounts.stakeMint),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.systemProgram),
@@ -279,6 +291,7 @@ export function getStakeInstruction<
     TAccountUserTokenAccount,
     TAccountStakeVault,
     TAccountRewardVault,
+    TAccountStakeMint,
     TAccountTokenProgram,
     TAccountPayer,
     TAccountSystemProgram
@@ -303,12 +316,14 @@ export type ParsedStakeInstruction<
     stakeVault: TAccountMetas[4];
     /** Pool's reward vault (for checking available rewards) */
     rewardVault: TAccountMetas[5];
+    /** The token mint being staked */
+    stakeMint: TAccountMetas[6];
     /** The token program (Token or Token-2022) */
-    tokenProgram: TAccountMetas[6];
+    tokenProgram: TAccountMetas[7];
     /** The account paying for rent */
-    payer: TAccountMetas[7];
+    payer: TAccountMetas[8];
     /** The system program */
-    systemProgram: TAccountMetas[8];
+    systemProgram: TAccountMetas[9];
   };
   data: StakeInstructionData;
 };
@@ -321,7 +336,7 @@ export function parseStakeInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedStakeInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 9) {
+  if (instruction.accounts.length < 10) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -340,6 +355,7 @@ export function parseStakeInstruction<
       userTokenAccount: getNextAccount(),
       stakeVault: getNextAccount(),
       rewardVault: getNextAccount(),
+      stakeMint: getNextAccount(),
       tokenProgram: getNextAccount(),
       payer: getNextAccount(),
       systemProgram: getNextAccount(),

@@ -44,6 +44,7 @@ export type ClaimRewardsInstruction<
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountUserRewardAccount extends string | AccountMeta<string> = string,
   TAccountRewardVault extends string | AccountMeta<string> = string,
+  TAccountRewardMint extends string | AccountMeta<string> = string,
   TAccountTokenProgram extends
     | string
     | AccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
@@ -69,6 +70,9 @@ export type ClaimRewardsInstruction<
       TAccountRewardVault extends string
         ? WritableAccount<TAccountRewardVault>
         : TAccountRewardVault,
+      TAccountRewardMint extends string
+        ? ReadonlyAccount<TAccountRewardMint>
+        : TAccountRewardMint,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
@@ -110,6 +114,7 @@ export type ClaimRewardsInput<
   TAccountOwner extends string = string,
   TAccountUserRewardAccount extends string = string,
   TAccountRewardVault extends string = string,
+  TAccountRewardMint extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountClock extends string = string,
 > = {
@@ -123,6 +128,8 @@ export type ClaimRewardsInput<
   userRewardAccount: Address<TAccountUserRewardAccount>;
   /** Pool's reward vault */
   rewardVault: Address<TAccountRewardVault>;
+  /** The reward token mint */
+  rewardMint: Address<TAccountRewardMint>;
   /** The token program */
   tokenProgram?: Address<TAccountTokenProgram>;
   /** Clock sysvar */
@@ -135,6 +142,7 @@ export function getClaimRewardsInstruction<
   TAccountOwner extends string,
   TAccountUserRewardAccount extends string,
   TAccountRewardVault extends string,
+  TAccountRewardMint extends string,
   TAccountTokenProgram extends string,
   TAccountClock extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
@@ -145,6 +153,7 @@ export function getClaimRewardsInstruction<
     TAccountOwner,
     TAccountUserRewardAccount,
     TAccountRewardVault,
+    TAccountRewardMint,
     TAccountTokenProgram,
     TAccountClock
   >,
@@ -156,6 +165,7 @@ export function getClaimRewardsInstruction<
   TAccountOwner,
   TAccountUserRewardAccount,
   TAccountRewardVault,
+  TAccountRewardMint,
   TAccountTokenProgram,
   TAccountClock
 > {
@@ -172,6 +182,7 @@ export function getClaimRewardsInstruction<
       isWritable: true,
     },
     rewardVault: { value: input.rewardVault ?? null, isWritable: true },
+    rewardMint: { value: input.rewardMint ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     clock: { value: input.clock ?? null, isWritable: false },
   };
@@ -194,6 +205,7 @@ export function getClaimRewardsInstruction<
       getAccountMeta(accounts.owner),
       getAccountMeta(accounts.userRewardAccount),
       getAccountMeta(accounts.rewardVault),
+      getAccountMeta(accounts.rewardMint),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.clock),
     ],
@@ -206,6 +218,7 @@ export function getClaimRewardsInstruction<
     TAccountOwner,
     TAccountUserRewardAccount,
     TAccountRewardVault,
+    TAccountRewardMint,
     TAccountTokenProgram,
     TAccountClock
   >);
@@ -227,10 +240,12 @@ export type ParsedClaimRewardsInstruction<
     userRewardAccount: TAccountMetas[3];
     /** Pool's reward vault */
     rewardVault: TAccountMetas[4];
+    /** The reward token mint */
+    rewardMint: TAccountMetas[5];
     /** The token program */
-    tokenProgram: TAccountMetas[5];
+    tokenProgram: TAccountMetas[6];
     /** Clock sysvar */
-    clock: TAccountMetas[6];
+    clock: TAccountMetas[7];
   };
   data: ClaimRewardsInstructionData;
 };
@@ -243,7 +258,7 @@ export function parseClaimRewardsInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedClaimRewardsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -261,6 +276,7 @@ export function parseClaimRewardsInstruction<
       owner: getNextAccount(),
       userRewardAccount: getNextAccount(),
       rewardVault: getNextAccount(),
+      rewardMint: getNextAccount(),
       tokenProgram: getNextAccount(),
       clock: getNextAccount(),
     },

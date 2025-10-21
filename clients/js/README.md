@@ -62,9 +62,12 @@ const stakeIx = getStakeInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountAddress,
   owner: owner.address,
-  ownerStakeTokenAccount: ownerTokenAddress,
+  userTokenAccount: userTokenAddress,
   stakeVault: stakeVaultAddress,
+  rewardVault: rewardVaultAddress,
+  stakeMint: stakeMintAddress,
   tokenProgram: tokenProgramAddress,
+  payer: payer.address,
   amount: 10_000_000n, // 10 tokens
   index: 0n,
   expectedRewardRate: null,
@@ -76,8 +79,9 @@ const claimIx = getClaimRewardsInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountAddress,
   owner: owner.address,
-  ownerRewardTokenAccount: ownerRewardAddress,
+  userRewardAccount: userRewardAddress,
   rewardVault: rewardVaultAddress,
+  rewardMint: rewardMintAddress,
   tokenProgram: tokenProgramAddress,
 });
 ```
@@ -130,8 +134,9 @@ Add rewards to the pool's reward vault.
 const fundIx = getFundRewardsInstruction({
   pool: poolAddress,
   funder: funder.address,
-  funderRewardTokenAccount: funderTokenAddress,
+  funderTokenAccount: funderTokenAddress,
   rewardVault: rewardVaultAddress,
+  rewardMint: rewardMintAddress,
   tokenProgram: tokenProgramAddress,
   amount: 1_000_000_000n, // 1000 tokens
 });
@@ -144,8 +149,8 @@ Create a new stake account for a user.
 
 ```typescript
 const initStakeIx = getInitializeStakeAccountInstruction({
-  pool: poolAddress,
   stakeAccount: stakeAccountPda,
+  pool: poolAddress,
   owner: owner.address,
   payer: payer.address,
   index: 0n, // First stake account for this user
@@ -160,9 +165,12 @@ const stakeIx = getStakeInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountAddress,
   owner: owner.address,
-  ownerStakeTokenAccount: ownerTokenAddress,
+  userTokenAccount: userTokenAddress,
   stakeVault: stakeVaultAddress,
+  rewardVault: rewardVaultAddress,
+  stakeMint: stakeMintAddress,
   tokenProgram: tokenProgramAddress,
+  payer: payer.address,
   amount: 100_000_000n, // 100 tokens
   index: 0n,
   expectedRewardRate: null, // Optional frontrunning protection
@@ -178,8 +186,9 @@ const unstakeIx = getUnstakeInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountAddress,
   owner: owner.address,
-  ownerStakeTokenAccount: ownerTokenAddress,
+  userTokenAccount: userTokenAddress,
   stakeVault: stakeVaultAddress,
+  stakeMint: stakeMintAddress,
   tokenProgram: tokenProgramAddress,
   amount: 50_000_000n, // Partial unstake (50 tokens)
   expectedRewardRate: null, // Optional frontrunning protection
@@ -194,8 +203,9 @@ const claimIx = getClaimRewardsInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountAddress,
   owner: owner.address,
-  ownerRewardTokenAccount: ownerRewardAddress,
+  userRewardAccount: userRewardAddress,
   rewardVault: rewardVaultAddress,
+  rewardMint: rewardMintAddress,
   tokenProgram: tokenProgramAddress,
 });
 ```
@@ -337,8 +347,8 @@ const owner = await generateKeyPairSigner();
 
 // Step 1: Initialize stake account
 const initStakeIx = getInitializeStakeAccountInstruction({
-  pool: poolAddress,
   stakeAccount: stakeAccountPda,
+  pool: poolAddress,
   owner: owner.address,
   payer: owner.address,
   index: 0n,
@@ -349,9 +359,12 @@ const stakeIx = getStakeInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountPda,
   owner: owner.address,
-  ownerStakeTokenAccount: ownerTokenAddress,
+  userTokenAccount: userTokenAddress,
   stakeVault: stakeVaultAddress,
+  rewardVault: rewardVaultAddress,
+  stakeMint: stakeMintAddress,
   tokenProgram: tokenProgramAddress,
+  payer: owner.address,
   amount: 100_000_000n,
   index: 0n,
   expectedRewardRate: null,
@@ -419,10 +432,50 @@ Full API documentation is available at: [TypeDoc Documentation](https://yourwall
 
 ## Program Information
 
-- **Program ID**: `Bdm2SF3wrRLmo2t9MyGKydLHAgU5Bhxif8wN9HNMYfSH`
-- **Version**: `1.3.0`
+- **Program ID**: `8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR`
+- **Version**: `1.4.0`
 - **Network**: Devnet, Mainnet
 - **Cluster**: Solana
+
+## Breaking Changes in v1.4.0
+
+This version includes important updates to instruction accounts:
+
+### Updated Instructions
+
+All token transfer instructions now require the **mint account** to be passed explicitly for proper Token-2022 support and decimal handling:
+
+- **`getStakeInstruction()`** - Now requires `stakeMint` and `rewardVault` parameters
+- **`getUnstakeInstruction()`** - Now requires `stakeMint` parameter  
+- **`getClaimRewardsInstruction()`** - Now requires `rewardMint` parameter
+- **`getFundRewardsInstruction()`** - Now requires `rewardMint` parameter
+
+### Migration Guide
+
+If you're upgrading from v1.3.x, update your instruction calls:
+
+```typescript
+// Before (v1.3.x)
+const stakeIx = getStakeInstruction({
+  pool, stakeAccount, owner,
+  userTokenAccount, stakeVault,
+  tokenProgram, amount, index
+});
+
+// After (v1.4.0)
+const stakeIx = getStakeInstruction({
+  pool, stakeAccount, owner,
+  userTokenAccount, stakeVault,
+  rewardVault,        // NEW: Required
+  stakeMint,          // NEW: Required
+  tokenProgram, payer, amount, index
+});
+```
+
+These changes ensure proper support for:
+- Token-2022 transfer fees
+- Correct decimal handling
+- Enhanced transfer validation
 
 ## Security
 
