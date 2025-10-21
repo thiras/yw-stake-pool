@@ -42,12 +42,12 @@
   "homepage": "https://github.com/yourwalletio/stake-pool#readme",
   "license": "MIT",
   "peerDependencies": {
-    "@solana/web3.js": "^2.0.0"
+    "@solana/kit": "^4.0.0"
   },
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
     "@solana/eslint-config-solana": "^3.0.3",
-    "@solana/web3.js": "^2.0.0",
+    "@solana/kit": "^4.0.0",
     "@types/node": "^20",
     "@typescript-eslint/eslint-plugin": "^7.16.1",
     "@typescript-eslint/parser": "^7.16.1",
@@ -70,8 +70,5 @@
       }
     }
   },
-  "packageManager": "pnpm@9.1.0",
-  "dependencies": {
-    "@solana/kit": "^4.0.0"
-  }
+  "packageManager": "pnpm@9.1.0"
 }
