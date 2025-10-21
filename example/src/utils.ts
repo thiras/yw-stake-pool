@@ -288,13 +288,26 @@ export function logStep(step: number, description: string): void {
 /**
  * Load keypair from filesystem
  * Tries the following locations in order:
- * 1. Path specified in SOLANA_KEYPAIR_PATH env var
- * 2. ~/.config/solana/id.json (default Solana CLI location)
- * 3. ./keypair.json (local file)
+ * 1. Custom path parameter (if provided)
+ * 2. CLI arguments: --keypair <path> or -k <path>
+ * 3. Path specified in SOLANA_KEYPAIR_PATH env var
+ * 4. ~/.config/solana/id.json (default Solana CLI location)
+ * 5. ./keypair.json (local file)
  */
 export async function loadKeypair(customPath?: string): Promise<KeyPairSigner> {
+  // Parse CLI arguments for --keypair or -k
+  let cliKeypairPath: string | undefined;
+  const args = process.argv;
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === '--keypair' || args[i] === '-k') && i + 1 < args.length) {
+      cliKeypairPath = args[i + 1];
+      break;
+    }
+  }
+
   const paths = [
     customPath,
+    cliKeypairPath,
     process.env.SOLANA_KEYPAIR_PATH,
     join(homedir(), '.config', 'solana', 'id.json'),
     './keypair.json',
