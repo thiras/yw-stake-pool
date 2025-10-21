@@ -17,6 +17,7 @@ pub fn update_pool<'a>(
     min_stake_amount: Option<u64>,
     lockup_period: Option<i64>,
     is_paused: Option<bool>,
+    enforce_lockup: Option<bool>,
     pool_end_date: Option<Option<i64>>,
 ) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
@@ -56,6 +57,9 @@ pub fn update_pool<'a>(
     }
     if let Some(paused) = is_paused {
         pool_data.is_paused = paused;
+    }
+    if let Some(enforce) = enforce_lockup {
+        pool_data.enforce_lockup = enforce;
     }
     if let Some(end_date) = pool_end_date {
         // Prevent extending pool after end date has passed

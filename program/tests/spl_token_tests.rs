@@ -402,6 +402,7 @@ fn test_initialize_pool_with_real_tokens() {
             reward_rate: 100_000_000, // 10%
             min_stake_amount: 1_000_000,
             lockup_period: 86400,
+            enforce_lockup: false,
             pool_end_date: None,
         }
         .try_to_vec()
@@ -471,6 +472,7 @@ fn test_stake_pool_serialized_size() {
         min_stake_amount: 1000,
         lockup_period: 0,
         is_paused: false,
+        enforce_lockup: false,
         bump: 255,
         pending_authority: None,
         pool_end_date: None,
@@ -505,6 +507,7 @@ fn test_stake_pool_serialized_size() {
         min_stake_amount: 1000,
         lockup_period: 0,
         is_paused: false,
+        enforce_lockup: true,
         bump: 255,
         pending_authority: Some(Pubkey::new_unique()),
         pool_end_date: Some(12345678),

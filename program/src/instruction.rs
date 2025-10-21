@@ -19,6 +19,8 @@ pub enum StakePoolInstruction {
         reward_rate: u64,
         min_stake_amount: u64,
         lockup_period: i64,
+        /// Whether to enforce lockup period (prevent early withdrawals). Default: false (allows early unstake with penalty)
+        enforce_lockup: bool,
         /// Optional pool end date (Unix timestamp). If set, no new stakes allowed after this time.
         pool_end_date: Option<i64>,
     },
@@ -79,6 +81,8 @@ pub enum StakePoolInstruction {
         min_stake_amount: Option<u64>,
         lockup_period: Option<i64>,
         is_paused: Option<bool>,
+        /// Whether to enforce lockup period (prevent early withdrawals)
+        enforce_lockup: Option<bool>,
         /// Optional pool end date (Unix timestamp). Set to extend/shorten pool duration.
         pool_end_date: Option<Option<i64>>,
     },

@@ -48,6 +48,7 @@ try {
     rewardRate: 100_000_000n,
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n,
+    enforceLockup: false,
     poolEndDate: null,
   });
   

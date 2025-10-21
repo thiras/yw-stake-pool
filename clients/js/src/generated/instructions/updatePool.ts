@@ -72,6 +72,7 @@ export type UpdatePoolInstructionData = {
   minStakeAmount: Option<bigint>;
   lockupPeriod: Option<bigint>;
   isPaused: Option<boolean>;
+  enforceLockup: Option<boolean>;
   poolEndDate: Option<Option<bigint>>;
 };
 
@@ -80,6 +81,7 @@ export type UpdatePoolInstructionDataArgs = {
   minStakeAmount: OptionOrNullable<number | bigint>;
   lockupPeriod: OptionOrNullable<number | bigint>;
   isPaused: OptionOrNullable<boolean>;
+  enforceLockup: OptionOrNullable<boolean>;
   poolEndDate: OptionOrNullable<OptionOrNullable<number | bigint>>;
 };
 
@@ -91,6 +93,7 @@ export function getUpdatePoolInstructionDataEncoder(): Encoder<UpdatePoolInstruc
       ['minStakeAmount', getOptionEncoder(getU64Encoder())],
       ['lockupPeriod', getOptionEncoder(getI64Encoder())],
       ['isPaused', getOptionEncoder(getBooleanEncoder())],
+      ['enforceLockup', getOptionEncoder(getBooleanEncoder())],
       ['poolEndDate', getOptionEncoder(getOptionEncoder(getI64Encoder()))],
     ]),
     (value) => ({ ...value, discriminator: UPDATE_POOL_DISCRIMINATOR })
@@ -104,6 +107,7 @@ export function getUpdatePoolInstructionDataDecoder(): Decoder<UpdatePoolInstruc
     ['minStakeAmount', getOptionDecoder(getU64Decoder())],
     ['lockupPeriod', getOptionDecoder(getI64Decoder())],
     ['isPaused', getOptionDecoder(getBooleanDecoder())],
+    ['enforceLockup', getOptionDecoder(getBooleanDecoder())],
     ['poolEndDate', getOptionDecoder(getOptionDecoder(getI64Decoder()))],
   ]);
 }
@@ -130,6 +134,7 @@ export type UpdatePoolInput<
   minStakeAmount: UpdatePoolInstructionDataArgs['minStakeAmount'];
   lockupPeriod: UpdatePoolInstructionDataArgs['lockupPeriod'];
   isPaused: UpdatePoolInstructionDataArgs['isPaused'];
+  enforceLockup: UpdatePoolInstructionDataArgs['enforceLockup'];
   poolEndDate: UpdatePoolInstructionDataArgs['poolEndDate'];
 };
 

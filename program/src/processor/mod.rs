@@ -43,6 +43,7 @@ pub fn process_instruction<'a>(
             reward_rate,
             min_stake_amount,
             lockup_period,
+            enforce_lockup,
             pool_end_date,
         } => {
             msg!("Instruction: InitializePool");
@@ -51,6 +52,7 @@ pub fn process_instruction<'a>(
                 reward_rate,
                 min_stake_amount,
                 lockup_period,
+                enforce_lockup,
                 pool_end_date,
             )
         }
@@ -85,6 +87,7 @@ pub fn process_instruction<'a>(
             min_stake_amount,
             lockup_period,
             is_paused,
+            enforce_lockup,
             pool_end_date,
         } => {
             msg!("Instruction: UpdatePool");
@@ -94,6 +97,7 @@ pub fn process_instruction<'a>(
                 min_stake_amount,
                 lockup_period,
                 is_paused,
+                enforce_lockup,
                 pool_end_date,
             )
         }

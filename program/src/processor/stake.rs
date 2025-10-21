@@ -278,7 +278,7 @@ pub fn unstake<'a>(
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
 
-    // Check lockup period - allow unstaking anytime but warn if not complete
+    // Check lockup period
     let time_staked = clock
         .unix_timestamp
         .checked_sub(stake_account_data.stake_timestamp)
@@ -286,7 +286,18 @@ pub fn unstake<'a>(
 
     let lockup_complete = time_staked >= pool_data.lockup_period;
 
-    if !lockup_complete {
+    // If enforce_lockup is true, prevent early withdrawals
+    if pool_data.enforce_lockup && !lockup_complete {
+        msg!(
+            "Lockup period not expired. Time staked: {}, Required: {}",
+            time_staked,
+            pool_data.lockup_period
+        );
+        return Err(StakePoolError::LockupNotExpired.into());
+    }
+
+    // If lockup not enforced and not complete, warn about forfeiting rewards
+    if !pool_data.enforce_lockup && !lockup_complete {
         msg!("Warning: Unstaking before lockup period complete. Forfeiting proportional rewards.");
     }
 

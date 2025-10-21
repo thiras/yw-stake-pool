@@ -8,6 +8,8 @@
 
 import {
   combineCodec,
+  getBooleanDecoder,
+  getBooleanEncoder,
   getI64Decoder,
   getI64Encoder,
   getOptionDecoder,
@@ -110,6 +112,7 @@ export type InitializePoolInstructionData = {
   rewardRate: bigint;
   minStakeAmount: bigint;
   lockupPeriod: bigint;
+  enforceLockup: boolean;
   poolEndDate: Option<bigint>;
 };
 
@@ -117,6 +120,7 @@ export type InitializePoolInstructionDataArgs = {
   rewardRate: number | bigint;
   minStakeAmount: number | bigint;
   lockupPeriod: number | bigint;
+  enforceLockup: boolean;
   poolEndDate: OptionOrNullable<number | bigint>;
 };
 
@@ -127,6 +131,7 @@ export function getInitializePoolInstructionDataEncoder(): Encoder<InitializePoo
       ['rewardRate', getU64Encoder()],
       ['minStakeAmount', getU64Encoder()],
       ['lockupPeriod', getI64Encoder()],
+      ['enforceLockup', getBooleanEncoder()],
       ['poolEndDate', getOptionEncoder(getI64Encoder())],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_POOL_DISCRIMINATOR })
@@ -139,6 +144,7 @@ export function getInitializePoolInstructionDataDecoder(): Decoder<InitializePoo
     ['rewardRate', getU64Decoder()],
     ['minStakeAmount', getU64Decoder()],
     ['lockupPeriod', getI64Decoder()],
+    ['enforceLockup', getBooleanDecoder()],
     ['poolEndDate', getOptionDecoder(getI64Decoder())],
   ]);
 }
@@ -188,6 +194,7 @@ export type InitializePoolInput<
   rewardRate: InitializePoolInstructionDataArgs['rewardRate'];
   minStakeAmount: InitializePoolInstructionDataArgs['minStakeAmount'];
   lockupPeriod: InitializePoolInstructionDataArgs['lockupPeriod'];
+  enforceLockup: InitializePoolInstructionDataArgs['enforceLockup'];
   poolEndDate: InitializePoolInstructionDataArgs['poolEndDate'];
 };
 
