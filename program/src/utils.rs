@@ -8,7 +8,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use solana_sdk_ids::system_program;
-use spl_token_2022::instruction::transfer_checked;
+use spl_token_2022::{extension::StateWithExtensions, instruction::transfer_checked, state::Mint};
 
 use crate::error::StakePoolError;
 
@@ -164,8 +164,7 @@ pub fn transfer_lamports_from_pdas<'a>(
 }
 
 /// Transfer tokens with support for Token-2022 transfer fees
-/// Note: This function assumes the mint account has 9 decimals
-/// In production, you should pass the mint account and read decimals from it
+/// Safely extracts decimals from the mint account using proper unpacking
 pub fn transfer_tokens_with_fee<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
@@ -175,9 +174,11 @@ pub fn transfer_tokens_with_fee<'a>(
     amount: u64,
     signer_seeds: &[&[&[u8]]],
 ) -> Result<u64, ProgramError> {
-    // Get decimals from the mint account
+    // Safely unpack the mint account to get decimals
     let mint_data = mint.try_borrow_data()?;
-    let decimals = mint_data[44]; // Decimals is at offset 44 in the Mint account
+    let mint_state = StateWithExtensions::<Mint>::unpack(&mint_data)?;
+    let decimals = mint_state.base.decimals;
+    drop(mint_data);
 
     let accounts = vec![from.clone(), to.clone(), mint.clone(), authority.clone()];
 
