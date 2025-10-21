@@ -41,6 +41,25 @@
   },
   "homepage": "https://github.com/yourwalletio/stake-pool#readme",
   "license": "MIT",
+  "keywords": [
+    "solana",
+    "stake",
+    "staking",
+    "pool",
+    "stake-pool",
+    "rewards",
+    "defi",
+    "spl",
+    "token",
+    "token-2022",
+    "blockchain",
+    "web3",
+    "crypto",
+    "typescript",
+    "javascript",
+    "client",
+    "sdk"
+  ],
   "peerDependencies": {
     "@solana/kit": "^4.0.0"
   },
