@@ -112,7 +112,7 @@ console.log('='.repeat(60));
 console.log('✅ Library is working correctly!');
 console.log();
 console.log('📚 Next Steps:');
-console.log('   - Run: pnpm complete-flow');
+console.log('   - Run: pnpm devnet-test');
 console.log('   - Run: pnpm pool-admin');
 console.log('   - Run: pnpm user-staking');
 console.log('   - Read: README.md for full documentation');

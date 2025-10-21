@@ -38,7 +38,6 @@ async function main() {
 
     // Create admin keypair (uses local keypair by default)
     const admin = await createFundedKeypair(rpc, 'Pool Admin', config.useLocalKeypair);
-    await waitForRateLimit();
 
     // Placeholder addresses (in production, use real SPL tokens)
     const stakeMint = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
@@ -75,7 +74,6 @@ async function main() {
     console.log(`   Reward Rate: ${formatRewardRate(config.defaultPoolConfig.rewardRate)}`);
     console.log(`   Min Stake: ${formatAmount(config.defaultPoolConfig.minStakeAmount)}`);
     console.log(`   Lockup: ${formatDuration(config.defaultPoolConfig.lockupPeriod)}`);
-    await waitForRateLimit();
 
     // ========================================================================
     // Example 2: Fund Reward Vault
@@ -96,7 +94,6 @@ async function main() {
     });
 
     console.log('✅ Fund rewards instruction created');
-    await waitForRateLimit();
 
     // ========================================================================
     // Example 3: Update Pool - Change Reward Rate
@@ -117,7 +114,6 @@ async function main() {
     });
 
     console.log('✅ Update reward rate instruction created');
-    await waitForRateLimit();
 
     // ========================================================================
     // Example 4: Update Pool - Pause
@@ -137,7 +133,6 @@ async function main() {
     });
 
     console.log('✅ Pause pool instruction created');
-    await waitForRateLimit();
 
     // ========================================================================
     // Example 5: Update Pool - Multiple Parameters
@@ -160,7 +155,6 @@ async function main() {
     });
 
     console.log('✅ Multi-parameter update instruction created');
-    await waitForRateLimit();
 
     // ========================================================================
     // Example 6: Set Pool End Date
@@ -182,29 +176,30 @@ async function main() {
     });
 
     console.log('✅ Set end date instruction created');
-    await waitForRateLimit();
 
     // ========================================================================
     // Example 7: Transfer Authority (Two-Step)
     // ========================================================================
     logStep(7, 'Transfer Authority (Two-Step Process)');
 
-    const newAdmin = await createFundedKeypair(rpc, 'New Admin', false);
+    console.log('⚠️  Note: Authority transfer requires a funded new authority account');
+    console.log('   Skipping keypair generation to avoid devnet airdrop issues');
+    console.log('   In production, generate a new keypair and fund it before transfer\n');
+
+    // Using a placeholder address for demonstration
+    const newAdminAddress = address('11111111111111111111111111111119');
 
     console.log('\n7a. Current admin nominates new authority');
     const nominateIx = getNominateNewAuthorityInstruction({
       pool: poolAddress,
       currentAuthority: admin,
-      newAuthority: newAdmin.address,
+      newAuthority: newAdminAddress,
     });
     console.log('✅ Nominate instruction created');
+    console.log(`   New authority: ${newAdminAddress}`);
 
     console.log('\n7b. New authority accepts the nomination');
-    const acceptIx = getAcceptAuthorityInstruction({
-      pool: poolAddress,
-      pendingAuthority: newAdmin,
-    });
-    console.log('✅ Accept instruction created');
+    console.log('   (In production, this would be signed by the new authority keypair)');
     console.log('   🔐 Two-step process prevents accidental authority loss');
 
     // ========================================================================

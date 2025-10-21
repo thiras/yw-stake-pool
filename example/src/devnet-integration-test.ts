@@ -1,13 +1,15 @@
 /**
- * Complete Stake Pool Flow Example
+ * Devnet Integration Test
  * 
- * This example demonstrates the entire lifecycle of a stake pool:
+ * This example demonstrates the entire lifecycle of a stake pool on Solana devnet:
  * 1. Setup - Create test tokens and fund accounts
  * 2. Pool initialization
  * 3. User staking
  * 4. Reward claiming
  * 5. Unstaking
- * 6. Pool management (updates, authority transfer)
+ * 6. Pool management (updates)
+ * 
+ * This is a LIVE TEST that executes real transactions on devnet.
  */
 
 import { address, generateKeyPairSigner } from '@solana/kit';
@@ -46,7 +48,7 @@ import { setupTestTokens } from './setup-tokens';
  */
 async function main() {
   try {
-    logSection('YW Stake Pool - Complete Flow Example');
+    logSection('YW Stake Pool - Devnet Integration Test');
 
     // Initialize RPC client
     const rpc = createRpc();
@@ -326,7 +328,7 @@ async function main() {
     // ========================================================================
     // Summary
     // ========================================================================
-    logSection('Example Complete!');
+    logSection('Devnet Integration Test Complete!');
 
     console.log('✨ All transactions executed successfully on devnet!\n');
     console.log('📋 Transaction Summary:');
@@ -353,9 +355,9 @@ async function main() {
     console.log('   - Security Audit: ../SECURITY_AUDIT.md\n');
 
   } catch (error) {
-    handleError(error, 'Complete Flow');
+    handleError(error, 'Devnet Integration Test');
   }
 }
 
-// Run the example
+// Run the integration test
 main();

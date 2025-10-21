@@ -4,12 +4,12 @@ This directory contains comprehensive examples demonstrating how to use the `@yo
 
 ## Overview
 
-The examples cover all major functionality of the stake pool program:
+The examples demonstrate the stake pool program functionality:
 
-1. **Pool Administration** - Initialize and manage stake pools
-2. **User Staking** - Stake tokens, claim rewards, and unstake
-3. **Complete Flow** - End-to-end example with all operations
-4. **Helper Utilities** - Common functions for PDA derivation and setup
+1. **Simple Example** - Basic instruction creation (no network calls)
+2. **Pool Administration** - Pool management operations (instruction demos)
+3. **User Staking** - Staking workflow examples (instruction demos)
+4. **Devnet Integration Test** - Live end-to-end test on Solana devnet
 
 ## Prerequisites
 
@@ -37,18 +37,28 @@ pnpm install
 
 ## Running the Examples
 
-### Development Mode (with tsx)
-
-Run examples directly without building:
+### Quick Start
 
 ```bash
-# Complete flow example (recommended to start)
-pnpm dev
+# Simple example (no network calls - instruction creation only)
+pnpm simple
 
-# Or run specific examples:
-pnpm complete-flow    # Full stake pool lifecycle
-pnpm pool-admin       # Pool management operations
-pnpm user-staking     # Staking and reward claiming
+# Pool administration examples (instruction demos)
+pnpm pool-admin
+
+# User staking examples (instruction demos)
+pnpm user-staking
+
+# Live integration test on devnet (executes real transactions)
+pnpm devnet-test
+```
+
+### Development Mode
+
+Run the default test (devnet integration):
+
+```bash
+pnpm dev
 ```
 
 ### Production Mode
@@ -62,67 +72,86 @@ pnpm start
 
 ## Examples
 
-### 1. Complete Flow (`src/complete-flow.ts`)
+### 1. Simple Example (`src/simple-example.ts`)
 
-A comprehensive example that demonstrates the entire stake pool lifecycle:
+A minimal example showing basic library usage without network calls. Demonstrates instruction creation for:
 
-- Create test tokens (stake and reward tokens)
-- Initialize a new stake pool
-- Fund the reward vault
-- Initialize user stake accounts
+- Initialize Pool
 - Stake tokens
-- Wait for lockup period
 - Claim rewards
-- Unstake tokens
-- Update pool parameters
-- Transfer pool authority
 
-This is the **recommended starting point** to understand how all pieces work together.
+**Best for:** Understanding the API without needing a running network.
+
+```bash
+pnpm simple
+```
 
 ### 2. Pool Administration (`src/pool-admin.ts`)
 
-Focused on pool operator/admin operations:
+Demonstrates pool operator/admin operations with instruction creation:
 
 - Initialize new pools with custom parameters
-- Update pool settings (reward rate, lockup period, minimum stake)
-- Pause and unpause pools
 - Fund reward vaults
-- Transfer authority (two-step process)
+- Update pool settings (reward rate, lockup, minimum stake)
+- Pause and unpause pools
 - Set pool end dates
+- Transfer authority (two-step process)
+
+**Best for:** Pool operators and administrators.
+
+```bash
+pnpm pool-admin
+```
 
 ### 3. User Staking (`src/user-staking.ts`)
 
-Demonstrates typical user interactions:
+Demonstrates typical user interactions with instruction creation:
 
 - Initialize stake accounts
-- Stake tokens
-- Check stake status
+- Stake tokens (basic and with frontrunning protection)
 - Claim accrued rewards
-- Partial unstaking
-- Full unstaking after lockup
+- Partial and full unstaking
+- Multiple stake accounts
 
-### 4. Helper Utilities (`src/utils.ts`)
+**Best for:** Users and frontend developers.
 
-Common helper functions used across examples:
+```bash
+pnpm user-staking
+```
 
-- PDA derivation for pools and stake accounts
-- Airdrop SOL for testing
-- Create test tokens
-- Get or create associated token accounts
-- Build and send transactions
-- Calculate expected rewards
+### 4. Devnet Integration Test (`src/devnet-integration-test.ts`)
+
+A **live end-to-end test** that executes real transactions on Solana devnet:
+
+- Creates real SPL tokens (stake and reward mints)
+- Initializes a stake pool on devnet
+- Funds the reward vault
+- Stakes tokens with automatic account creation
+- Claims rewards after lockup
+- Unstakes tokens
+- Updates pool parameters
+
+**Best for:** Validating the complete workflow on a live network.
+
+**⚠️ Note:** This test requires devnet SOL and executes actual transactions.
+
+```bash
+pnpm devnet-test
+```
 
 ## Code Structure
 
 ```
 example/
 ├── src/
-│   ├── index.ts              # Main entry point
-│   ├── complete-flow.ts      # Full lifecycle example
-│   ├── pool-admin.ts         # Admin operations
-│   ├── user-staking.ts       # User staking operations
-│   ├── utils.ts              # Helper functions
-│   └── config.ts             # Configuration constants
+│   ├── index.ts                     # Main entry point
+│   ├── simple-example.ts            # Basic instruction creation
+│   ├── pool-admin.ts                # Admin operation demos
+│   ├── user-staking.ts              # User staking demos  
+│   ├── devnet-integration-test.ts   # Live devnet test
+│   ├── setup-tokens.ts              # Token creation helper
+│   ├── utils.ts                     # Common utilities
+│   └── config.ts                    # Configuration
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -188,62 +217,49 @@ Edit `src/config.ts` to customize:
 ```typescript
 export const config = {
   // RPC endpoint
-  rpcUrl: 'http://127.0.0.1:8899', // Local validator
-  // rpcUrl: 'https://api.devnet.solana.com', // Devnet
+  rpcUrl: 'https://solana-devnet.g.alchemy.com/v2/YOUR_KEY', // Devnet
   
-  // Program ID
-  programId: 'YOUR_PROGRAM_ID',
+  // Program ID (deployed on devnet)
+  programId: '8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR',
   
   // Pool parameters
-  rewardRate: 100_000_000n,      // 10% APY
-  minStakeAmount: 1_000_000n,    // 1 token (6 decimals)
-  lockupPeriod: 86400n,          // 1 day in seconds
+  defaultPoolConfig: {
+    rewardRate: 100_000_000n,      // 10% APY
+    minStakeAmount: 1_000_000n,    // 1 token (6 decimals)
+    lockupPeriod: 86400n,          // 1 day in seconds
+  },
   
   // Keypair configuration
   useLocalKeypair: true,         // Use your local Solana keypair
-  // customKeypairPath: '/path/to/keypair.json', // Optional custom path
   
-  // Rate limiting (for public RPC endpoints)
-  rateLimitDelay: 1500,          // Milliseconds between operations
+  // Rate limiting (for devnet)
+  rateLimitDelay: 10000,         // 10 seconds between operations
+};
 ```
 
 ### Rate Limiting
 
-**Public RPC endpoints** (like `api.devnet.solana.com`) have rate limits. All examples include automatic rate limiting to prevent `429 Too Many Requests` errors.
+**Public RPC endpoints** (like devnet) have rate limits. The devnet integration test includes 10-second delays between operations to prevent `429 Too Many Requests` errors.
 
-- **Default**: 1500ms (1.5 seconds) between operations
+- **Devnet**: 10000ms (10 seconds) recommended
 - **Local validator**: Set to `0` to disable
 - **Premium RPC**: Adjust based on your provider's limits
 
-See [RATE_LIMITING.md](./RATE_LIMITING.md) for details.
-```
-
 ### Using Your Local Keypair
 
-**By default, the examples use your local Solana keypair** located at `~/.config/solana/id.json`. This is the same keypair used by the Solana CLI.
-
-**Benefits:**
-- No need for airdrops if you already have SOL
-- Use your existing devnet/mainnet keypair
-- Consistent identity across examples
-
-**Keypair Loading Priority:**
-1. Custom path (if specified in config or `SOLANA_KEYPAIR_PATH` env var)
-2. `~/.config/solana/id.json` (default Solana CLI location)
-3. `./keypair.json` (local file in example directory)
-4. Falls back to generating new keypair if none found
+**By default**, examples use your local Solana keypair at `~/.config/solana/id.json` (same as Solana CLI).
 
 **To use a different keypair:**
 
-```typescript
-// Option 1: Set environment variable
+```bash
+# Option 1: Environment variable
 export SOLANA_KEYPAIR_PATH=/path/to/your/keypair.json
 
-// Option 2: Set in config.ts
+# Option 2: Set in config.ts
 customKeypairPath: '/path/to/your/keypair.json'
 
-// Option 3: Disable local keypair usage
-useLocalKeypair: false  // Will generate new keypairs
+# Option 3: Disable (generates new keypairs)
+useLocalKeypair: false
 ```
 
 **Check your current keypair:**
@@ -252,32 +268,25 @@ solana address
 solana balance
 ```
 
-## Testing on Local Validator
-
-1. Start the local validator:
-   ```bash
-   cd .. # Back to repo root
-   pnpm validator:start
-   ```
-
-2. Build and deploy the program:
-   ```bash
-   pnpm programs:build
-   pnpm programs:deploy
-   ```
-
-3. Run the examples:
-   ```bash
-   cd example
-   pnpm dev
-   ```
-
 ## Testing on Devnet
 
-1. Update RPC URL in `src/config.ts` to devnet
-2. Ensure you have devnet SOL
-3. Update program ID to deployed devnet program
-4. Run examples
+The devnet integration test is pre-configured for Solana devnet:
+
+1. Ensure you have devnet SOL:
+   ```bash
+   solana airdrop 2 --url devnet
+   ```
+
+2. Run the integration test:
+   ```bash
+   pnpm devnet-test
+   ```
+
+The test will:
+- Create real SPL tokens on devnet
+- Execute all stake pool operations
+- Display transaction signatures
+- Complete in ~2 minutes (with rate limiting)
 
 ## Common Operations
 
@@ -288,13 +297,15 @@ import { getInitializePoolInstruction } from '@yourwallet/stake-pool';
 
 const instruction = getInitializePoolInstruction({
   pool: poolAddress,
-  authority: authority.address,
-  stakeMint: stakeMintAddress,
-  rewardMint: rewardMintAddress,
-  stakeVault: stakeVaultAddress,
-  rewardVault: rewardVaultAddress,
-  payer: payer.address,
+  authority: authority,
+  stakeMint,
+  rewardMint,
+  stakeVault,
+  rewardVault,
+  payer: authority,
   tokenProgram: TOKEN_PROGRAM_ID,
+  systemProgram: SYSTEM_PROGRAM_ID,
+  rent: SYSVAR_RENT_PUBKEY,
   rewardRate: 100_000_000n,     // 10%
   minStakeAmount: 1_000_000n,   // 1 token
   lockupPeriod: 86400n,         // 1 day
@@ -310,14 +321,18 @@ import { getStakeInstruction } from '@yourwallet/stake-pool';
 const instruction = getStakeInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountAddress,
-  owner: owner.address,
-  ownerStakeTokenAccount: userTokenAccount,
-  stakeVault: stakeVaultAddress,
+  owner: user,
+  userTokenAccount,
+  stakeVault,
+  rewardVault,
+  stakeMint,
   tokenProgram: TOKEN_PROGRAM_ID,
+  payer: user,
+  systemProgram: SYSTEM_PROGRAM_ID,
   amount: 100_000_000n, // 100 tokens
   index: 0n,
-  expectedRewardRate: null,      // Frontrunning protection (optional)
-  expectedLockupPeriod: null,    // Frontrunning protection (optional)
+  expectedRewardRate: null,      // Optional frontrunning protection
+  expectedLockupPeriod: null,    // Optional frontrunning protection
 });
 ```
 
@@ -329,10 +344,12 @@ import { getClaimRewardsInstruction } from '@yourwallet/stake-pool';
 const instruction = getClaimRewardsInstruction({
   pool: poolAddress,
   stakeAccount: stakeAccountAddress,
-  owner: owner.address,
-  ownerRewardTokenAccount: userRewardAccount,
-  rewardVault: rewardVaultAddress,
+  owner: user,
+  userRewardAccount,
+  rewardVault,
+  rewardMint,
   tokenProgram: TOKEN_PROGRAM_ID,
+  clock: SYSVAR_CLOCK_PUBKEY,
 });
 ```
 

@@ -8,7 +8,7 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "simple": "tsx src/simple-example.ts",
-    "complete-flow": "tsx src/complete-flow.ts",
+    "devnet-test": "tsx src/devnet-integration-test.ts",
     "pool-admin": "tsx src/pool-admin.ts",
     "user-staking": "tsx src/user-staking.ts"
   },
