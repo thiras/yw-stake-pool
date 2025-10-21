@@ -312,28 +312,36 @@ export function logStep(step: number, description: string): void {
 }
 
 /**
+ * Get keypair path from Solana CLI config
+ */
+async function getSolanaConfigKeypairPath(): Promise<string | undefined> {
+  try {
+    const { execSync } = await import('child_process');
+    const output = execSync('solana config get', { encoding: 'utf-8' });
+    const match = output.match(/Keypair Path: (.+)/);
+    return match ? match[1].trim() : undefined;
+  } catch (error) {
+    // Solana CLI not available or config not set
+    return undefined;
+  }
+}
+
+/**
  * Load keypair from filesystem
  * Tries the following locations in order:
  * 1. Custom path parameter (if provided)
- * 2. CLI arguments: --keypair <path> or -k <path>
+ * 2. Keypair path from `solana config get`
  * 3. Path specified in SOLANA_KEYPAIR_PATH env var
  * 4. ~/.config/solana/id.json (default Solana CLI location)
  * 5. ./keypair.json (local file)
  */
 export async function loadKeypair(customPath?: string): Promise<KeyPairSigner> {
-  // Parse CLI arguments for --keypair or -k
-  let cliKeypairPath: string | undefined;
-  const args = process.argv;
-  for (let i = 0; i < args.length; i++) {
-    if ((args[i] === '--keypair' || args[i] === '-k') && i + 1 < args.length) {
-      cliKeypairPath = args[i + 1];
-      break;
-    }
-  }
+  // Get keypair path from Solana CLI config
+  const solanaConfigPath = await getSolanaConfigKeypairPath();
 
   const paths = [
     customPath,
-    cliKeypairPath,
+    solanaConfigPath,
     process.env.SOLANA_KEYPAIR_PATH,
     join(homedir(), '.config', 'solana', 'id.json'),
     './keypair.json',
@@ -355,11 +363,16 @@ export async function loadKeypair(customPath?: string): Promise<KeyPairSigner> {
   }
 
   throw new Error(
-    'No keypair found. Please ensure you have a Solana keypair at:\n' +
-    '  - ~/.config/solana/id.json (default), or\n' +
-    '  - Set SOLANA_KEYPAIR_PATH environment variable, or\n' +
-    '  - Create ./keypair.json in the example directory\n' +
-    'You can generate one with: solana-keygen new'
+    'No keypair found. Please ensure you have a Solana keypair by:\n' +
+    '  - Running: solana-keygen new (creates keypair and sets in config), or\n' +
+    '  - Setting SOLANA_KEYPAIR_PATH environment variable, or\n' +
+    '  - Creating ./keypair.json in the example directory\n\n' +
+    'The loadKeypair function checks (in order):\n' +
+    '  1. Custom path parameter\n' +
+    '  2. Keypair path from `solana config get`\n' +
+    '  3. SOLANA_KEYPAIR_PATH environment variable\n' +
+    '  4. ~/.config/solana/id.json\n' +
+    '  5. ./keypair.json'
   );
 }
 
