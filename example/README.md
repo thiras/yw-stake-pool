@@ -111,6 +111,7 @@ Demonstrates typical user interactions with instruction creation:
   - Automatically creates stake accounts if they don't exist
 - Claim accrued rewards
 - Partial and full unstaking
+- Close empty stake accounts to recover rent
 - Multiple stake accounts with different indices
 
 **Best for:** Users and frontend developers.
@@ -351,6 +352,21 @@ const instruction = getClaimRewardsInstruction({
   rewardMint,
   tokenProgram: TOKEN_PROGRAM_ID,
   clock: SYSVAR_CLOCK_PUBKEY,
+});
+```
+
+### Close Stake Account
+
+After unstaking all tokens, you can close the stake account to recover rent:
+
+```typescript
+import { getCloseStakeAccountInstruction } from '@yourwallet/stake-pool';
+
+// Can only close when staked_amount is 0
+const instruction = getCloseStakeAccountInstruction({
+  stakeAccount: stakeAccountAddress,
+  owner: user,
+  receiver: user.address, // Where to send the rent SOL
 });
 ```
 
