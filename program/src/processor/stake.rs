@@ -297,7 +297,7 @@ pub fn unstake<'a>(
     }
 
     // If lockup not enforced and not complete, warn about forfeiting rewards
-    if !lockup_complete {
+    if !pool_data.enforce_lockup && !lockup_complete {
         msg!("Warning: Unstaking before lockup period complete. Forfeiting proportional rewards.");
     }
 
