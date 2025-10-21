@@ -75,10 +75,21 @@ jobs:
             ./target/deploy/*.json
           key: ${{ runner.os }}-builds-${{ github.sha }}
 
+      - name: Save Build Target Directory
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            target/
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-build-target-${{ github.sha }}
+
   test_programs:
     name: Test Programs
     runs-on: ubuntu-latest
-    needs: format_and_lint_programs
+    needs: build_programs
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
@@ -86,9 +97,19 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          cargo-cache-key: cargo-program-tests
-          cargo-cache-fallback-key: cargo-programs
           solana: true
+
+      - name: Restore Build Target Directory
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            target/
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-build-target-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Cache SPL Token 2022 Program
         id: cache-spl-token
@@ -334,7 +355,6 @@ jobs:
   generate_idls:
     name: Check IDL Generation
     runs-on: ubuntu-latest
-    needs: format_and_lint_programs
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
@@ -356,7 +376,6 @@ jobs:
   generate_clients:
     name: Check Client Generation
     runs-on: ubuntu-latest
-    needs: format_and_lint_programs
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
