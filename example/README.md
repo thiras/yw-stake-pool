@@ -220,7 +220,7 @@ export const config = {
   rpcUrl: 'https://solana-devnet.g.alchemy.com/v2/YOUR_KEY', // Devnet
   
   // Program ID (deployed on devnet)
-  programId: '8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR',
+  programId: '8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx',
   
   // Pool parameters
   defaultPoolConfig: {

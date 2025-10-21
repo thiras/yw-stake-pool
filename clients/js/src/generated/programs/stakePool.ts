@@ -25,7 +25,7 @@ import {
 } from '../instructions';
 
 export const STAKE_POOL_PROGRAM_ADDRESS =
-  '8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR' as Address<'8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR'>;
+  '8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx' as Address<'8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx'>;
 
 export enum StakePoolAccount {
   StakePool,
@@ -81,7 +81,7 @@ export function identifyStakePoolInstruction(
 }
 
 export type ParsedStakePoolInstruction<
-  TProgram extends string = '8NeQPViHUkoDrRaZSGEB75GCeufGthBiNwXZ742stkHR',
+  TProgram extends string = '8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx',
 > =
   | ({
       instructionType: StakePoolInstruction.InitializePool;
