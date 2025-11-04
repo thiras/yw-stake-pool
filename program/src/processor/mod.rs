@@ -40,6 +40,7 @@ pub fn process_instruction<'a>(
 
     match instruction {
         StakePoolInstruction::InitializePool {
+            pool_id,
             reward_rate,
             min_stake_amount,
             lockup_period,
@@ -49,6 +50,7 @@ pub fn process_instruction<'a>(
             msg!("Instruction: InitializePool");
             initialize_pool(
                 accounts,
+                pool_id,
                 reward_rate,
                 min_stake_amount,
                 lockup_period,

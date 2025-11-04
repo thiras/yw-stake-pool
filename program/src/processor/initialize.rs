@@ -16,6 +16,7 @@ use super::helpers::verify_token_account;
 
 pub fn initialize_pool<'a>(
     accounts: &'a [AccountInfo<'a>],
+    pool_id: u64,
     reward_rate: u64,
     min_stake_amount: u64,
     lockup_period: i64,
@@ -50,10 +51,18 @@ pub fn initialize_pool<'a>(
     let ctx = InitializePoolAccounts::context(accounts)?;
 
     // Guards
-    let pool_seeds = StakePool::seeds(ctx.accounts.authority.key, ctx.accounts.stake_mint.key);
+    // Derive the expected pool PDA from authority, stake_mint, and pool_id
+    // This ensures the provided pool account matches the pool_id parameter
+    let pool_seeds = StakePool::seeds(
+        ctx.accounts.authority.key,
+        ctx.accounts.stake_mint.key,
+        pool_id,
+    );
     let pool_seeds_refs: Vec<&[u8]> = pool_seeds.iter().map(|s| s.as_slice()).collect();
     let (pool_key, bump) = Pubkey::find_program_address(&pool_seeds_refs, &crate::ID);
 
+    // Validate that the provided pool address matches the expected PDA
+    // This prevents initialization with wrong pool_id
     assert_same_pubkeys("pool", ctx.accounts.pool, &pool_key)?;
     assert_signer("authority", ctx.accounts.authority)?;
     assert_signer("payer", ctx.accounts.payer)?;
@@ -87,6 +96,7 @@ pub fn initialize_pool<'a>(
         authority: *ctx.accounts.authority.key,
         stake_mint: *ctx.accounts.stake_mint.key,
         reward_mint: *ctx.accounts.reward_mint.key,
+        pool_id,
         stake_vault: *ctx.accounts.stake_vault.key,
         reward_vault: *ctx.accounts.reward_vault.key,
         total_staked: 0,

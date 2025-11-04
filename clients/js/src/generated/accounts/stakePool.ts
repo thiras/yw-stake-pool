@@ -52,6 +52,7 @@ export type StakePool = {
   authority: Address;
   stakeMint: Address;
   rewardMint: Address;
+  poolId: bigint;
   stakeVault: Address;
   rewardVault: Address;
   totalStaked: bigint;
@@ -72,6 +73,7 @@ export type StakePoolArgs = {
   authority: Address;
   stakeMint: Address;
   rewardMint: Address;
+  poolId: number | bigint;
   stakeVault: Address;
   rewardVault: Address;
   totalStaked: number | bigint;
@@ -93,6 +95,7 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
     ['authority', getAddressEncoder()],
     ['stakeMint', getAddressEncoder()],
     ['rewardMint', getAddressEncoder()],
+    ['poolId', getU64Encoder()],
     ['stakeVault', getAddressEncoder()],
     ['rewardVault', getAddressEncoder()],
     ['totalStaked', getU64Encoder()],
@@ -115,6 +118,7 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['authority', getAddressDecoder()],
     ['stakeMint', getAddressDecoder()],
     ['rewardMint', getAddressDecoder()],
+    ['poolId', getU64Decoder()],
     ['stakeVault', getAddressDecoder()],
     ['rewardVault', getAddressDecoder()],
     ['totalStaked', getU64Decoder()],

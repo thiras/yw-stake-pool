@@ -12,6 +12,7 @@ test('initializePool instruction data codec with reward_rate', (t) => {
   const codec = getInitializePoolInstructionDataCodec();
 
   const data = {
+    poolId: 0n,
     rewardRate: 100_000_000n, // 10%
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n, // 1 day
@@ -22,6 +23,7 @@ test('initializePool instruction data codec with reward_rate', (t) => {
   const encoded = codec.encode(data);
   const decoded = codec.decode(encoded);
 
+  t.is(decoded.poolId, 0n);
   t.is(decoded.rewardRate, 100_000_000n);
   t.is(decoded.minStakeAmount, 1_000_000n);
   t.is(decoded.lockupPeriod, 86400n);
@@ -41,6 +43,7 @@ test('initializePool with different reward_rate values', (t) => {
 
   rewardRates.forEach(({ rate, description }) => {
     const data = {
+      poolId: 0n,
       rewardRate: rate,
       minStakeAmount: 1_000_000n,
       lockupPeriod: 86400n,
@@ -280,6 +283,7 @@ test('initializePool with enforceLockup flag', (t) => {
 
   // Test with enforceLockup = true
   const strictData = {
+    poolId: 0n,
     rewardRate: 100_000_000n,
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n,
@@ -294,6 +298,7 @@ test('initializePool with enforceLockup flag', (t) => {
 
   // Test with enforceLockup = false
   const flexibleData = {
+    poolId: 0n,
     rewardRate: 100_000_000n,
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n,
@@ -373,6 +378,7 @@ test('instruction data codecs preserve exact values', (t) => {
 
   const initPoolCodec = getInitializePoolInstructionDataCodec();
   const initPoolData = {
+    poolId: 0n,
     rewardRate: 123_456_789n,
     minStakeAmount: 987_654_321n,
     lockupPeriod: 555_555n,
@@ -383,6 +389,7 @@ test('instruction data codecs preserve exact values', (t) => {
   const initPoolEncoded = initPoolCodec.encode(initPoolData);
   const initPoolDecoded = initPoolCodec.decode(initPoolEncoded);
 
+  t.is(initPoolDecoded.poolId, 0n);
   t.is(initPoolDecoded.rewardRate, 123_456_789n);
   t.is(initPoolDecoded.minStakeAmount, 987_654_321n);
   t.is(initPoolDecoded.lockupPeriod, 555_555n);

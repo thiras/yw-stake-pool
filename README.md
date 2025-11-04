@@ -33,6 +33,7 @@ YW Stake Pool is a production-ready Solana program that provides:
 
 ### For Pool Operators
 - **Initialize** pools with custom parameters (reward rate, lockup, minimum stake)
+- **Create Multiple Pools** - Same authority can manage multiple pools for the same token using unique pool IDs
 - **Update** pool settings (pause/unpause, change rates)
 - **Fund** reward vaults to ensure liquidity
 - **Transfer** authority with two-step verification
@@ -135,6 +136,7 @@ const initIx = getInitializePoolInstruction({
   tokenProgram: TOKEN_PROGRAM_ID,
   systemProgram: SYSTEM_PROGRAM_ID,
   rent: SYSVAR_RENT_PUBKEY,
+  poolId: 0n,                    // Unique ID (0 for first pool, 1 for second, etc.)
   rewardRate: 100_000_000n,      // 10% APY
   minStakeAmount: 1_000_000n,    // 1 token (6 decimals)
   lockupPeriod: 86400n,          // 1 day
@@ -159,6 +161,26 @@ const stakeIx = getStakeInstruction({
 ```
 
 See [clients/js/README.md](./clients/js/README.md) for full API documentation.
+
+### Multiple Pools Per Token
+
+A single authority can create multiple stake pools for the same token by using different `poolId` values. This allows pool operators to:
+
+- Run multiple pools with different reward rates and lockup periods
+- Segment user groups (e.g., VIP vs standard pools)
+- Test new configurations without affecting existing pools
+- Create time-limited promotional pools
+
+Each pool is identified by the combination of `(authority, stakeMint, poolId)`, so use:
+- `poolId: 0n` for your first pool
+- `poolId: 1n` for your second pool
+- And so on...
+
+**Built-in Safeguards:**
+The program validates that the pool address matches the provided `pool_id`. If you:
+- ❌ Use the wrong `pool_id` when deriving the PDA → Transaction fails (address mismatch)
+- ❌ Try to reuse an existing `pool_id` → Transaction fails (account not empty)
+- ✅ Always use `findPoolPda()` helper → Correct address is guaranteed
 
 ## Documentation
 
