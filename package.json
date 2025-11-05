@@ -31,6 +31,8 @@
     "example:pool-admin": "cd example && pnpm pool-admin",
     "example:user-staking": "cd example && pnpm user-staking",
     "example:devnet": "cd example && pnpm devnet-test",
+    "example:list-pools": "cd example && pnpm list-pools",
+    "example:list-all-pools": "cd example && pnpm list-all-pools",
     "prepare": "husky"
   },
   "devDependencies": {

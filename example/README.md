@@ -51,6 +51,12 @@ pnpm user-staking
 
 # Live integration test on devnet (executes real transactions)
 pnpm devnet-test
+
+# Check if a pool exists for an authority + stake mint
+pnpm list-pools <authority> <stake_mint>
+
+# List ALL pools on the network (no parameters needed)
+pnpm list-all-pools
 ```
 
 ### Development Mode
@@ -120,7 +126,86 @@ Demonstrates typical user interactions with instruction creation:
 pnpm user-staking
 ```
 
-### 4. Devnet Integration Test (`src/devnet-integration-test.ts`)
+### 4. List Pools (`src/list-pools.ts`)
+
+A utility script to check if a stake pool exists for a given authority and stake mint combination.
+
+**Features:**
+- Derives the correct pool PDA address
+- Checks if the pool account exists on-chain
+- Displays detailed pool information including:
+  - Pool configuration (reward rate, lockup period, min stake)
+  - Current state (total staked, rewards owed)
+  - Pool status (active/paused)
+  - Authority and vault addresses
+
+**Usage:**
+
+```bash
+# Check a specific pool
+pnpm list-pools <authority_pubkey> <stake_mint_address>
+
+# Example
+pnpm list-pools 7xYz3pZD6qvL8... TokenkegQfeZyiNwAJ...
+```
+
+**Note:** In the current implementation, each authority + stake_mint combination can have only **one** pool. This script helps you verify if a pool already exists before trying to create one.
+
+**Best for:** Pool operators checking existing pools, debugging, and monitoring.
+
+### 5. List All Pools (`src/list-all-pools.ts`)
+
+A utility script to discover and display **ALL** stake pools on the network, regardless of authority or stake mint.
+
+**Features:**
+- Scans the entire blockchain for all program-owned accounts
+- Filters and decodes valid stake pool accounts
+- Displays comprehensive information for each pool
+- Groups pools by authority
+- Shows network-wide statistics:
+  - Total number of pools
+  - Active vs paused pools
+  - Number of unique authorities
+  - Total value locked across all pools
+  - Total rewards owed
+
+**Usage:**
+
+```bash
+# Scan all pools on the configured network
+pnpm list-all-pools
+```
+
+**Note:** This script uses `getProgramAccounts` RPC call which:
+- May take several seconds to complete
+- Might not be available on all public RPC endpoints
+- Works best with local validators or premium RPC services
+
+**Output Example:**
+```
+Found 5 Stake Pool(s)
+
+1. Pool ABC123...
+   Authority: XYZ...
+   Total Staked: 1,250.50 tokens
+   Reward Rate: 15.00%
+   Status: ✅ ACTIVE
+
+[... more pools ...]
+
+Summary by Authority:
+XYZ... → 3 pool(s), Total Staked: 2,500.00 tokens
+
+Overall Statistics:
+Total Pools: 5
+Active Pools: 4
+Paused Pools: 1
+Total Value Staked: 5,000.00 tokens
+```
+
+**Best for:** Network analysis, monitoring, discovering all pools, and getting ecosystem-wide statistics.
+
+### 6. Devnet Integration Test (`src/devnet-integration-test.ts`)
 
 A **live end-to-end test** that executes real transactions on Solana devnet:
 
