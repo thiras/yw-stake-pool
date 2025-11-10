@@ -14,11 +14,17 @@ use solana_program::pubkey::Pubkey;
 
 use super::helpers::{verify_token_account, verify_vault_ownership};
 
+/// Minimum lockup period in seconds (1 day = 86400 seconds)
+/// This prevents reward vault drain attacks by ensuring a meaningful staking duration.
+/// See [H-02] security fix.
+const MIN_LOCKUP_PERIOD: i64 = 86400; // 1 day
+
 /// Initialize a new staking pool with the provided parameters.
 ///
 /// # Security
-/// This function includes critical security validations (see [H-01] fix):
-/// - Validates vault token accounts are owned by the pool PDA (not by arbitrary users)
+/// This function includes critical security validations:
+/// - [H-01] Validates vault token accounts are owned by the pool PDA (not by arbitrary users)
+/// - [H-02] Enforces minimum lockup period to prevent reward drain attacks
 /// - Prevents attackers from passing malicious token accounts they control
 /// - Ensures only the pool program can authorize transfers from vaults
 ///
@@ -27,13 +33,13 @@ use super::helpers::{verify_token_account, verify_vault_ownership};
 /// * `pool_id` - Unique identifier for this pool (allows multiple pools per authority+mint)
 /// * `reward_rate` - Fixed reward percentage (scaled by 1e9, e.g., 100_000_000 = 10%)
 /// * `min_stake_amount` - Minimum amount users must stake
-/// * `lockup_period` - Time in seconds before rewards are earned
+/// * `lockup_period` - Time in seconds before rewards are earned (minimum 1 day)
 /// * `enforce_lockup` - Whether to prevent early unstaking
 /// * `pool_end_date` - Optional timestamp after which no new stakes allowed
 ///
 /// # Errors
 /// Returns error if:
-/// - Parameters are invalid (reward rate too high, negative lockup, past end date)
+/// - Parameters are invalid (reward rate too high, lockup below minimum, past end date)
 /// - Pool account doesn't match expected PDA derivation
 /// - Required signers are missing
 /// - Vault accounts are not owned by the pool PDA (CRITICAL SECURITY CHECK)
@@ -54,8 +60,19 @@ pub fn initialize_pool<'a>(
         return Err(StakePoolError::InvalidParameters.into());
     }
 
-    if lockup_period < 0 {
-        msg!("Lockup period cannot be negative: {}", lockup_period);
+    // [H-02] Security Fix: Enforce minimum lockup period
+    // Without this check, admins could set lockup to 1 second, allowing users to:
+    // 1. Stake tokens
+    // 2. Wait 1 second
+    // 3. Claim full rewards instantly
+    // 4. Drain the reward vault
+    // The minimum lockup ensures rewards are earned over a meaningful timeframe.
+    if lockup_period < MIN_LOCKUP_PERIOD {
+        msg!(
+            "Lockup period too short: {} seconds. Minimum required: {} seconds (1 day)",
+            lockup_period,
+            MIN_LOCKUP_PERIOD
+        );
         return Err(StakePoolError::InvalidParameters.into());
     }
 

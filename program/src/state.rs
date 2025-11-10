@@ -201,33 +201,80 @@ impl StakePool {
         Ok(())
     }
 
-    /// Calculate rewards for a stake based on fixed reward rate
-    /// Rewards are only earned if lockup period is complete
-    /// Formula: (amount * reward_rate) / 1e9
+    /// Calculate rewards for a stake based on time-proportional reward rate
+    ///
+    /// # Security Fix [H-02]: Time-Proportional Rewards
+    /// This function now calculates rewards proportionally to staking duration to prevent
+    /// reward vault drain attacks. Previously, rewards were granted in full once lockup
+    /// expired, allowing attackers to:
+    /// 1. Set a short lockup (e.g., 1 second)
+    /// 2. Stake funds
+    /// 3. Wait for lockup to pass
+    /// 4. Claim full rewards instantly
+    /// 5. Repeat to drain the reward vault
+    ///
+    /// Now rewards accrue continuously based on time staked:
+    /// - Formula: (amount * reward_rate * time_staked) / (SCALE * lockup_period)
+    /// - Rewards are prorated: staking for half the lockup period = half the rewards
+    /// - Full rewards are only earned after the complete lockup period
+    ///
+    /// # Arguments
+    /// * `amount_staked` - Amount of tokens staked
+    /// * `stake_timestamp` - Unix timestamp when stake was created
+    /// * `current_time` - Current Unix timestamp
+    ///
+    /// # Returns
+    /// The reward amount earned based on time staked, up to the maximum reward_rate
+    ///
+    /// # Example
+    /// - reward_rate = 100_000_000 (10% when scaled by 1e9)
+    /// - lockup_period = 86400 seconds (1 day)
+    /// - amount_staked = 1000 tokens
+    /// - After 12 hours (43200s): reward = 1000 * 0.1 * 0.5 = 50 tokens
+    /// - After 24 hours (86400s): reward = 1000 * 0.1 * 1.0 = 100 tokens
+    /// - After 48 hours (172800s): reward = 1000 * 0.1 * 1.0 = 100 tokens (capped)
     pub fn calculate_rewards(
         &self,
         amount_staked: u64,
         stake_timestamp: i64,
         current_time: i64,
     ) -> Result<u64, ProgramError> {
-        // Check if lockup period is complete
+        // Calculate time staked in seconds
         let time_staked = current_time
             .checked_sub(stake_timestamp)
             .ok_or(StakePoolError::NumericalOverflow)?;
 
-        if time_staked < self.lockup_period {
-            // No rewards if lockup not complete
+        // No negative time staking
+        if time_staked < 0 {
             return Ok(0);
         }
 
-        // Calculate fixed rewards based on reward rate
-        // reward_rate is scaled by 1e9 (e.g., 10_000_000_000 = 10% of staked amount)
+        // If no lockup period (should not happen due to MIN_LOCKUP_PERIOD validation)
+        if self.lockup_period == 0 {
+            return Ok(0);
+        }
+
+        // Calculate the time factor: how much of the lockup period has elapsed
+        // Cap at 1.0 (100%) if time_staked exceeds lockup_period
+        let time_factor = if time_staked >= self.lockup_period {
+            self.lockup_period as u128
+        } else {
+            time_staked as u128
+        };
+
+        // Calculate time-proportional rewards
+        // Formula: (amount * reward_rate * time_factor) / (SCALE * lockup_period)
+        // This ensures rewards accrue linearly with time staked
         const SCALE: u128 = 1_000_000_000;
 
         let rewards = (amount_staked as u128)
             .checked_mul(self.reward_rate as u128)
             .ok_or(StakePoolError::NumericalOverflow)?
+            .checked_mul(time_factor)
+            .ok_or(StakePoolError::NumericalOverflow)?
             .checked_div(SCALE)
+            .ok_or(StakePoolError::NumericalOverflow)?
+            .checked_div(self.lockup_period as u128)
             .ok_or(StakePoolError::NumericalOverflow)? as u64;
 
         Ok(rewards)
