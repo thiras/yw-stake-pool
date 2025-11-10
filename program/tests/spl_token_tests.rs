@@ -374,7 +374,7 @@ fn test_initialize_pool_with_real_tokens() {
     println!("✅ Created reward mint: {}", reward_mint);
 
     // Derive PDAs
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint);
+    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, 0);
 
     // Create vault token accounts (owned by pool PDA)
     let stake_vault_account = create_token_account(&mut svm, &payer, &stake_mint, &pool_pda);
