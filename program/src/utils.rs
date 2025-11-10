@@ -55,12 +55,12 @@ pub fn create_account<'a>(
         let data = target_account.try_borrow_data()?;
         let is_zeroed = data.iter().all(|&byte| byte == 0);
         drop(data);
-        
+
         if !is_zeroed {
             // Account has initialized data - reject to prevent malicious pre-initialization
-            return Err(ProgramError::AccountAlreadyInitialized);
+            return Err(StakePoolError::ExpectedEmptyAccount.into());
         }
-        
+
         // Account has correct params and is uninitialized, nothing to do
         return Ok(());
     }
@@ -72,7 +72,7 @@ pub fn create_account<'a>(
         // as it may contain malicious content. We only handle the simple DoS case where
         // an attacker sends lamports without allocating data.
         if current_data_len != 0 {
-            return Err(ProgramError::AccountAlreadyInitialized);
+            return Err(StakePoolError::ExpectedEmptyAccount.into());
         }
 
         // Calculate additional lamports needed (if any)
