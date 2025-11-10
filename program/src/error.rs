@@ -80,6 +80,9 @@ pub enum StakePoolError {
     /// 24 - Invalid parameters
     #[error("Invalid parameters")]
     InvalidParameters,
+    /// 25 - Invalid vault owner (vault must be owned by pool PDA)
+    #[error("Invalid vault owner (vault must be owned by pool PDA)")]
+    InvalidVaultOwner,
 }
 
 impl From<StakePoolError> for ProgramError {
