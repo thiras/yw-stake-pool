@@ -62,6 +62,7 @@ async function main() {
       tokenProgram: config.tokenProgramId,
       systemProgram: config.systemProgramId,
       rent: address('SysvarRent111111111111111111111111111111111'),
+      poolId: 0n, // First pool for this authority + stake_mint
       rewardRate: config.defaultPoolConfig.rewardRate,
       minStakeAmount: config.defaultPoolConfig.minStakeAmount,
       lockupPeriod: config.defaultPoolConfig.lockupPeriod,

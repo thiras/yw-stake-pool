@@ -68,7 +68,7 @@ impl TestEnvironment {
         let reward_mint = Keypair::new().pubkey();
 
         // Derive PDAs
-        let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint);
+        let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, 0);
         let (stake_vault, _) = get_stake_vault_pda(&pool_pda);
         let (reward_vault, _) = get_reward_vault_pda(&pool_pda);
 
@@ -110,6 +110,7 @@ impl TestEnvironment {
                 AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
             ],
             data: StakePoolInstruction::InitializePool {
+                pool_id: 0,
                 reward_rate,
                 min_stake_amount,
                 lockup_period,

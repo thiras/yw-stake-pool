@@ -344,7 +344,11 @@ pub fn unstake<'a>(
     };
 
     // Transfer tokens back (with PDA signer)
-    let pool_seeds = StakePool::seeds(&pool_data.authority, &pool_data.stake_mint);
+    let pool_seeds = StakePool::seeds(
+        &pool_data.authority,
+        &pool_data.stake_mint,
+        pool_data.pool_id,
+    );
     let mut seeds_with_bump = pool_seeds.clone();
     seeds_with_bump.push(vec![pool_data.bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();

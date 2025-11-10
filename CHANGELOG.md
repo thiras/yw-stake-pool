@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Multi-Pool Support Enhancement**: New `pool_id` parameter for better pool management
+  - `pool_id: u64` field added to `StakePool` state
+  - Enables multiple pools with same authority and stake_mint using unique IDs
+  - Pool PDA derivation now includes pool_id: `["stake_pool", authority, stake_mint, pool_id]`
+  - Use `pool_id: 0` for first pool, `1` for second, etc.
+  - Built-in validation ensures pool address matches provided pool_id
+
+### Changed
+- `StakePool` state size increased to accommodate new `pool_id` field
+- `InitializePool` instruction now requires `pool_id: u64` parameter
+- Pool PDA derivation updated to include pool_id in seed array
+- All documentation updated with pool_id examples
+- Test suite expanded with multi-pool validation
+
+### Technical Details
+- Added `test_multiple_pool_ids()` unit test
+- Updated all PDA helper functions to include pool_id parameter
+- Client library auto-generated with new pool_id field
+- Example code updated to demonstrate pool_id usage
+
 ## [1.5.0] - 2025-10-22
 
 ### Added

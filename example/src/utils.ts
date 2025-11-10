@@ -44,13 +44,26 @@ export function createRpcSubscriptions() {
 
 /**
  * Find Pool PDA
+ * 
+ * IMPORTANT: Always use this function to derive the correct pool address.
+ * The pool_id must match what you pass to initializePool instruction.
+ * If the addresses don't match, the transaction will fail.
+ * 
+ * @param authority - The pool authority public key
+ * @param stakeMint - The token mint being staked
+ * @param poolId - Unique pool identifier (0 for first pool, 1 for second, etc.)
+ * @param programId - The stake pool program address
+ * @returns [poolAddress, bump] - The derived PDA and bump seed
  */
 export async function findPoolPda(
   authority: Address,
   stakeMint: Address,
+  poolId: bigint = 0n,
   programId: Address = config.programId
 ): Promise<[Address, number]> {
   const encoder = getAddressEncoder();
+  const poolIdBytes = new Uint8Array(8);
+  new DataView(poolIdBytes.buffer).setBigUint64(0, poolId, true); // little-endian
   
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress: programId,
@@ -58,6 +71,7 @@ export async function findPoolPda(
       'stake_pool',
       encoder.encode(authority),
       encoder.encode(stakeMint),
+      poolIdBytes,
     ],
   });
   

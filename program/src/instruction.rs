@@ -16,6 +16,8 @@ pub enum StakePoolInstruction {
     #[account(8, name="system_program", desc = "The system program")]
     #[account(9, name="rent", desc = "Rent sysvar")]
     InitializePool {
+        /// Unique identifier to allow multiple pools for same authority + stake_mint (typically 0 for first pool, 1 for second, etc.)
+        pool_id: u64,
         reward_rate: u64,
         min_stake_amount: u64,
         lockup_period: i64,

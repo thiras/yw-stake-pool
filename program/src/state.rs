@@ -72,6 +72,8 @@ pub struct StakePool {
     pub stake_mint: Pubkey,
     /// The token mint for rewards (supports Token-2022)
     pub reward_mint: Pubkey,
+    /// Unique identifier to allow multiple pools for same authority + stake_mint
+    pub pool_id: u64,
     /// The pool's stake token vault
     pub stake_vault: Pubkey,
     /// The pool's reward token vault
@@ -129,6 +131,7 @@ impl StakePool {
     // - authority (Pubkey): 32 bytes
     // - stake_mint (Pubkey): 32 bytes
     // - reward_mint (Pubkey): 32 bytes
+    // - pool_id (u64): 8 bytes
     // - stake_vault (Pubkey): 32 bytes
     // - reward_vault (Pubkey): 32 bytes
     // - total_staked (u64): 8 bytes
@@ -144,20 +147,28 @@ impl StakePool {
     // - _reserved: 32 bytes
     //
     // We allocate for the maximum size (both Options as Some) to support future updates
-    // None: 1 + 32*5 + 8*4 + 1*3 + 1 + 1 + 32 = 238 bytes
-    // Some: 1 + 32*5 + 8*4 + 1*3 + 33 + 9 + 32 = 278 bytes
-    pub const LEN: usize = 1 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 32;
+    // None: 1 + 32*5 + 8*5 + 1*3 + 1 + 1 + 32 = 246 bytes
+    // Some: 1 + 32*5 + 8*5 + 1*3 + 33 + 9 + 32 = 286 bytes
+    pub const LEN: usize =
+        1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 32;
 
-    pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey) -> Vec<Vec<u8>> {
+    pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> Vec<Vec<u8>> {
         vec![
             b"stake_pool".to_vec(),
             authority.as_ref().to_vec(),
             stake_mint.as_ref().to_vec(),
+            pool_id.to_le_bytes().to_vec(),
         ]
     }
 
-    pub fn find_pda(authority: &Pubkey, stake_mint: &Pubkey) -> (Pubkey, u8) {
-        let seeds: Vec<&[u8]> = vec![b"stake_pool", authority.as_ref(), stake_mint.as_ref()];
+    pub fn find_pda(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> (Pubkey, u8) {
+        let pool_id_bytes = pool_id.to_le_bytes();
+        let seeds: Vec<&[u8]> = vec![
+            b"stake_pool",
+            authority.as_ref(),
+            stake_mint.as_ref(),
+            &pool_id_bytes,
+        ];
         Pubkey::find_program_address(&seeds, &crate::ID)
     }
 

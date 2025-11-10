@@ -11,6 +11,7 @@ test('StakePool codec encodes and decodes correctly', (t) => {
     authority: address('11111111111111111111111111111111'),
     stakeMint: address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
     rewardMint: address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+    poolId: 0n,
     stakeVault: address('11111111111111111111111111111111'),
     rewardVault: address('11111111111111111111111111111111'),
     totalStaked: 1_000_000_000n,
@@ -19,6 +20,7 @@ test('StakePool codec encodes and decodes correctly', (t) => {
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n, // 1 day in seconds
     isPaused: false,
+    enforceLockup: false,
     bump: 255,
     pendingAuthority: null,
     poolEndDate: null,
@@ -54,6 +56,7 @@ test('StakePool has correct reward_rate field', (t) => {
     authority: address('11111111111111111111111111111111'),
     stakeMint: address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
     rewardMint: address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+    poolId: 0n,
     stakeVault: address('11111111111111111111111111111111'),
     rewardVault: address('11111111111111111111111111111111'),
     totalStaked: 0n,
@@ -62,6 +65,7 @@ test('StakePool has correct reward_rate field', (t) => {
     minStakeAmount: 1_000_000n,
     lockupPeriod: 604800n, // 7 days
     isPaused: false,
+    enforceLockup: false,
     bump: 255,
     pendingAuthority: null,
     poolEndDate: null,

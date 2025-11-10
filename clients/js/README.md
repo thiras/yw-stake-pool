@@ -51,6 +51,7 @@ const initPoolIx = getInitializePoolInstruction({
   rewardVault: rewardVaultAddress,
   payer: payer.address,
   tokenProgram: tokenProgramAddress,
+  poolId: 0n, // Unique ID (0 for first pool, 1 for second, etc.)
   rewardRate: 100_000_000n, // 10% APY
   minStakeAmount: 1_000_000n, // 1 token (6 decimals)
   lockupPeriod: 86400n, // 1 day in seconds
@@ -103,6 +104,7 @@ const initIx = getInitializePoolInstruction({
   rewardVault: rewardVaultAddress,
   payer: payer.address,
   tokenProgram: tokenProgramAddress,
+  poolId: 0n, // Unique ID (0 for first pool, 1 for second, etc.)
   rewardRate: 100_000_000n, // 10% APY (basis points * 10^6)
   minStakeAmount: 1_000_000n,
   lockupPeriod: 86400n, // 1 day
@@ -299,28 +301,75 @@ try {
 Derive Program Derived Addresses (PDAs) for pools and stake accounts:
 
 ```typescript
-import { getAddressEncoder } from '@solana/kit';
+import { getAddressEncoder, getProgramDerivedAddress } from '@solana/kit';
 
-// Pool PDA
-const [poolPda] = await findProgramAddress(
-  [
-    Buffer.from('stake_pool'),
+// Pool PDA (includes poolId for multi-pool support)
+const poolId = 0n; // First pool
+
+// Encode poolId as little-endian u64
+const poolIdBytes = new Uint8Array(8);
+new DataView(poolIdBytes.buffer).setBigUint64(0, poolId, true); // true = little-endian
+
+const [poolPda] = await getProgramDerivedAddress({
+  programAddress: programId,
+  seeds: [
+    'stake_pool',
     getAddressEncoder().encode(authority),
     getAddressEncoder().encode(stakeMint),
+    poolIdBytes,
   ],
-  programId
-);
+});
 
 // Stake Account PDA
-const [stakeAccountPda] = await findProgramAddress(
-  [
-    Buffer.from('stake_account'),
+// Encode index as little-endian u64
+const indexBytes = new Uint8Array(8);
+new DataView(indexBytes.buffer).setBigUint64(0, index, true); // true = little-endian
+
+const [stakeAccountPda] = await getProgramDerivedAddress({
+  programAddress: programId,
+  seeds: [
+    'stake_account',
     getAddressEncoder().encode(pool),
     getAddressEncoder().encode(owner),
-    Buffer.from(new BigUint64Array([index]).buffer),
+    indexBytes,
   ],
-  programId
-);
+});
+```
+
+### Multiple Pools Per Token
+
+A single authority can create multiple stake pools for the same token by using different `poolId` values:
+
+```typescript
+// Encode poolId as little-endian u64
+const poolIdBytes1 = new Uint8Array(8);
+new DataView(poolIdBytes1.buffer).setBigUint64(0, 0n, true);
+
+// First pool (standard staking)
+const [pool1] = await getProgramDerivedAddress({
+  programAddress: programId,
+  seeds: [
+    'stake_pool',
+    getAddressEncoder().encode(authority),
+    getAddressEncoder().encode(stakeMint),
+    poolIdBytes1,
+  ],
+});
+
+// Encode second poolId
+const poolIdBytes2 = new Uint8Array(8);
+new DataView(poolIdBytes2.buffer).setBigUint64(0, 1n, true);
+
+// Second pool (VIP staking with higher rewards)
+const [pool2] = await getProgramDerivedAddress({
+  programAddress: programId,
+  seeds: [
+    'stake_pool',
+    getAddressEncoder().encode(authority),
+    getAddressEncoder().encode(stakeMint),
+    poolIdBytes2,
+  ],
+});
 ```
 
 ## Examples

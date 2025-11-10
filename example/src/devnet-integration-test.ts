@@ -87,7 +87,10 @@ async function main() {
     const stakeMintKeypair = await generateKeyPairSigner();
     const stakeMint = stakeMintKeypair.address;
 
-    const [poolAddress] = await findPoolPda(authority.address, stakeMint);
+    // Derive pool PDA with pool_id = 0 (first pool for this authority + mint)
+    // NOTE: The pool_id used here MUST match the one passed to initializePool
+    // Otherwise the transaction will fail with "address mismatch"
+    const [poolAddress] = await findPoolPda(authority.address, stakeMint, 0n);
     console.log(`\n📍 Derived Pool PDA: ${poolAddress}`);
     console.log('   (Will be used as vault owner)\n');
 
@@ -149,6 +152,7 @@ async function main() {
       tokenProgram: config.tokenProgramId,
       systemProgram: config.systemProgramId,
       rent: address('SysvarRent111111111111111111111111111111111'),
+      poolId: 0n, // First pool for this authority + stake_mint
       rewardRate: config.defaultPoolConfig.rewardRate,
       minStakeAmount: config.defaultPoolConfig.minStakeAmount,
       lockupPeriod: config.defaultPoolConfig.lockupPeriod,

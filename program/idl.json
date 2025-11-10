@@ -88,6 +88,10 @@
       ],
       "args": [
         {
+          "name": "poolId",
+          "type": "u64"
+        },
+        {
           "name": "rewardRate",
           "type": "u64"
         },
@@ -631,6 +635,10 @@
           {
             "name": "rewardMint",
             "type": "publicKey"
+          },
+          {
+            "name": "poolId",
+            "type": "u64"
           },
           {
             "name": "stakeVault",
