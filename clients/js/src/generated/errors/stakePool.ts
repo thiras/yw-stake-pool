@@ -64,6 +64,8 @@ export const STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY = 0x16; // 22
 export const STAKE_POOL_ERROR__POOL_ENDED = 0x17; // 23
 /** InvalidParameters: Invalid parameters */
 export const STAKE_POOL_ERROR__INVALID_PARAMETERS = 0x18; // 24
+/** InvalidVaultOwner: Invalid vault owner (vault must be owned by pool PDA) */
+export const STAKE_POOL_ERROR__INVALID_VAULT_OWNER = 0x19; // 25
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -83,6 +85,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER
   | typeof STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM
+  | typeof STAKE_POOL_ERROR__INVALID_VAULT_OWNER
   | typeof STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED
   | typeof STAKE_POOL_ERROR__NO_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__NUMERICAL_OVERFLOW
@@ -112,6 +115,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY]: `Invalid pending authority`,
     [STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER]: `Invalid program owner`,
     [STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM]: `Invalid token program`,
+    [STAKE_POOL_ERROR__INVALID_VAULT_OWNER]: `Invalid vault owner (vault must be owned by pool PDA)`,
     [STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED]: `Lockup period not expired`,
     [STAKE_POOL_ERROR__NO_PENDING_AUTHORITY]: `No pending authority transfer`,
     [STAKE_POOL_ERROR__NUMERICAL_OVERFLOW]: `Numerical overflow`,
