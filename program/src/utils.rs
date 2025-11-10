@@ -77,9 +77,8 @@ pub fn create_account<'a>(
 
         // Calculate additional lamports needed (if any)
         if current_lamports < required_lamports {
-            let additional_lamports = required_lamports
-                .checked_sub(current_lamports)
-                .ok_or(StakePoolError::NumericalOverflow)?;
+            // Safe: condition above guarantees required_lamports > current_lamports
+            let additional_lamports = required_lamports - current_lamports;
 
             // Transfer additional lamports to meet rent requirement
             let transfer_ix = solana_program::system_instruction::transfer(
