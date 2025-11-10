@@ -49,7 +49,19 @@ pub fn create_account<'a>(
     // Case 1: Account already properly initialized (idempotent behavior)
     if current_lamports >= required_lamports && current_data_len == size && *current_owner == *owner
     {
-        // Account is already correctly set up, nothing to do
+        // Verify account data is uninitialized (all zeros) to prevent accepting
+        // malicious pre-initialized accounts. An attacker could pre-fund an account
+        // with correct lamports/size/owner but fill it with malicious data.
+        let data = target_account.try_borrow_data()?;
+        let is_zeroed = data.iter().all(|&byte| byte == 0);
+        drop(data);
+        
+        if !is_zeroed {
+            // Account has initialized data - reject to prevent malicious pre-initialization
+            return Err(ProgramError::AccountAlreadyInitialized);
+        }
+        
+        // Account has correct params and is uninitialized, nothing to do
         return Ok(());
     }
 
