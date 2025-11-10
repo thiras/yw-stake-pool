@@ -110,6 +110,7 @@ impl TestEnvironment {
                 AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
             ],
             data: StakePoolInstruction::InitializePool {
+                pool_id: 0,
                 reward_rate,
                 min_stake_amount,
                 lockup_period,

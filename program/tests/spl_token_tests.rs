@@ -399,6 +399,7 @@ fn test_initialize_pool_with_real_tokens() {
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
         ],
         data: StakePoolInstruction::InitializePool {
+            pool_id: 0,
             reward_rate: 100_000_000, // 10%
             min_stake_amount: 1_000_000,
             lockup_period: 86400,
@@ -464,6 +465,7 @@ fn test_stake_pool_serialized_size() {
         authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
+        pool_id: 0,
         stake_vault: Pubkey::new_unique(),
         reward_vault: Pubkey::new_unique(),
         total_staked: 0,
@@ -499,6 +501,7 @@ fn test_stake_pool_serialized_size() {
         authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
+        pool_id: 0,
         stake_vault: Pubkey::new_unique(),
         reward_vault: Pubkey::new_unique(),
         total_staked: 0,
