@@ -12,7 +12,18 @@ use spl_token_2022::{extension::StateWithExtensions, instruction::transfer_check
 
 use crate::error::StakePoolError;
 
-/// Create a new account from the given size.
+/// Create a new PDA account from the given size.
+///
+/// SECURITY FIX [M-01]: Front-running DoS Prevention
+/// This function is designed to prevent front-running DoS attacks on PDA creation.
+/// Instead of using system_instruction::create_account (which fails if the account
+/// has any lamports), this implementation uses allocate + assign pattern which:
+///
+/// 1. Checks if account already exists and is properly initialized
+/// 2. If account has lamports but wrong owner/size, transfers additional lamports and reallocates
+/// 3. If account is empty, creates it normally
+///
+/// This prevents attackers from blocking PDA creation by sending rent-exempt SOL to the address.
 #[inline(always)]
 pub fn create_account<'a>(
     target_account: &AccountInfo<'a>,
@@ -23,21 +34,83 @@ pub fn create_account<'a>(
     signer_seeds: Option<&[&[&[u8]]]>,
 ) -> ProgramResult {
     let rent = Rent::get()?;
-    let lamports: u64 = rent.minimum_balance(size);
+    let required_lamports: u64 = rent.minimum_balance(size);
 
-    let create_account_ix = solana_program::system_instruction::create_account(
+    // Get the signer seeds, defaulting to empty if None
+    let signer_seeds = signer_seeds.unwrap_or(&[]);
+
+    // Check current state of target account
+    let current_lamports = target_account.lamports();
+    let current_data_len = target_account.data_len();
+    let current_owner = target_account.owner;
+
+    // Case 1: Account already properly initialized (idempotent behavior)
+    if current_lamports >= required_lamports && current_data_len == size && current_owner == owner {
+        // Account is already correctly set up, nothing to do
+        return Ok(());
+    }
+
+    // Case 2: Account has lamports but wrong configuration
+    // This is the front-running scenario - account has SOL but isn't initialized
+    if current_lamports > 0 {
+        // Calculate additional lamports needed (if any)
+        if current_lamports < required_lamports {
+            let additional_lamports = required_lamports
+                .checked_sub(current_lamports)
+                .ok_or(StakePoolError::NumericalOverflow)?;
+
+            // Transfer additional lamports to meet rent requirement
+            let transfer_ix = solana_program::system_instruction::transfer(
+                funding_account.key,
+                target_account.key,
+                additional_lamports,
+            );
+            invoke(
+                &transfer_ix,
+                &[funding_account.clone(), target_account.clone()],
+            )?;
+        }
+
+        // Allocate space if needed (this works even if account has lamports)
+        if current_data_len != size {
+            let allocate_ix =
+                solana_program::system_instruction::allocate(target_account.key, size as u64);
+            invoke_signed(&allocate_ix, &[target_account.clone()], signer_seeds)?;
+        }
+
+        // Assign to our program if needed
+        if current_owner != owner {
+            let assign_ix = solana_program::system_instruction::assign(target_account.key, owner);
+            invoke_signed(&assign_ix, &[target_account.clone()], signer_seeds)?;
+        }
+
+        return Ok(());
+    }
+
+    // Case 3: Account is completely empty - use standard creation
+    // Use allocate + assign pattern instead of create_account for consistency
+    // This also works better with PDAs
+
+    // First, transfer lamports for rent
+    let transfer_ix = solana_program::system_instruction::transfer(
         funding_account.key,
         target_account.key,
-        lamports,
-        size as u64,
-        owner,
+        required_lamports,
     );
-
-    invoke_signed(
-        &create_account_ix,
+    invoke(
+        &transfer_ix,
         &[funding_account.clone(), target_account.clone()],
-        signer_seeds.unwrap_or(&[]),
-    )
+    )?;
+
+    // Then allocate space
+    let allocate_ix = solana_program::system_instruction::allocate(target_account.key, size as u64);
+    invoke_signed(&allocate_ix, &[target_account.clone()], signer_seeds)?;
+
+    // Finally assign ownership
+    let assign_ix = solana_program::system_instruction::assign(target_account.key, owner);
+    invoke_signed(&assign_ix, &[target_account.clone()], signer_seeds)?;
+
+    Ok(())
 }
 
 /// Resize an account using realloc, lifted from Solana Cookbook.
