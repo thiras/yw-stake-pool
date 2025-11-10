@@ -891,6 +891,11 @@
       "code": 24,
       "name": "InvalidParameters",
       "msg": "Invalid parameters"
+    },
+    {
+      "code": 25,
+      "name": "InvalidVaultOwner",
+      "msg": "Invalid vault owner (vault must be owned by pool PDA)"
     }
   ],
   "metadata": {
