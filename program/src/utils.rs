@@ -81,16 +81,29 @@ pub fn create_account<'a>(
             )?;
         }
 
+        // Ensure account is owned by system program before allocate
+        // Note: When transferring lamports to a non-existent address, Solana creates an account
+        // owned by the system program. This check handles edge cases.
+        if *current_owner != solana_program::system_program::id() {
+            let assign_to_system_ix = solana_program::system_instruction::assign(
+                target_account.key,
+                &solana_program::system_program::id(),
+            );
+            invoke_signed(
+                &assign_to_system_ix,
+                &[target_account.clone()],
+                signer_seeds,
+            )?;
+        }
+
         // Allocate space (we know current_data_len == 0 at this point)
         let allocate_ix =
             solana_program::system_instruction::allocate(target_account.key, size as u64);
         invoke_signed(&allocate_ix, &[target_account.clone()], signer_seeds)?;
 
-        // Assign to our program if not already owned by target owner
-        if *current_owner != *owner {
-            let assign_ix = solana_program::system_instruction::assign(target_account.key, owner);
-            invoke_signed(&assign_ix, &[target_account.clone()], signer_seeds)?;
-        }
+        // Assign to our program
+        let assign_ix = solana_program::system_instruction::assign(target_account.key, owner);
+        invoke_signed(&assign_ix, &[target_account.clone()], signer_seeds)?;
 
         return Ok(());
     }
