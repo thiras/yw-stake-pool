@@ -20,9 +20,9 @@ use crate::error::StakePoolError;
 /// has any lamports), this implementation uses allocate + assign pattern which:
 ///
 /// 1. Checks if account already exists and is properly initialized (idempotent)
-/// 2. If account has lamports but zero data, allocates space and assigns ownership
-///    - Note: allocate instruction requires current_data_len == 0
-///    - If data exists with wrong size, returns error (cannot safely recover)
+/// 2. If account has lamports but NO DATA, allocates space and assigns ownership
+///    - Handles simple DoS: attacker sends lamports without allocating data
+///    - Rejects accounts with pre-allocated data (potential malicious content)
 /// 3. If account is empty, creates it normally via transfer + allocate + assign
 ///
 /// This prevents attackers from blocking PDA creation by sending rent-exempt SOL to the address.
@@ -56,8 +56,10 @@ pub fn create_account<'a>(
     // Case 2: Account has lamports but wrong configuration
     // This is the front-running scenario - account has SOL but isn't initialized
     if current_lamports > 0 {
-        // Error if account has data but wrong size - cannot safely recover
-        if current_data_len != 0 && current_data_len != size {
+        // Error if account has any data - cannot safely take ownership of pre-allocated data
+        // as it may contain malicious content. We only handle the simple DoS case where
+        // an attacker sends lamports without allocating data.
+        if current_data_len != 0 {
             return Err(ProgramError::AccountAlreadyInitialized);
         }
 
@@ -79,13 +81,10 @@ pub fn create_account<'a>(
             )?;
         }
 
-        // Allocate space only if the account has zero data length
-        // The allocate instruction requires current_data_len == 0
-        if current_data_len == 0 {
-            let allocate_ix =
-                solana_program::system_instruction::allocate(target_account.key, size as u64);
-            invoke_signed(&allocate_ix, &[target_account.clone()], signer_seeds)?;
-        }
+        // Allocate space (we know current_data_len == 0 at this point)
+        let allocate_ix =
+            solana_program::system_instruction::allocate(target_account.key, size as u64);
+        invoke_signed(&allocate_ix, &[target_account.clone()], signer_seeds)?;
 
         // Assign to our program if not already owned by target owner
         if *current_owner != *owner {
