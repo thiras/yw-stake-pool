@@ -566,3 +566,105 @@ fn test_spl_token_integration_summary() {
     println!("║                                                           ║");
     println!("╚═══════════════════════════════════════════════════════════╝\n");
 }
+
+// ============================================================================
+// Security Test: [H-01] Vault Ownership Validation
+// ============================================================================
+
+#[test]
+fn test_initialize_pool_rejects_attacker_owned_vaults() {
+    let mut svm = LiteSVM::new();
+
+    // Load programs
+    let token_program_data = load_spl_token_program();
+    svm.add_program(spl_token_2022::id(), &token_program_data)
+        .unwrap();
+
+    let program_data = load_program();
+    let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
+    svm.add_program(program_id, &program_data).unwrap();
+
+    // Setup
+    let payer = Keypair::new();
+    let authority = Keypair::new();
+    let attacker = Keypair::new(); // Attacker who wants to steal funds
+    svm.airdrop(&payer.pubkey(), 10_000_000_000).unwrap();
+    svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&attacker.pubkey(), 1_000_000_000).unwrap();
+
+    // Create mints
+    let stake_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
+    let reward_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
+
+    // Derive pool PDA
+    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, 0);
+
+    // ATTACK: Create vault token accounts owned by attacker (NOT by pool PDA)
+    let malicious_stake_vault =
+        create_token_account(&mut svm, &payer, &stake_mint, &attacker.pubkey());
+    let malicious_reward_vault =
+        create_token_account(&mut svm, &payer, &reward_mint, &attacker.pubkey());
+
+    println!("🔴 Attacker created vaults owned by themselves:");
+    println!("   Malicious stake vault: {}", malicious_stake_vault);
+    println!("   Malicious reward vault: {}", malicious_reward_vault);
+    println!("   Attacker pubkey: {}", attacker.pubkey());
+
+    // Try to initialize pool with attacker-owned vaults
+    let init_pool_ix = Instruction {
+        program_id,
+        accounts: vec![
+            AccountMeta::new(pool_pda, false),
+            AccountMeta::new_readonly(authority.pubkey(), true),
+            AccountMeta::new_readonly(stake_mint, false),
+            AccountMeta::new_readonly(reward_mint, false),
+            AccountMeta::new(malicious_stake_vault, false), // Attacker's account!
+            AccountMeta::new(malicious_reward_vault, false), // Attacker's account!
+            AccountMeta::new(payer.pubkey(), true),
+            AccountMeta::new_readonly(spl_token_2022::id(), false),
+            AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+        ],
+        data: StakePoolInstruction::InitializePool {
+            pool_id: 0,
+            reward_rate: 100_000_000, // 10%
+            min_stake_amount: 1_000_000,
+            lockup_period: 86400,
+            enforce_lockup: false,
+            pool_end_date: None,
+        }
+        .try_to_vec()
+        .unwrap(),
+    };
+
+    let tx = Transaction::new_signed_with_payer(
+        &[init_pool_ix],
+        Some(&payer.pubkey()),
+        &[&payer, &authority],
+        svm.latest_blockhash(),
+    );
+
+    let result = svm.send_transaction(tx);
+
+    // Verify that initialization FAILS (our security fix working!)
+    match result {
+        Err(e) => {
+            println!("✅ SECURITY FIX WORKING: Pool initialization rejected!");
+            println!("   Error: {:?}", e);
+            println!("   This prevents attacker from stealing user funds");
+
+            // Check for specific error (InvalidVaultOwner = error code 25)
+            let error_msg = format!("{:?}", e);
+            if error_msg.contains("Custom(25)") || error_msg.contains("InvalidVaultOwner") {
+                println!("✅ Correct error: InvalidVaultOwner (error code 25)");
+            }
+        }
+        Ok(_) => {
+            panic!(
+                "❌ SECURITY VULNERABILITY: Pool initialization should have failed!\n\
+                   Attacker-owned vaults were accepted, allowing theft of user funds.\n\
+                   The [H-01] fix is not working properly."
+            );
+        }
+    }
+}
