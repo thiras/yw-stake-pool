@@ -7,21 +7,24 @@
 //
 // Vulnerability Description:
 // Previously, the protocol allowed admins to set trivially short lockup periods
-// (e.g., 1 second) and rewards were not prorated based on staking duration.
-// This allowed attackers to drain the reward vault by:
+// (e.g., 1 second). This allowed attackers to drain the reward vault by:
 // 1. Creating a pool with high reward_rate and 1-second lockup
 // 2. Staking massive amounts of tokens
 // 3. Waiting 1 second
 // 4. Claiming full rewards instantly
 // 5. Repeating to drain the entire reward vault
 //
-// Security Fixes:
-// 1. Enforced minimum lockup period (MIN_LOCKUP_PERIOD = 86400 seconds = 1 day)
-// 2. Time-proportional reward calculation (rewards accrue linearly with time)
+// Security Fix:
+// Enforced minimum lockup period (MIN_LOCKUP_PERIOD = 86400 seconds = 1 day)
+// This prevents the creation of pools with trivially short lockup periods.
+//
+// Reward Model:
+// Binary distribution - 0% rewards before lockup completes, 100% after.
+// The minimum lockup enforcement ensures meaningful staking duration.
 //
 // Test Coverage:
 // - Minimum lockup period enforcement
-// - Time-proportional reward calculation
+// - Binary reward calculation (0% before, 100% after lockup)
 // - Attack scenario prevention
 // - Edge cases and boundary conditions
 
@@ -100,131 +103,123 @@ fn test_accept_valid_lockup_periods() {
 }
 
 // ============================================================================
-// Module 2: Time-Proportional Reward Calculation Tests
+// Module 2: Binary Reward Calculation Tests
 // ============================================================================
 
-/// Test reward calculation with mock StakePool
+/// Test reward calculation with mock StakePool (binary model)
 fn calculate_test_rewards(
     amount_staked: u64,
     reward_rate: u64,
     lockup_period: i64,
     time_staked: i64,
 ) -> u64 {
-    // Simulate the new calculate_rewards logic
-    if lockup_period == 0 {
-        return 0;
+    // Simulate the binary calculate_rewards logic
+    if time_staked < lockup_period {
+        return 0; // No rewards before lockup completes
     }
-
-    if time_staked < 0 {
-        return 0;
-    }
-
-    // Calculate time factor (capped at lockup_period)
-    let time_factor = if time_staked >= lockup_period {
-        lockup_period as u128
-    } else {
-        time_staked as u128
-    };
 
     const SCALE: u128 = 1_000_000_000;
 
-    // Time-proportional calculation
+    // Full rewards after lockup completes
     let rewards = (amount_staked as u128)
         .checked_mul(reward_rate as u128)
         .unwrap()
-        .checked_mul(time_factor)
-        .unwrap()
         .checked_div(SCALE)
-        .unwrap()
-        .checked_div(lockup_period as u128)
         .unwrap() as u64;
 
     rewards
 }
 
 #[test]
-fn test_time_proportional_rewards() {
-    println!("\n🔒 Testing H-02 Fix: Time-proportional reward calculation");
+fn test_binary_rewards() {
+    println!("\n🔒 Testing H-02 Fix: Binary reward calculation");
 
     let amount_staked = 1000u64;
     let reward_rate = 100_000_000u64; // 10% when scaled by 1e9
     let lockup_period = 86400i64; // 1 day
 
-    // Test at 0% completion (0 seconds)
+    // Test before lockup (0 seconds)
     let rewards_0 = calculate_test_rewards(amount_staked, reward_rate, lockup_period, 0);
-    println!("  0% of lockup (0s): {} tokens reward", rewards_0);
-    assert_eq!(rewards_0, 0, "Should earn 0 tokens at 0% completion");
+    println!("  Before lockup (0s): {} tokens reward", rewards_0);
+    assert_eq!(rewards_0, 0, "Should earn 0 tokens before lockup");
 
-    // Test at 25% completion (6 hours)
+    // Test at 25% completion (6 hours) - still locked
     let rewards_25 = calculate_test_rewards(amount_staked, reward_rate, lockup_period, 21600);
     println!("  25% of lockup (6h): {} tokens reward", rewards_25);
-    assert_eq!(rewards_25, 25, "Should earn 25 tokens at 25% completion");
+    assert_eq!(
+        rewards_25, 0,
+        "Should earn 0 tokens before lockup completes"
+    );
 
-    // Test at 50% completion (12 hours)
+    // Test at 50% completion (12 hours) - still locked
     let rewards_50 = calculate_test_rewards(amount_staked, reward_rate, lockup_period, 43200);
     println!("  50% of lockup (12h): {} tokens reward", rewards_50);
-    assert_eq!(rewards_50, 50, "Should earn 50 tokens at 50% completion");
+    assert_eq!(
+        rewards_50, 0,
+        "Should earn 0 tokens before lockup completes"
+    );
 
-    // Test at 75% completion (18 hours)
-    let rewards_75 = calculate_test_rewards(amount_staked, reward_rate, lockup_period, 64800);
-    println!("  75% of lockup (18h): {} tokens reward", rewards_75);
-    assert_eq!(rewards_75, 75, "Should earn 75 tokens at 75% completion");
+    // Test at 99% completion (almost there) - still locked
+    let rewards_99 = calculate_test_rewards(amount_staked, reward_rate, lockup_period, 86399);
+    println!("  99% of lockup (23h59m59s): {} tokens reward", rewards_99);
+    assert_eq!(
+        rewards_99, 0,
+        "Should earn 0 tokens before lockup completes"
+    );
 
-    // Test at 100% completion (24 hours)
+    // Test at 100% completion (24 hours) - lockup complete!
     let rewards_100 = calculate_test_rewards(amount_staked, reward_rate, lockup_period, 86400);
     println!("  100% of lockup (24h): {} tokens reward", rewards_100);
     assert_eq!(
         rewards_100, 100,
-        "Should earn 100 tokens at 100% completion"
+        "Should earn full 100 tokens after lockup completes"
     );
 
-    // Test beyond 100% completion (48 hours) - should cap at 100%
+    // Test beyond lockup (48 hours) - still full reward
     let rewards_200 = calculate_test_rewards(amount_staked, reward_rate, lockup_period, 172800);
-    println!(
-        "  200% of lockup (48h): {} tokens reward (capped)",
-        rewards_200
-    );
+    println!("  Beyond lockup (48h): {} tokens reward", rewards_200);
     assert_eq!(
         rewards_200, 100,
-        "Should cap at 100 tokens even after 200% time"
+        "Should still earn 100 tokens after lockup"
     );
 
-    println!("✅ Time-proportional rewards calculated correctly");
+    println!("✅ Binary rewards calculated correctly");
 }
 
 #[test]
-fn test_rewards_accrue_linearly() {
-    println!("\n🔒 Testing H-02 Fix: Rewards accrue linearly");
+fn test_lockup_boundary() {
+    println!("\n🔒 Testing H-02 Fix: Lockup period boundary");
 
     let amount_staked = 10000u64;
     let reward_rate = 500_000_000u64; // 50% reward rate
     let lockup_period = 86400i64;
 
-    // Test rewards at regular intervals
-    let intervals = vec![
-        (0, 0),        // 0%
-        (8640, 500),   // 10%
-        (17280, 1000), // 20%
-        (25920, 1500), // 30%
-        (34560, 2000), // 40%
-        (43200, 2500), // 50%
-        (51840, 3000), // 60%
-        (60480, 3500), // 70%
-        (69120, 4000), // 80%
-        (77760, 4500), // 90%
-        (86400, 5000), // 100%
+    // Test rewards at different times - binary distribution
+    let test_times = vec![
+        (0, 0),         // 0% - no rewards
+        (8640, 0),      // 10% - no rewards
+        (17280, 0),     // 20% - no rewards
+        (43200, 0),     // 50% - no rewards
+        (86399, 0),     // Just before lockup - no rewards
+        (86400, 5000),  // Lockup complete - full rewards!
+        (172800, 5000), // Beyond lockup - still full rewards
     ];
 
-    for (time, expected) in intervals {
+    for (time, expected) in test_times {
         let rewards = calculate_test_rewards(amount_staked, reward_rate, lockup_period, time);
+        let percentage = if lockup_period > 0 {
+            (time * 100) / lockup_period
+        } else {
+            0
+        };
         println!(
-            "  At {}s: {} tokens (expected: {})",
-            time, rewards, expected
+            "  At {}s ({}%): {} tokens (expected: {})",
+            time, percentage, rewards, expected
         );
-        assert_eq!(rewards, expected, "Rewards should accrue linearly");
+        assert_eq!(rewards, expected, "Binary rewards should match expected");
     }
 
-    println!("✅ Rewards accrue linearly over lockup period");
+    println!("✅ Binary reward distribution works correctly");
 }
 
 // ============================================================================
@@ -263,21 +258,18 @@ fn test_prevent_rapid_drain_attack() {
         reasonable_reward_rate / 10_000_000_000
     );
 
-    // Even if someone stakes, they only get proportional rewards
+    // With binary rewards, must wait full lockup period
     let rewards_after_1_sec =
         calculate_test_rewards(attacker_stake, reasonable_reward_rate, min_lockup, 1);
     println!("    Rewards after 1 second: {} tokens", rewards_after_1_sec);
-    assert_eq!(
-        rewards_after_1_sec, 1,
-        "Should only earn ~1 token after 1 second"
-    );
+    assert_eq!(rewards_after_1_sec, 0, "Should earn 0 tokens before lockup");
 
     let rewards_after_1_hour =
         calculate_test_rewards(attacker_stake, reasonable_reward_rate, min_lockup, 3600);
     println!("    Rewards after 1 hour: {} tokens", rewards_after_1_hour);
     assert_eq!(
-        rewards_after_1_hour, 4166,
-        "Should only earn partial rewards after 1 hour"
+        rewards_after_1_hour, 0,
+        "Should earn 0 tokens before lockup completes"
     );
 
     let rewards_after_1_day =
@@ -285,10 +277,10 @@ fn test_prevent_rapid_drain_attack() {
     println!("    Rewards after 1 day: {} tokens", rewards_after_1_day);
     assert_eq!(
         rewards_after_1_day, 100_000,
-        "Should earn full rewards after 1 day"
+        "Should earn full rewards after lockup completes"
     );
 
-    println!("✅ Rapid drain attack prevented");
+    println!("✅ Rapid drain attack prevented - must wait minimum 1 day");
 }
 
 #[test]
@@ -306,15 +298,15 @@ fn test_compare_old_vs_new_behavior() {
     );
     println!("  Lockup period: {} seconds (1 day)", lockup_period);
 
-    // Old behavior: Binary rewards (0 before lockup, full after)
+    // Old behavior: Could set 1-second lockup and drain vault
     println!("\n  OLD BEHAVIOR (Vulnerable):");
-    println!("    After 1 second:  0 tokens (lockup not complete)");
-    println!("    After 86399s:    0 tokens (lockup not complete)");
-    println!("    After 86400s:    100 tokens (full rewards instantly!)");
-    println!("    After 86401s:    100 tokens");
+    println!("    With 1-second lockup:");
+    println!("      After 1 second:  100 tokens (instant drain!)");
+    println!("    Attack: Repeat rapidly to drain vault");
 
-    // New behavior: Proportional rewards
+    // New behavior: Minimum lockup + binary rewards
     println!("\n  NEW BEHAVIOR (Secure):");
+    println!("    With 1-day minimum lockup:");
     let test_times = vec![
         (1, "1 second"),
         (43200, "12 hours"),
@@ -326,18 +318,10 @@ fn test_compare_old_vs_new_behavior() {
 
     for (time, label) in test_times {
         let rewards = calculate_test_rewards(amount_staked, reward_rate, lockup_period, time);
-        let percentage = if time >= lockup_period {
-            100
-        } else {
-            (time * 100) / lockup_period
-        };
-        println!(
-            "    After {:<15} {} tokens ({}% of max)",
-            label, rewards, percentage
-        );
+        println!("      After {:<15} {} tokens", label, rewards);
     }
 
-    println!("\n✅ New behavior provides gradual, time-proportional rewards");
+    println!("\n✅ Minimum lockup prevents rapid drain - must wait full period");
 }
 
 // ============================================================================
@@ -400,7 +384,7 @@ fn test_very_long_lockup_period() {
     let reward_rate = 100_000_000u64;
     let lockup_period = 31536000i64; // 1 year
 
-    // Test at various time points
+    // Test at various time points - binary rewards
     let rewards_1_day = calculate_test_rewards(amount_staked, reward_rate, lockup_period, 86400);
     let rewards_30_days =
         calculate_test_rewards(amount_staked, reward_rate, lockup_period, 2592000);
@@ -411,18 +395,12 @@ fn test_very_long_lockup_period() {
     println!("  After 30 days: {} tokens", rewards_30_days);
     println!("  After 1 year: {} tokens", rewards_1_year);
 
-    // Verify proportional scaling
+    // Binary rewards: 0 until lockup complete, then 100
+    assert_eq!(rewards_1_day, 0, "Should earn 0 tokens before lockup");
+    assert_eq!(rewards_30_days, 0, "Should earn 0 tokens before lockup");
     assert_eq!(
         rewards_1_year, 100,
-        "Should earn full 100 tokens after 1 year"
-    );
-    assert!(
-        rewards_1_day < rewards_30_days,
-        "30 days should earn more than 1 day"
-    );
-    assert!(
-        rewards_30_days < rewards_1_year,
-        "1 year should earn more than 30 days"
+        "Should earn full 100 tokens after lockup completes"
     );
 
     println!("✅ Long lockup periods handled correctly");
@@ -436,20 +414,18 @@ fn test_high_precision_rewards() {
     let reward_rate = 333_333_333u64; // ~33.3333%
     let lockup_period = 86400i64;
 
-    // Test at odd time intervals
+    // Test at different times - binary model
     let times = vec![
-        (1, "1 second"),
-        (7, "7 seconds"),
-        (37, "37 seconds"),
-        (12345, "12345 seconds"),
-        (86400, "full lockup"),
+        (1, "1 second", 0),
+        (43199, "just before", 0),
+        (86400, "at lockup", 333332),
+        (172800, "after lockup", 333332),
     ];
 
-    for (time, label) in times {
+    for (time, label, expected) in times {
         let rewards = calculate_test_rewards(amount_staked, reward_rate, lockup_period, time);
         println!("  After {}: {} tokens", label, rewards);
-        // Just verify no overflow/panic
-        assert!(rewards <= 333_333, "Rewards should not exceed max");
+        assert_eq!(rewards, expected, "Rewards should match expected");
     }
 
     println!("✅ High precision calculations handled correctly");
@@ -470,21 +446,18 @@ fn test_security_fix_summary() {
     println!("║   • No minimum lockup enforcement                         ║");
     println!("║   • Binary reward distribution (0% or 100%)               ║");
     println!("║                                                           ║");
-    println!("║ Security Fixes Implemented:                               ║");
+    println!("║ Security Fix Implemented:                                 ║");
     println!("║   ✅ Minimum lockup period: 86400 seconds (1 day)        ║");
-    println!("║   ✅ Time-proportional reward calculation                ║");
-    println!("║   ✅ Linear reward accrual over lockup period            ║");
-    println!("║   ✅ Reward cap at 100% of reward_rate                   ║");
+    println!("║   ✅ Binary reward model (0% before, 100% after lockup)  ║");
     println!("║                                                           ║");
     println!("║ Attack Vector Eliminated:                                 ║");
-    println!("║   ❌ Cannot create pools with 1-second lockup            ║");
-    println!("║   ❌ Cannot claim instant rewards                        ║");
-    println!("║   ❌ Cannot drain reward vault rapidly                   ║");
+    println!("║   ❌ Cannot create pools with short lockup (<1 day)      ║");
+    println!("║   ❌ Cannot drain vault rapidly                          ║");
+    println!("║   ✅ Must wait minimum 1 day for any rewards             ║");
     println!("║                                                           ║");
     println!("║ Test Coverage:                                            ║");
     println!("║   ✅ Minimum lockup validation                           ║");
-    println!("║   ✅ Time-proportional calculations                      ║");
-    println!("║   ✅ Linear reward accrual                               ║");
+    println!("║   ✅ Binary reward calculations                          ║");
     println!("║   ✅ Attack scenario prevention                          ║");
     println!("║   ✅ Edge cases and boundaries                           ║");
     println!("║                                                           ║");
