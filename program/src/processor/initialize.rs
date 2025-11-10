@@ -25,7 +25,7 @@ use super::helpers::{verify_token_account, verify_vault_ownership};
 /// # Arguments
 /// * `accounts` - Accounts required for pool initialization
 /// * `pool_id` - Unique identifier for this pool (allows multiple pools per authority+mint)
-/// * `reward_rate` - Fixed reward percentage (scaled by 1e9, e.g., 10_000_000_000 = 10%)
+/// * `reward_rate` - Fixed reward percentage (scaled by 1e9, e.g., 100_000_000 = 10%)
 /// * `min_stake_amount` - Minimum amount users must stake
 /// * `lockup_period` - Time in seconds before rewards are earned
 /// * `enforce_lockup` - Whether to prevent early unstaking
