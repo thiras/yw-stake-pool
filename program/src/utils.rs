@@ -47,7 +47,8 @@ pub fn create_account<'a>(
     let current_owner = target_account.owner;
 
     // Case 1: Account already properly initialized (idempotent behavior)
-    if current_lamports >= required_lamports && current_data_len == size && current_owner == owner {
+    if current_lamports >= required_lamports && current_data_len == size && *current_owner == *owner
+    {
         // Account is already correctly set up, nothing to do
         return Ok(());
     }
@@ -87,7 +88,7 @@ pub fn create_account<'a>(
         }
 
         // Assign to our program if not already owned by target owner
-        if current_owner != owner {
+        if *current_owner != *owner {
             let assign_ix = solana_program::system_instruction::assign(target_account.key, owner);
             invoke_signed(&assign_ix, &[target_account.clone()], signer_seeds)?;
         }
