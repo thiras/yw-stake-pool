@@ -51,6 +51,7 @@ const initPoolIx = getInitializePoolInstruction({
   rewardVault: rewardVaultAddress,
   payer: payer.address,
   tokenProgram: tokenProgramAddress,
+  poolId: 0n, // Unique ID (0 for first pool, 1 for second, etc.)
   rewardRate: 100_000_000n, // 10% APY
   minStakeAmount: 1_000_000n, // 1 token (6 decimals)
   lockupPeriod: 86400n, // 1 day in seconds
@@ -103,6 +104,7 @@ const initIx = getInitializePoolInstruction({
   rewardVault: rewardVaultAddress,
   payer: payer.address,
   tokenProgram: tokenProgramAddress,
+  poolId: 0n, // Unique ID (0 for first pool, 1 for second, etc.)
   rewardRate: 100_000_000n, // 10% APY (basis points * 10^6)
   minStakeAmount: 1_000_000n,
   lockupPeriod: 86400n, // 1 day
@@ -301,12 +303,14 @@ Derive Program Derived Addresses (PDAs) for pools and stake accounts:
 ```typescript
 import { getAddressEncoder } from '@solana/kit';
 
-// Pool PDA
+// Pool PDA (includes poolId for multi-pool support)
+const poolId = 0n; // First pool
 const [poolPda] = await findProgramAddress(
   [
     Buffer.from('stake_pool'),
     getAddressEncoder().encode(authority),
     getAddressEncoder().encode(stakeMint),
+    Buffer.from(new BigUint64Array([poolId]).buffer),
   ],
   programId
 );
@@ -318,6 +322,34 @@ const [stakeAccountPda] = await findProgramAddress(
     getAddressEncoder().encode(pool),
     getAddressEncoder().encode(owner),
     Buffer.from(new BigUint64Array([index]).buffer),
+  ],
+  programId
+);
+```
+
+### Multiple Pools Per Token
+
+A single authority can create multiple stake pools for the same token by using different `poolId` values:
+
+```typescript
+// First pool (standard staking)
+const [pool1] = await findProgramAddress(
+  [
+    Buffer.from('stake_pool'),
+    getAddressEncoder().encode(authority),
+    getAddressEncoder().encode(stakeMint),
+    Buffer.from(new BigUint64Array([0n]).buffer),
+  ],
+  programId
+);
+
+// Second pool (VIP staking with higher rewards)
+const [pool2] = await findProgramAddress(
+  [
+    Buffer.from('stake_pool'),
+    getAddressEncoder().encode(authority),
+    getAddressEncoder().encode(stakeMint),
+    Buffer.from(new BigUint64Array([1n]).buffer),
   ],
   programId
 );

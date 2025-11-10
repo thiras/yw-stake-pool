@@ -165,10 +165,12 @@ example/
 The stake pool uses PDAs for deterministic account addressing:
 
 ```typescript
-// Pool PDA
+// Pool PDA (includes poolId for multi-pool support)
+const poolId = 0n; // First pool (use 1n, 2n, etc. for additional pools)
 const [poolAddress] = await findPoolPda(
   authority.address,
   stakeMint,
+  poolId,
   programId
 );
 
@@ -307,6 +309,7 @@ const instruction = getInitializePoolInstruction({
   tokenProgram: TOKEN_PROGRAM_ID,
   systemProgram: SYSTEM_PROGRAM_ID,
   rent: SYSVAR_RENT_PUBKEY,
+  poolId: 0n, // First pool (use 1n, 2n, etc. for additional pools)
   rewardRate: 100_000_000n,     // 10%
   minStakeAmount: 1_000_000n,   // 1 token
   lockupPeriod: 86400n,         // 1 day
