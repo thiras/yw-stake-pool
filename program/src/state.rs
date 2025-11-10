@@ -202,8 +202,31 @@ impl StakePool {
     }
 
     /// Calculate rewards for a stake based on fixed reward rate
-    /// Rewards are only earned if lockup period is complete
-    /// Formula: (amount * reward_rate) / 1e9
+    ///
+    /// # Security Fix [H-02]: Minimum Lockup Period
+    /// Rewards are only earned if the lockup period is complete. The attack vector
+    /// of setting trivially short lockup periods (e.g., 1 second) is prevented by
+    /// MIN_LOCKUP_PERIOD validation in initialize_pool, which requires at least 1 day.
+    ///
+    /// # Reward Model
+    /// - Binary distribution: 0% before lockup completes, 100% after
+    /// - Formula: (amount * reward_rate) / 1e9
+    /// - Users must wait full lockup period before earning any rewards
+    ///
+    /// # Arguments
+    /// * `amount_staked` - Amount of tokens staked
+    /// * `stake_timestamp` - Unix timestamp when stake was created
+    /// * `current_time` - Current Unix timestamp
+    ///
+    /// # Returns
+    /// The reward amount: 0 if lockup incomplete, full reward if lockup complete
+    ///
+    /// # Example
+    /// - reward_rate = 100_000_000 (10% when scaled by 1e9)
+    /// - lockup_period = 86400 seconds (1 day)
+    /// - amount_staked = 1000 tokens
+    /// - Before 24 hours: 0 tokens
+    /// - After 24 hours: 100 tokens (full reward)
     pub fn calculate_rewards(
         &self,
         amount_staked: u64,
@@ -221,7 +244,7 @@ impl StakePool {
         }
 
         // Calculate fixed rewards based on reward rate
-        // reward_rate is scaled by 1e9 (e.g., 10_000_000_000 = 10% of staked amount)
+        // reward_rate is scaled by 1e9 (e.g., 100_000_000 = 10% of staked amount)
         const SCALE: u128 = 1_000_000_000;
 
         let rewards = (amount_staked as u128)
