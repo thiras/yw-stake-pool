@@ -71,15 +71,29 @@ pub fn create_account<'a>(
             )?;
         }
 
-        // Allocate space if needed (this works even if account has lamports)
+        // First, assign to system program if needed (required before allocate can work)
+        // Note: allocate instruction requires the account to be owned by the system program
+        if current_owner != &solana_program::system_program::id() {
+            let assign_to_system_ix = solana_program::system_instruction::assign(
+                target_account.key,
+                &solana_program::system_program::id(),
+            );
+            invoke_signed(
+                &assign_to_system_ix,
+                &[target_account.clone()],
+                signer_seeds,
+            )?;
+        }
+
+        // Then allocate space (this works even if account has lamports, but requires system program ownership)
         if current_data_len != size {
             let allocate_ix =
                 solana_program::system_instruction::allocate(target_account.key, size as u64);
             invoke_signed(&allocate_ix, &[target_account.clone()], signer_seeds)?;
         }
 
-        // Assign to our program if needed
-        if current_owner != owner {
+        // Finally, assign to our program
+        if owner != &solana_program::system_program::id() {
             let assign_ix = solana_program::system_instruction::assign(target_account.key, owner);
             invoke_signed(&assign_ix, &[target_account.clone()], signer_seeds)?;
         }
