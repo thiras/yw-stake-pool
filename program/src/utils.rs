@@ -19,9 +19,11 @@ use crate::error::StakePoolError;
 /// Instead of using system_instruction::create_account (which fails if the account
 /// has any lamports), this implementation uses allocate + assign pattern which:
 ///
-/// 1. Checks if account already exists and is properly initialized
-/// 2. If account has lamports but wrong owner/size, transfers additional lamports and reallocates
-/// 3. If account is empty, creates it normally
+/// 1. Checks if account already exists and is properly initialized (idempotent)
+/// 2. If account has lamports but zero data, allocates space and assigns ownership
+///    - Note: allocate instruction requires current_data_len == 0
+///    - If data exists with wrong size, returns error (cannot safely recover)
+/// 3. If account is empty, creates it normally via transfer + allocate + assign
 ///
 /// This prevents attackers from blocking PDA creation by sending rent-exempt SOL to the address.
 #[inline(always)]
@@ -53,6 +55,11 @@ pub fn create_account<'a>(
     // Case 2: Account has lamports but wrong configuration
     // This is the front-running scenario - account has SOL but isn't initialized
     if current_lamports > 0 {
+        // Error if account has data but wrong size - cannot safely recover
+        if current_data_len != 0 && current_data_len != size {
+            return Err(ProgramError::AccountAlreadyInitialized);
+        }
+
         // Calculate additional lamports needed (if any)
         if current_lamports < required_lamports {
             let additional_lamports = required_lamports
@@ -71,29 +78,16 @@ pub fn create_account<'a>(
             )?;
         }
 
-        // First, assign to system program if needed (required before allocate can work)
-        // Note: allocate instruction requires the account to be owned by the system program
-        if current_owner != &solana_program::system_program::id() {
-            let assign_to_system_ix = solana_program::system_instruction::assign(
-                target_account.key,
-                &solana_program::system_program::id(),
-            );
-            invoke_signed(
-                &assign_to_system_ix,
-                &[target_account.clone()],
-                signer_seeds,
-            )?;
-        }
-
-        // Then allocate space (this works even if account has lamports, but requires system program ownership)
-        if current_data_len != size {
+        // Allocate space only if the account has zero data length
+        // The allocate instruction requires current_data_len == 0
+        if current_data_len == 0 {
             let allocate_ix =
                 solana_program::system_instruction::allocate(target_account.key, size as u64);
             invoke_signed(&allocate_ix, &[target_account.clone()], signer_seeds)?;
         }
 
-        // Finally, assign to our program
-        if owner != &solana_program::system_program::id() {
+        // Assign to our program if not already owned by target owner
+        if current_owner != owner {
             let assign_ix = solana_program::system_instruction::assign(target_account.key, owner);
             invoke_signed(&assign_ix, &[target_account.clone()], signer_seeds)?;
         }
