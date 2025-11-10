@@ -12,8 +12,32 @@ use crate::state::{Key, StakePool};
 use crate::utils::create_account;
 use solana_program::pubkey::Pubkey;
 
-use super::helpers::verify_token_account;
+use super::helpers::{verify_token_account, verify_vault_ownership};
 
+/// Initialize a new staking pool with the provided parameters.
+///
+/// # Security
+/// This function includes critical security validations (see [H-01] fix):
+/// - Validates vault token accounts are owned by the pool PDA (not by arbitrary users)
+/// - Prevents attackers from passing malicious token accounts they control
+/// - Ensures only the pool program can authorize transfers from vaults
+///
+/// # Arguments
+/// * `accounts` - Accounts required for pool initialization
+/// * `pool_id` - Unique identifier for this pool (allows multiple pools per authority+mint)
+/// * `reward_rate` - Fixed reward percentage (scaled by 1e9, e.g., 100_000_000 = 10%)
+/// * `min_stake_amount` - Minimum amount users must stake
+/// * `lockup_period` - Time in seconds before rewards are earned
+/// * `enforce_lockup` - Whether to prevent early unstaking
+/// * `pool_end_date` - Optional timestamp after which no new stakes allowed
+///
+/// # Errors
+/// Returns error if:
+/// - Parameters are invalid (reward rate too high, negative lockup, past end date)
+/// - Pool account doesn't match expected PDA derivation
+/// - Required signers are missing
+/// - Vault accounts are not owned by the pool PDA (CRITICAL SECURITY CHECK)
+/// - Account creation fails
 pub fn initialize_pool<'a>(
     accounts: &'a [AccountInfo<'a>],
     pool_id: u64,
@@ -72,9 +96,24 @@ pub fn initialize_pool<'a>(
     assert_writable("reward_vault", ctx.accounts.reward_vault)?;
     assert_writable("payer", ctx.accounts.payer)?;
 
-    // Verify token accounts
+    // Verify token accounts have correct mints
     verify_token_account(ctx.accounts.stake_vault, ctx.accounts.stake_mint.key)?;
     verify_token_account(ctx.accounts.reward_vault, ctx.accounts.reward_mint.key)?;
+
+    // CRITICAL SECURITY FIX [H-01]: Verify vault ownership
+    // This prevents an attacker from passing token accounts they control as pool vaults.
+    // Without this check, an attacker could:
+    // 1. Create token accounts they own
+    // 2. Pass them as stake_vault and reward_vault during pool initialization
+    // 3. Steal all user deposits since funds would be sent to attacker's accounts
+    // 4. Lock the system permanently since vault addresses cannot be changed
+    //
+    // The pool PDA must own both vaults to ensure:
+    // - Only the pool program can authorize transfers from vaults
+    // - User funds are protected by program logic
+    // - No external parties can drain the vaults
+    verify_vault_ownership(ctx.accounts.stake_vault, &pool_key, "stake_vault")?;
+    verify_vault_ownership(ctx.accounts.reward_vault, &pool_key, "reward_vault")?;
 
     // Create pool account
     let mut seeds_with_bump = pool_seeds.clone();
