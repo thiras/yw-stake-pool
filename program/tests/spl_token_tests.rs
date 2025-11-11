@@ -199,40 +199,6 @@ fn create_token_account(
 }
 
 // ============================================================================
-// Helper: Initialize Program Authority (required for pool creation)
-// ============================================================================
-
-fn initialize_program_authority(svm: &mut LiteSVM, payer: &Keypair, authority: &Keypair) -> Pubkey {
-    let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
-    let (program_authority_pda, _) = get_program_authority_pda();
-
-    let init_authority_ix = Instruction {
-        program_id,
-        accounts: vec![
-            AccountMeta::new(program_authority_pda, false),
-            AccountMeta::new_readonly(authority.pubkey(), true),
-            AccountMeta::new(payer.pubkey(), true),
-            AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
-        ],
-        data: StakePoolInstruction::InitializeProgramAuthority
-            .try_to_vec()
-            .unwrap(),
-    };
-
-    let tx = Transaction::new_signed_with_payer(
-        &[init_authority_ix],
-        Some(&payer.pubkey()),
-        &[payer, authority],
-        svm.latest_blockhash(),
-    );
-
-    svm.send_transaction(tx)
-        .expect("Failed to initialize program authority");
-
-    program_authority_pda
-}
-
-// ============================================================================
 // Helper: Mint Tokens
 // ============================================================================
 
