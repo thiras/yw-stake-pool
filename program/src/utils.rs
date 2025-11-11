@@ -315,6 +315,13 @@ pub fn transfer_tokens_with_fee<'a>(
     drop(mint_data);
 
     // Get the recipient's balance before transfer to calculate actual amount received
+    // NOTE: This requires unpacking the account twice (before and after transfer).
+    // While this adds overhead, it's necessary because:
+    // 1. Cannot hold borrow across CPI boundary (transfer instruction)
+    // 2. No way to know if fees apply without checking balance difference
+    // 3. Both Token and Token-2022 use same account structure, so optimization
+    //    would require mint inspection adding similar overhead
+    // 4. Balance checking is the only reliable way to handle all fee scenarios
     let to_data_before = to.try_borrow_data()?;
     let to_account_before =
         StateWithExtensions::<spl_token_2022::state::Account>::unpack(&to_data_before)?;
