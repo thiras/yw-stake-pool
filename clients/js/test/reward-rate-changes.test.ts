@@ -49,9 +49,7 @@ test('PendingRewardRateChangeExists error message', (t) => {
 });
 
 test('InvalidTimestamp error message', (t) => {
-  const message = getStakePoolErrorMessage(
-    STAKE_POOL_ERROR__INVALID_TIMESTAMP
-  );
+  const message = getStakePoolErrorMessage(STAKE_POOL_ERROR__INVALID_TIMESTAMP);
   t.is(message, 'Invalid timestamp (timestamp is in the future)');
 });
 
@@ -228,11 +226,11 @@ test('Reward rate bounds validation constant', (t) => {
   // The on-chain program validates reward_rate <= 1_000_000_000_000
   // This test documents the maximum allowed rate
   const MAX_REWARD_RATE = 1_000_000_000_000n;
-  
+
   // This represents 100,000% APY (1_000_000_000_000 / 1_000_000_000)
   // In practice, reasonable rates are much lower (e.g., 10-50% = 100M-500M)
   t.is(MAX_REWARD_RATE, 1_000_000_000_000n);
-  
+
   // Example: 100% APY
   const oneHundredPercent = 1_000_000_000n;
   t.true(oneHundredPercent <= MAX_REWARD_RATE);
