@@ -236,6 +236,24 @@ pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
 /// # Security: L-01 Mitigation
 /// This time-locked mechanism prevents centralized surprise changes to reward rates.
 /// Users have 7 days notice to unstake if they disagree with the new rate.
+///
+/// # Permissionless Design
+/// **IMPORTANT**: This function can be called by ANYONE after the delay period.
+/// This is intentional to prevent the authority from blocking finalization indefinitely.
+///
+/// ## Safety Properties:
+/// - **Idempotent**: Safe to call multiple times - subsequent calls will fail with
+///   NoPendingRewardRateChange error since pending fields are cleared atomically
+/// - **No Race Conditions**: Single atomic update in pool_data.save() prevents any
+///   race conditions between concurrent finalization attempts
+/// - **Time-Lock Enforcement**: Cannot be called until exactly REWARD_RATE_CHANGE_DELAY
+///   seconds have elapsed, regardless of who calls it
+/// - **Rate Validation**: Pending rate is re-validated during finalization (defense-in-depth)
+///
+/// ## Attack Surface:
+/// - Authority cannot prevent finalization once delay elapses
+/// - Griefing is prevented: only one finalization can succeed (first caller wins)
+/// - No economic incentive for early/late finalization: rate change is deterministic
 pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = FinalizeRewardRateChangeAccounts::context(accounts)?;
