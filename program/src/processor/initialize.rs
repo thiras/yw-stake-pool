@@ -1,11 +1,13 @@
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
+    log::sol_log_data,
     msg,
     sysvar::{clock::Clock, Sysvar},
 };
 
 use crate::assertions::*;
+use crate::constants::MAX_REWARD_RATE;
 use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
 use crate::state::{Key, ProgramAuthority, StakePool};
@@ -57,8 +59,7 @@ pub fn initialize_pool<'a>(
     pool_end_date: Option<i64>,
 ) -> ProgramResult {
     // Validate parameters
-    if reward_rate > 1_000_000_000_000 {
-        // > 1000% reward rate seems unreasonable
+    if reward_rate > MAX_REWARD_RATE {
         msg!("Reward rate too high: {}", reward_rate);
         return Err(StakePoolError::InvalidParameters.into());
     }
@@ -200,5 +201,25 @@ pub fn initialize_pool<'a>(
         _reserved: [0; 7],
     };
 
-    pool_data.save(ctx.accounts.pool)
+    msg!(
+        "Pool initialized: pool_id={}, reward_rate={}, lockup_period={}, min_stake_amount={}",
+        pool_id,
+        reward_rate,
+        lockup_period,
+        min_stake_amount
+    );
+
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+
+    // Emit event for off-chain indexing after successful state save
+    sol_log_data(&[
+        b"InitializePool",
+        ctx.accounts.pool.key.as_ref(),
+        ctx.accounts.authority.key.as_ref(),
+        &pool_id.to_le_bytes(),
+        &reward_rate.to_le_bytes(),
+    ]);
+
+    Ok(())
 }

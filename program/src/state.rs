@@ -5,6 +5,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
+use crate::constants::REWARD_SCALE;
 use crate::error::StakePoolError;
 
 /// Helper function to safely write serialized data to an account with size validation
@@ -353,13 +354,11 @@ impl StakePool {
         }
 
         // Calculate fixed rewards based on reward rate
-        // reward_rate is scaled by 1e9 (e.g., 100_000_000 = 10% of staked amount)
-        const SCALE: u128 = 1_000_000_000;
-
+        // reward_rate is scaled by REWARD_SCALE (1e9, e.g., 100_000_000 = 10% of staked amount)
         let rewards_u128 = (amount_staked as u128)
             .checked_mul(self.reward_rate as u128)
             .ok_or(StakePoolError::NumericalOverflow)?
-            .checked_div(SCALE)
+            .checked_div(REWARD_SCALE)
             .ok_or(StakePoolError::NumericalOverflow)?;
 
         // Safe cast from u128 to u64 with overflow check
