@@ -109,6 +109,30 @@ pub struct StakePool {
     /// The token mint for rewards (supports Token-2022)
     pub reward_mint: Pubkey,
     /// Unique identifier to allow multiple pools for same authority + stake_mint
+    ///
+    /// **IMPORTANT: Pool ID Collision Risk After Authority Transfer**
+    ///
+    /// After transferring pool authority via the two-step transfer process
+    /// (NominateNewAuthority + AcceptAuthority), be aware that:
+    ///
+    /// 1. The old authority can still create NEW pools with the same pool_id
+    ///    for the same stake_mint, because pool PDAs are derived from:
+    ///    ["stake_pool", authority, stake_mint, pool_id]
+    ///
+    /// 2. This creates separate, independent pools with different addresses:
+    ///    - Old pool: PDA(old_authority, stake_mint, pool_id)
+    ///    - New pool: PDA(old_authority, stake_mint, pool_id) - Same as above!
+    ///
+    /// 3. To avoid confusion:
+    ///    - Use unique pool_ids after authority transfer
+    ///    - Document which authority controls which pool_id
+    ///    - Consider using pool_id as a version/generation number
+    ///
+    /// Example:
+    /// - Old authority creates Pool ID 0 for USDC
+    /// - Authority transferred to new authority  
+    /// - Old authority should use Pool ID 1+ for new USDC pools
+    /// - Or new authority should start with a high pool_id range (e.g., 1000+)
     pub pool_id: u64,
     /// The pool's stake token vault
     pub stake_vault: Pubkey,
@@ -170,10 +194,14 @@ pub struct StakePool {
     /// Used to enforce REWARD_RATE_CHANGE_DELAY before finalizing
     /// Must always be in sync with pending_reward_rate (both Some or both None)
     pub reward_rate_change_timestamp: Option<i64>,
+    /// Timestamp of the last successful reward rate change (finalization)
+    /// Used to enforce cooldown period between rate changes to prevent authority
+    /// from bypassing the 7-day time-lock by immediately proposing another change
+    pub last_rate_change: Option<i64>,
     /// Reserved space for future use. Not currently used.
     /// This field allows for future upgrades without breaking compatibility.
-    /// REDUCED from 32 bytes to 16 bytes to accommodate new time-lock fields.
-    pub _reserved: [u8; 16],
+    /// REDUCED from 32 bytes to 7 bytes to accommodate new cooldown field.
+    pub _reserved: [u8; 7],
 }
 
 /// Individual user stake account (one per deposit)
@@ -218,13 +246,14 @@ impl StakePool {
     // - pool_end_date (Option<i64>): 1 byte when None, 9 bytes when Some
     // - pending_reward_rate (Option<u64>): 1 byte when None, 9 bytes when Some
     // - reward_rate_change_timestamp (Option<i64>): 1 byte when None, 9 bytes when Some
-    // - _reserved: 16 bytes
+    // - last_rate_change (Option<i64>): 1 byte when None, 9 bytes when Some
+    // - _reserved: 7 bytes
     //
     // We allocate for the maximum size (all Options as Some) to support future updates
-    // None: 1 + 160 + 40 + 8 + 3 + 1 + 1 + 1 + 1 + 16 = 232 bytes
-    // Some: 1 + 160 + 40 + 8 + 3 + 33 + 9 + 9 + 9 + 16 = 288 bytes
+    // None: 1 + 160 + 40 + 8 + 3 + 1 + 1 + 1 + 1 + 1 + 1 + 7 = 225 bytes
+    // Some: 1 + 160 + 40 + 8 + 3 + 33 + 9 + 9 + 9 + 9 + 7 = 288 bytes
     pub const LEN: usize =
-        1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 9 + 9 + 16;
+        1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 9 + 9 + 9 + 7;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> Vec<Vec<u8>> {
         vec![
@@ -253,6 +282,30 @@ impl StakePool {
         if !matches!(pool.key, Key::StakePool) {
             msg!("Invalid StakePool discriminator");
             return Err(StakePoolError::InvalidAccountDiscriminator.into());
+        }
+
+        // Validate stored timestamps to detect data corruption early
+        // This prevents processing accounts with corrupted timestamp fields
+        use solana_program::sysvar::{clock::Clock, Sysvar};
+        let current_time = Clock::get()?.unix_timestamp;
+
+        // Import validation functions
+        use crate::processor::helpers::{validate_current_timestamp, validate_stored_timestamp};
+        validate_current_timestamp(current_time)?;
+
+        // Validate pool_end_date if present
+        if let Some(end_date) = pool.pool_end_date {
+            validate_stored_timestamp(end_date, current_time)?;
+        }
+
+        // Validate reward_rate_change_timestamp if present
+        if let Some(change_ts) = pool.reward_rate_change_timestamp {
+            validate_stored_timestamp(change_ts, current_time)?;
+        }
+
+        // Validate last_rate_change if present
+        if let Some(last_change) = pool.last_rate_change {
+            validate_stored_timestamp(last_change, current_time)?;
         }
 
         Ok(pool)
