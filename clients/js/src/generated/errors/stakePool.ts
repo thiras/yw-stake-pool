@@ -76,6 +76,8 @@ export const STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY = 0x1c; // 28
 export const STAKE_POOL_ERROR__REWARD_RATE_CHANGE_DELAY_NOT_ELAPSED = 0x1d; // 29
 /** NoPendingRewardRateChange: No pending reward rate change */
 export const STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE = 0x1e; // 30
+/** PendingRewardRateChangeExists: Pending reward rate change already exists */
+export const STAKE_POOL_ERROR__PENDING_REWARD_RATE_CHANGE_EXISTS = 0x1f; // 31
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -101,6 +103,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__NO_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE
   | typeof STAKE_POOL_ERROR__NUMERICAL_OVERFLOW
+  | typeof STAKE_POOL_ERROR__PENDING_REWARD_RATE_CHANGE_EXISTS
   | typeof STAKE_POOL_ERROR__POOL_ENDED
   | typeof STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED
   | typeof STAKE_POOL_ERROR__POOL_PAUSED
@@ -136,6 +139,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__NO_PENDING_AUTHORITY]: `No pending authority transfer`,
     [STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE]: `No pending reward rate change`,
     [STAKE_POOL_ERROR__NUMERICAL_OVERFLOW]: `Numerical overflow`,
+    [STAKE_POOL_ERROR__PENDING_REWARD_RATE_CHANGE_EXISTS]: `Pending reward rate change already exists`,
     [STAKE_POOL_ERROR__POOL_ENDED]: `Pool has ended (no new stakes allowed)`,
     [STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED]: `Pool parameters changed (frontrunning protection)`,
     [STAKE_POOL_ERROR__POOL_PAUSED]: `Pool is paused`,

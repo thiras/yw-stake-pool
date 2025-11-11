@@ -51,6 +51,15 @@ pub fn update_pool<'a>(
             return Err(StakePoolError::InvalidParameters.into());
         }
 
+        // Check if there's already a pending reward rate change
+        // This prevents authority from indefinitely deferring changes by repeatedly proposing new rates
+        if pool_data.pending_reward_rate.is_some() {
+            msg!(
+                "Cannot propose new reward rate change while one is already pending. Finalize the current pending change first."
+            );
+            return Err(StakePoolError::PendingRewardRateChangeExists.into());
+        }
+
         // Set pending reward rate change instead of immediate change
         // This gives users 7 days to exit if they disagree
         pool_data.pending_reward_rate = Some(rate);

@@ -951,6 +951,11 @@
       "code": 30,
       "name": "NoPendingRewardRateChange",
       "msg": "No pending reward rate change"
+    },
+    {
+      "code": 31,
+      "name": "PendingRewardRateChangeExists",
+      "msg": "Pending reward rate change already exists"
     }
   ],
   "metadata": {

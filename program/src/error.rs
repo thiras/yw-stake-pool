@@ -98,6 +98,9 @@ pub enum StakePoolError {
     /// 30 - No pending reward rate change
     #[error("No pending reward rate change")]
     NoPendingRewardRateChange,
+    /// 31 - Pending reward rate change already exists
+    #[error("Pending reward rate change already exists")]
+    PendingRewardRateChangeExists,
 }
 
 impl From<StakePoolError> for ProgramError {

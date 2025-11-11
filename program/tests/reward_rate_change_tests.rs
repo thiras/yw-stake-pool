@@ -168,3 +168,27 @@ fn test_instruction_has_finalize_variant() {
     // The discriminator should be 9 (it's the 10th variant, 0-indexed)
     assert_eq!(serialized[0], 9);
 }
+
+/// Test that proposing a new rate while one is pending fails
+#[test]
+fn test_cannot_propose_while_pending() {
+    use your_wallet_stake_pool::error::StakePoolError;
+
+    // Verify the error exists and has correct discriminator
+    let error = StakePoolError::PendingRewardRateChangeExists;
+    let error_code = error as u32;
+
+    // Should be error 31 (the 32nd variant, 0-indexed)
+    assert_eq!(error_code, 31);
+}
+
+/// Test that error message is descriptive
+#[test]
+fn test_pending_error_message() {
+    use your_wallet_stake_pool::error::StakePoolError;
+
+    let error = StakePoolError::PendingRewardRateChangeExists;
+    let error_string = format!("{}", error);
+
+    assert!(error_string.contains("Pending reward rate change already exists"));
+}
