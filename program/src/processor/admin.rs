@@ -256,20 +256,18 @@ pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
 /// - No economic incentive for early/late finalization: rate change is deterministic
 ///
 /// ## Interaction with Authority Transfers
-/// **CRITICAL SECURITY CONSIDERATION**: If authority is transferred (via nominate_new_authority
-/// and accept_authority) while a reward rate change is pending:
+/// If authority is transferred (via nominate_new_authority and accept_authority) while a
+/// reward rate change is pending:
 ///
-/// 1. **New authority CANNOT cancel**: Only way to cancel is reproposing the current rate,
-///    but the original authority (who proposed) has lost their authority
+/// 1. **New authority CAN cancel**: By calling update_pool with reward_rate = current_rate,
+///    the new authority can cancel the pending change (same mechanism available to any authority)
 /// 2. **New authority CANNOT propose different rate**: PendingRewardRateChangeExists error
-///    blocks any new proposals until pending change is finalized
-/// 3. **Pending change WILL finalize**: Anyone can still call this function after delay,
-///    completing the change proposed by the previous authority
+///    blocks any new proposals until the pending change is finalized or cancelled
+/// 3. **Anyone can finalize**: After the delay period, anyone (including the new authority)
+///    can call this function to complete the change proposed by the previous authority
 ///
-/// This design intentionally protects pending changes from being blocked by authority transfers.
-/// The new authority inherits the pending change and must wait for it to finalize (or expire
-/// in a future version with expiration logic). This prevents a malicious authority from
-/// transferring control to avoid their proposed changes.
+/// The new authority inherits full control over the pending change and can choose to either
+/// let it finalize (by waiting) or cancel it (by reproposing the current rate).
 pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
     let ctx = FinalizeRewardRateChangeAccounts::context(accounts)?;
