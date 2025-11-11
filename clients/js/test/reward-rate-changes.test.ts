@@ -50,7 +50,7 @@ test('PendingRewardRateChangeExists error message', (t) => {
 
 test('InvalidTimestamp error message', (t) => {
   const message = getStakePoolErrorMessage(STAKE_POOL_ERROR__INVALID_TIMESTAMP);
-  t.is(message, 'Invalid timestamp (timestamp is in the future)');
+  t.is(message, 'Invalid timestamp');
 });
 
 test('FinalizeRewardRateChange instruction has correct discriminator', (t) => {
