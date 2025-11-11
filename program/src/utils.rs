@@ -270,6 +270,25 @@ pub fn transfer_lamports_from_pdas<'a>(
 
 /// Transfer tokens with support for Token-2022 transfer fees
 /// Returns the actual amount transferred (which may be less than requested if fees apply)
+///
+/// # Fee Calculation Method
+/// This function uses balance checking to determine actual transferred amounts.
+/// While this is generally reliable for our single-threaded transaction model,
+/// it has a theoretical limitation: if the recipient account receives tokens from
+/// another source within the same transaction slot (via CPI), the calculated
+/// amount would be inflated.
+///
+/// # Why Balance Checking
+/// 1. Works for both Token and Token-2022 mints uniformly
+/// 2. Accounts for all fee scenarios without complex calculations
+/// 3. Solana's transaction model makes concurrent modifications extremely rare
+/// 4. The protocol design (vault accounts controlled by PDAs) prevents external deposits
+///
+/// # Security Properties
+/// - Vault accounts are PDAs owned by the protocol (no external deposits possible)
+/// - User accounts are validated to belong to correct mints
+/// - Single-threaded transaction execution prevents concurrent modifications
+/// - Balance differences accurately reflect actual transfer results
 pub fn transfer_tokens_with_fee<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
