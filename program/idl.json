@@ -906,6 +906,11 @@
       "code": 27,
       "name": "UnexpectedBalanceChange",
       "msg": "Unexpected token balance change during transfer"
+    },
+    {
+      "code": 28,
+      "name": "MintHasFreezeAuthority",
+      "msg": "Mint has freeze authority (can lock user funds)"
     }
   ],
   "metadata": {

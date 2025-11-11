@@ -70,6 +70,8 @@ export const STAKE_POOL_ERROR__INVALID_VAULT_OWNER = 0x19; // 25
 export const STAKE_POOL_ERROR__UNSAFE_TOKEN_EXTENSION = 0x1a; // 26
 /** UnexpectedBalanceChange: Unexpected token balance change during transfer */
 export const STAKE_POOL_ERROR__UNEXPECTED_BALANCE_CHANGE = 0x1b; // 27
+/** MintHasFreezeAuthority: Mint has freeze authority (can lock user funds) */
+export const STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY = 0x1c; // 28
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -91,6 +93,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM
   | typeof STAKE_POOL_ERROR__INVALID_VAULT_OWNER
   | typeof STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED
+  | typeof STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY
   | typeof STAKE_POOL_ERROR__NO_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__NUMERICAL_OVERFLOW
   | typeof STAKE_POOL_ERROR__POOL_ENDED
@@ -123,6 +126,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM]: `Invalid token program`,
     [STAKE_POOL_ERROR__INVALID_VAULT_OWNER]: `Invalid vault owner (vault must be owned by pool PDA)`,
     [STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED]: `Lockup period not expired`,
+    [STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY]: `Mint has freeze authority (can lock user funds)`,
     [STAKE_POOL_ERROR__NO_PENDING_AUTHORITY]: `No pending authority transfer`,
     [STAKE_POOL_ERROR__NUMERICAL_OVERFLOW]: `Numerical overflow`,
     [STAKE_POOL_ERROR__POOL_ENDED]: `Pool has ended (no new stakes allowed)`,

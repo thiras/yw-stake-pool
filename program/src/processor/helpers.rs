@@ -166,3 +166,51 @@ pub fn get_token_account_balance(token_account: &AccountInfo) -> Result<u64, Pro
         .map_err(|_| StakePoolError::InvalidTokenProgram)?;
     Ok(account.base.amount)
 }
+
+/// Validates that a mint does not have a freeze authority set.
+///
+/// # Security [M-03]
+/// The freeze_authority in an SPL token mint allows a designated account to freeze any
+/// token account holding that token, preventing all transfers. If a pool is created with
+/// a mint that has a freeze authority, the authority holder can unilaterally and permanently
+/// freeze the stake accounts of any user who deposits into the pool, rendering their funds
+/// inaccessible.
+///
+/// This validation must be performed during pool initialization to protect users from:
+/// - Permanent loss of funds via account freezing
+/// - Malicious pool creators who can lock user deposits at will
+/// - Centralized control over user assets
+///
+/// # Arguments
+/// * `mint_account` - The mint account to validate (can be Token or Token-2022)
+/// * `mint_name` - Name for error messages (e.g., "stake_mint" or "reward_mint")
+///
+/// # Returns
+/// * `Ok(())` if the mint has no freeze authority (safe to use)
+/// * `Err(ProgramError)` if a freeze authority is set
+pub fn validate_no_freeze_authority(
+    mint_account: &AccountInfo,
+    mint_name: &str,
+) -> Result<(), ProgramError> {
+    let account_data = mint_account.try_borrow_data()?;
+
+    // Try to unpack as Token/Token-2022 mint with extensions
+    let mint_with_extensions = StateWithExtensions::<Mint>::unpack(&account_data)
+        .map_err(|_| StakePoolError::InvalidTokenProgram)?;
+
+    // Check if freeze authority is set
+    if mint_with_extensions.base.freeze_authority.is_some() {
+        msg!(
+            "Security Error [M-03]: {} has a freeze authority set",
+            mint_name
+        );
+        msg!(
+            "Freeze authority: {:?}",
+            mint_with_extensions.base.freeze_authority
+        );
+        msg!("This allows locking user funds and is not allowed for pool mints.");
+        return Err(StakePoolError::MintHasFreezeAuthority.into());
+    }
+
+    Ok(())
+}
