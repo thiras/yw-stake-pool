@@ -8,7 +8,7 @@ use crate::instruction::StakePoolInstruction;
 
 mod admin;
 mod close;
-mod helpers;
+pub mod helpers;
 mod initialize;
 mod program_authority;
 mod rewards;
