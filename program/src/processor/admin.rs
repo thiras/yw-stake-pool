@@ -44,11 +44,11 @@ pub fn update_pool<'a>(
     // Get current time once for efficiency (Clock is a sysvar that shouldn't change during transaction)
     let current_time = Clock::get()?.unix_timestamp;
 
-    // Defensive validation: ensure timestamp is reasonable
-    // While Clock::get() should always return valid timestamps, this prevents issues
-    // if the system clock is misconfigured or in an invalid state
-    if current_time < 0 {
-        msg!("Invalid system time: {}", current_time);
+    // Sanity check: reject timestamps before Jan 1, 2021 (1609459200) as likely clock misconfiguration
+    // Note: Negative Unix timestamps are technically valid (pre-1970), but for a modern blockchain
+    // launched after 2021, such timestamps indicate a serious system clock issue
+    if current_time < 1609459200 {
+        msg!("Invalid system time (before 2021-01-01): {}", current_time);
         return Err(StakePoolError::InvalidTimestamp.into());
     }
 
@@ -307,13 +307,13 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
     // Check if the delay period has elapsed
     let current_time = Clock::get()?.unix_timestamp;
 
-    // Data corruption check: stored timestamp should never be negative
-    // When stored in update_pool, we validate current_time >= 0, so a negative value here
+    // Data corruption check: stored timestamp should be after Jan 1, 2021 (1609459200)
+    // When stored in update_pool, we validate current_time >= 1609459200, so a value below this
     // indicates corrupted storage (e.g., manual account modification, deserialization bug)
-    // Note: Negative Unix timestamps are technically valid (pre-1970), but impossible here
-    if change_timestamp < 0 {
+    // Note: Negative/old Unix timestamps are technically valid, but impossible for modern blockchain
+    if change_timestamp < 1609459200 {
         msg!(
-            "Data corruption detected: stored timestamp is negative: {}",
+            "Data corruption detected: stored timestamp is before 2021-01-01: {}",
             change_timestamp
         );
         return Err(StakePoolError::InvalidTimestamp.into());
