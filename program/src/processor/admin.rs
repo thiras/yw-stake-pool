@@ -8,6 +8,7 @@ use solana_program::{
 };
 
 use crate::assertions::*;
+use crate::constants::MAX_REWARD_RATE;
 use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
 use crate::processor::helpers::{validate_current_timestamp, validate_stored_timestamp};
@@ -49,7 +50,7 @@ pub fn update_pool<'a>(
 
     // Update fields
     if let Some(rate) = reward_rate {
-        if rate > 1_000_000_000_000 {
+        if rate > MAX_REWARD_RATE {
             msg!("Reward rate too high: {}", rate);
             return Err(StakePoolError::InvalidParameters.into());
         }
@@ -368,7 +369,7 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
 
     // Validate pending rate is within acceptable bounds (defense in depth)
     // Even though validated when proposed, validation logic could have changed
-    if pending_rate > 1_000_000_000_000 {
+    if pending_rate > MAX_REWARD_RATE {
         msg!("Pending reward rate too high: {}", pending_rate);
         return Err(StakePoolError::InvalidParameters.into());
     }

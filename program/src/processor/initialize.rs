@@ -7,6 +7,7 @@ use solana_program::{
 };
 
 use crate::assertions::*;
+use crate::constants::MAX_REWARD_RATE;
 use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
 use crate::state::{Key, ProgramAuthority, StakePool};
@@ -58,8 +59,7 @@ pub fn initialize_pool<'a>(
     pool_end_date: Option<i64>,
 ) -> ProgramResult {
     // Validate parameters
-    if reward_rate > 1_000_000_000_000 {
-        // > 1000% reward rate seems unreasonable
+    if reward_rate > MAX_REWARD_RATE {
         msg!("Reward rate too high: {}", reward_rate);
         return Err(StakePoolError::InvalidParameters.into());
     }

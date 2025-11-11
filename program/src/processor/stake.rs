@@ -8,6 +8,7 @@ use solana_program::{
 };
 
 use crate::assertions::*;
+use crate::constants::REWARD_SCALE;
 use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
 use crate::state::{Key, StakeAccount, StakePool};
@@ -131,7 +132,7 @@ pub fn stake<'a>(
     let expected_rewards = (amount as u128)
         .checked_mul(pool_data.reward_rate as u128)
         .ok_or(StakePoolError::NumericalOverflow)?
-        .checked_div(1_000_000_000)
+        .checked_div(REWARD_SCALE)
         .ok_or(StakePoolError::NumericalOverflow)? as u64;
 
     // Check if reward vault has sufficient balance to cover total rewards owed plus this new stake
@@ -368,7 +369,7 @@ pub fn unstake<'a>(
     } else {
         // Partial unstake - forfeit proportional amount of unclaimed rewards
         let unstake_fraction = (amount as u128)
-            .checked_mul(1_000_000_000)
+            .checked_mul(REWARD_SCALE)
             .ok_or(StakePoolError::NumericalOverflow)?
             .checked_div(total_staked_before as u128)
             .ok_or(StakePoolError::NumericalOverflow)? as u64;
@@ -380,7 +381,7 @@ pub fn unstake<'a>(
         (unclaimed_rewards as u128)
             .checked_mul(unstake_fraction as u128)
             .ok_or(StakePoolError::NumericalOverflow)?
-            .checked_div(1_000_000_000)
+            .checked_div(REWARD_SCALE)
             .ok_or(StakePoolError::NumericalOverflow)? as u64
     };
 
