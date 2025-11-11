@@ -61,7 +61,7 @@ pub fn update_pool<'a>(
 
         // Special case: If proposing the current active rate, cancel any pending change
         // This allows authority to revert/cancel unwanted proposals
-        // Note: Under normal operation, pending_reward_rate should never equal current_rate
+        // Note: pending_reward_rate should never equal current_rate immediately after proposing
         // (since we only allow proposing rates that differ from current). However, this
         // cancellation mechanism works regardless of what the pending rate is.
         if rate == pool_data.reward_rate {
