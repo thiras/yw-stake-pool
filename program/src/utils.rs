@@ -351,9 +351,8 @@ pub fn transfer_tokens_with_fee<'a>(
         return Err(StakePoolError::UnexpectedBalanceChange.into());
     }
 
-    let actual_transferred = balance_after
-        .checked_sub(balance_before)
-        .ok_or(StakePoolError::UnexpectedBalanceChange)?;
+    // Safe: check above guarantees balance_after >= balance_before
+    let actual_transferred = balance_after - balance_before;
 
     Ok(actual_transferred)
 }
