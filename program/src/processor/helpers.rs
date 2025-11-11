@@ -110,9 +110,10 @@ pub fn verify_token_account(
 
     // [M-02] Security Fix: Validate Token-2022 extensions during pool initialization
     // This prevents pools from being created with malicious Token-2022 mints that have
-    // dangerous extensions like TransferHook, PermanentDelegate, TransferFeeConfig, etc.
+    // dangerous extensions like TransferHook, PermanentDelegate, MintCloseAuthority, or DefaultAccountState.
     // Extension validation is only needed at initialization - runtime operations can skip it
     // since the pool has already been validated.
+    // Note: TransferFeeConfig is properly supported and not blocked.
     if let (Some(mint_acc), Some(name)) = (mint_account, mint_name) {
         validate_token_extensions(mint_acc, name)?;
     }
