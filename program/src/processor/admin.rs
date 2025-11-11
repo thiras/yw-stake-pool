@@ -44,6 +44,14 @@ pub fn update_pool<'a>(
     // Get current time once for efficiency (Clock is a sysvar that shouldn't change during transaction)
     let current_time = Clock::get()?.unix_timestamp;
 
+    // Defensive validation: ensure timestamp is reasonable
+    // While Clock::get() should always return valid timestamps, this prevents issues
+    // if the system clock is misconfigured or in an invalid state
+    if current_time < 0 {
+        msg!("Invalid system time: {}", current_time);
+        return Err(StakePoolError::InvalidTimestamp.into());
+    }
+
     // Update fields
     if let Some(rate) = reward_rate {
         if rate > 1_000_000_000_000 {
