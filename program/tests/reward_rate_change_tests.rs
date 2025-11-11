@@ -143,7 +143,8 @@ fn test_stake_pool_structure_has_new_fields() {
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000),
         reward_rate_change_timestamp: Some(1700000000),
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify new fields are accessible
@@ -214,7 +215,8 @@ fn test_finalize_validates_rate_bounds() {
         pool_end_date: None,
         pending_reward_rate: Some(2_000_000_000_000), // Invalid: > 1_000_000_000_000
         reward_rate_change_timestamp: Some(1700000000),
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify the pending rate exceeds the maximum
@@ -248,7 +250,8 @@ fn test_propose_current_rate_cancels_pending() {
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000), // Pending different rate
         reward_rate_change_timestamp: Some(1700000000),
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify there's a pending change different from current
@@ -283,7 +286,8 @@ fn test_propose_current_rate_no_pending() {
         pool_end_date: None,
         pending_reward_rate: None, // No pending change
         reward_rate_change_timestamp: None,
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify no pending change
@@ -357,7 +361,8 @@ fn test_future_timestamp_scenario() {
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000),
         reward_rate_change_timestamp: Some(9999999999), // Far future timestamp
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify timestamp is far in the future
