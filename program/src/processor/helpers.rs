@@ -27,7 +27,7 @@ use crate::error::StakePoolError;
 ///    preventing any token movement.
 ///
 /// Note: TransferFeeConfig is now properly supported as transfer_tokens_with_fee()
-/// correctly calculates the actual transferred amount after fees.
+/// correctly determines the actual transferred amount after fees via balance checking.
 ///
 /// # Arguments
 /// * `mint_account` - The mint account to validate (can be Token or Token-2022)

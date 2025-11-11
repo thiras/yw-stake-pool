@@ -274,13 +274,13 @@ pub fn transfer_lamports_from_pdas<'a>(
 /// # Fee Calculation Method
 /// This function uses balance checking to determine actual transferred amounts.
 /// While this is generally reliable due to Solana's atomic transaction execution,
-/// it has a theoretical limitation: if the recipient account receives tokens from
+/// there is a potential limitation: if the recipient account receives tokens from
 /// another source within the same transaction (via CPI), the calculated
 /// amount would be inflated.
 ///
-/// This limitation is mitigated in practice:
-/// - For vault accounts: PDAs owned by protocol, no external deposits possible
-/// - For user accounts: TransferHook extension blocked, preventing CPI injection
+/// However, this is not a practical concern in this protocol because:
+/// - For vault accounts: PDAs are owned by the protocol, so no external deposits are possible
+/// - For user accounts: The TransferHook extension is blocked, preventing CPI injection
 ///   during transfers; users control their own accounts but cannot inject code
 ///   into the protocol's transaction execution
 ///
@@ -361,7 +361,19 @@ pub fn transfer_tokens_with_fee<'a>(
         return Err(StakePoolError::UnexpectedBalanceChange.into());
     }
 
-    // Safe: check above guarantees balance_after >= balance_before
+    // Additional check: if amount > 0, balance must have increased
+    // This catches silent transfer failures that didn't error
+    if amount > 0 && balance_after == balance_before {
+        solana_program::msg!(
+            "Error: Transfer of {} tokens resulted in no balance change. Before: {}, After: {}",
+            amount,
+            balance_before,
+            balance_after
+        );
+        return Err(StakePoolError::UnexpectedBalanceChange.into());
+    }
+
+    // Safe: checks above guarantee balance_after >= balance_before and proper state change
     let actual_transferred = balance_after - balance_before;
 
     Ok(actual_transferred)

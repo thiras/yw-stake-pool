@@ -208,7 +208,7 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
     //   * Available: What can actually be paid out
     //
     // If transfer fees apply (actual_amount < amount):
-    // - Funder pays 'amount' but vault receives 'actual_amount'
+    // - Funder's account is debited 'amount', vault receives 'actual_amount' after fees are deducted
     // - This is the funder's responsibility to account for
     // - claim_rewards() checks vault balance before paying out
     // - If vault balance < committed rewards, claims fail with InsufficientRewards
