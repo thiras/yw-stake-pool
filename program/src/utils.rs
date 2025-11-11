@@ -269,7 +269,7 @@ pub fn transfer_lamports_from_pdas<'a>(
 }
 
 /// Transfer tokens with support for Token-2022 transfer fees
-/// Safely extracts decimals from the mint account using proper unpacking
+/// Returns the actual amount transferred (which may be less than requested if fees apply)
 pub fn transfer_tokens_with_fee<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
@@ -284,6 +284,13 @@ pub fn transfer_tokens_with_fee<'a>(
     let mint_state = StateWithExtensions::<Mint>::unpack(&mint_data)?;
     let decimals = mint_state.base.decimals;
     drop(mint_data);
+
+    // Get the recipient's balance before transfer to calculate actual amount received
+    let to_data_before = to.try_borrow_data()?;
+    let to_account_before =
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(&to_data_before)?;
+    let balance_before = to_account_before.base.amount;
+    drop(to_data_before);
 
     let accounts = vec![from.clone(), to.clone(), mint.clone(), authority.clone()];
 
@@ -305,8 +312,17 @@ pub fn transfer_tokens_with_fee<'a>(
         invoke_signed(&transfer_ix, &accounts, signer_seeds)?;
     }
 
-    // For Token-2022 with transfer fees, the actual transferred amount may be less
-    // In production, you'd want to calculate the exact amount after fees
-    // For now, return the requested amount (simplified)
-    Ok(amount)
+    // Calculate the actual amount transferred by checking the balance difference
+    // This properly accounts for any transfer fees that may have been deducted
+    let to_data_after = to.try_borrow_data()?;
+    let to_account_after =
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(&to_data_after)?;
+    let balance_after = to_account_after.base.amount;
+    drop(to_data_after);
+
+    let actual_transferred = balance_after
+        .checked_sub(balance_before)
+        .ok_or(ProgramError::ArithmeticOverflow)?;
+
+    Ok(actual_transferred)
 }

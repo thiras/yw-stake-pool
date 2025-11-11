@@ -21,15 +21,14 @@ use solana_program::{msg, pubkey::Pubkey};
 /// 2. **PermanentDelegate**: Allows forcible transfer of tokens from any account,
 ///    including the protocol's vaults, bypassing all authorization checks.
 ///
-/// 3. **TransferFeeConfig**: The current implementation of transfer_tokens_with_fee() does not
-///    properly calculate the actual amount after fees (returns requested amount instead).
-///    This would cause accounting mismatches. Blocked until properly implemented.
-///
-/// 4. **MintCloseAuthority**: Allows closing the mint account, rendering all
+/// 3. **MintCloseAuthority**: Allows closing the mint account, rendering all
 ///    staked tokens worthless and breaking the protocol entirely.
 ///
-/// 5. **DefaultAccountState (Frozen)**: Accounts could be created in frozen state,
+/// 4. **DefaultAccountState (Frozen)**: Accounts could be created in frozen state,
 ///    preventing any token movement.
+///
+/// Note: TransferFeeConfig is now properly supported as transfer_tokens_with_fee()
+/// correctly calculates the actual transferred amount after fees.
 ///
 /// # Arguments
 /// * `mint_account` - The mint account to validate (can be Token or Token-2022)
@@ -55,7 +54,6 @@ pub fn validate_token_extensions(
     const DANGEROUS_EXTENSIONS: &[ExtensionType] = &[
         ExtensionType::TransferHook,
         ExtensionType::PermanentDelegate,
-        ExtensionType::TransferFeeConfig, // Blocked: current implementation doesn't calculate actual fees
         ExtensionType::MintCloseAuthority,
         ExtensionType::DefaultAccountState,
     ];

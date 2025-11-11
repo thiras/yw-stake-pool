@@ -7,15 +7,16 @@
 // Blocked Extensions:
 // - TransferHook: Custom logic that can block/manipulate transfers
 // - PermanentDelegate: Allows forcible token transfers from vaults
-// - TransferFeeConfig: Current implementation doesn't calculate actual fees properly
 // - MintCloseAuthority: Can close mint, rendering tokens worthless
 // - DefaultAccountState: Can freeze accounts preventing movement
+//
+// Supported Extensions:
+// - TransferFeeConfig: Properly supported via balance checking in transfer_tokens_with_fee()
 //
 // Security Impact: HIGH
 // Without these checks, malicious pool creators could:
 // - Drain user funds via permanent delegate
 // - Block unstaking via transfer hooks
-// - Cause accounting errors via incomplete fee handling
 // - Render all staked tokens worthless by closing mint
 //
 // NOTE: Full integration tests require Token-2022 program setup in test environment.
@@ -27,20 +28,16 @@
 /// The protocol supports Token-2022 mints but did not validate or restrict
 /// potentially dangerous extensions that can break protocol invariants.
 ///
-/// # Dangerous Extensions (All Blocked)
+/// # Dangerous Extensions (Blocked)
 /// 1. **TransferHook** - Custom transfer logic that can block/redirect transfers
 /// 2. **PermanentDelegate** - Can drain vaults bypassing all authorization
-/// 3. **TransferFeeConfig** - Current transfer_tokens_with_fee() implementation incomplete:
-///    returns requested amount instead of actual amount after fees, causing accounting errors
-/// 4. **MintCloseAuthority** - Can destroy all staked tokens
-/// 5. **DefaultAccountState** - Can freeze accounts preventing movement
+/// 3. **MintCloseAuthority** - Can destroy all staked tokens
+/// 4. **DefaultAccountState** - Can freeze accounts preventing movement
 ///
-/// # Note on TransferFeeConfig
-/// While transfer_tokens_with_fee() exists, it currently has incomplete implementation:
-/// - Returns `Ok(amount)` instead of actual transferred amount after fees
-/// - Would cause accounting mismatches in pool state
-/// - Needs to check balance before/after or calculate fees properly
-/// - Blocked until proper implementation is complete
+/// # Supported Extensions
+/// - **TransferFeeConfig** - Now properly supported! The transfer_tokens_with_fee()
+///   function calculates actual transferred amounts by checking recipient balance
+///   before and after transfer, ensuring accurate accounting even with fees.
 ///
 /// # Fix Implementation
 /// - **File**: `program/src/error.rs`
@@ -48,8 +45,13 @@
 ///
 /// - **File**: `program/src/processor/helpers.rs`
 ///   - Implemented `validate_token_extensions()` function
-///   - Checks for all 5 dangerous extensions
+///   - Checks for 4 dangerous extensions
 ///   - Called during pool initialization for both stake_mint and reward_mint
+///
+/// - **File**: `program/src/utils.rs`
+///   - Enhanced `transfer_tokens_with_fee()` to properly calculate actual amounts
+///   - Checks recipient balance before and after transfer
+///   - Returns actual transferred amount (requested amount minus any fees)
 ///
 /// - **File**: `program/src/processor/initialize.rs`
 ///   - Integrated validation into `initialize_pool()`
@@ -60,13 +62,15 @@
 /// - ✅ Pools cannot be created with Token-2022 mints that have dangerous extensions
 /// - ✅ Users are protected from token loss due to malicious extensions
 /// - ✅ Protocol invariants are preserved
-/// - ✅ Accounting remains accurate (no incomplete fee handling)
+/// - ✅ Accounting remains accurate with proper fee calculation
+/// - ✅ TransferFeeConfig tokens are fully supported
 ///
 /// # Code Location
 /// - Error: `program/src/error.rs` (line 89-91)
-/// - Validation: `program/src/processor/helpers.rs` (lines 10-76)
-/// - Integration: `program/src/processor/helpers.rs` (lines 78-129)
+/// - Validation: `program/src/processor/helpers.rs` (lines 10-68)
+/// - Integration: `program/src/processor/helpers.rs` (lines 70-129)
 /// - Usage: `program/src/processor/initialize.rs` (lines 116-129)
+/// - Fee Handling: `program/src/utils.rs` (lines 273-328)
 #[test]
 fn test_m02_vulnerability_documentation() {
     // This test serves as documentation for the security fix.
@@ -79,10 +83,11 @@ fn test_m02_vulnerability_documentation() {
     // - Attempting to initialize pools with those mints
     // - Verifying that initialization fails with UnsafeTokenExtension error
     //
-    // All 5 extensions are blocked:
+    // The 4 blocked extensions are:
     // - ExtensionType::TransferHook
     // - ExtensionType::PermanentDelegate
-    // - ExtensionType::TransferFeeConfig (incomplete implementation)
     // - ExtensionType::MintCloseAuthority
     // - ExtensionType::DefaultAccountState
+    //
+    // TransferFeeConfig is supported via proper fee calculation in utils.rs
 }
