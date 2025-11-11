@@ -1,11 +1,10 @@
-use solana_program::{account_info::AccountInfo, program_error::ProgramError};
+use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
 use spl_token_2022::{
     extension::{BaseStateWithExtensions, ExtensionType, StateWithExtensions},
     state::{Account as TokenAccount, Mint},
 };
 
 use crate::error::StakePoolError;
-use solana_program::{msg, pubkey::Pubkey};
 
 /// Validates that a Token-2022 mint does not have dangerous extensions enabled.
 ///
