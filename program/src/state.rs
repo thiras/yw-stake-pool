@@ -156,7 +156,7 @@ impl StakePool {
     //
     // We allocate for the maximum size (all Options as Some) to support future updates
     // None: 1 + 32*5 + 8*5 + 1*3 + 1 + 1 + 1 + 1 + 16 = 246 bytes
-    // Some: 1 + 32*5 + 8*5 + 1*3 + 33 + 9 + 9 + 9 + 16 = 286 bytes
+    // Some: 1 + 32*5 + 8*5 + 1*3 + 33 + 9 + 9 + 9 + 16 = 288 bytes
     pub const LEN: usize =
         1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 9 + 9 + 16;
 
