@@ -209,7 +209,10 @@ pub fn initialize_pool<'a>(
         min_stake_amount
     );
 
-    // Emit event for off-chain indexing
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+
+    // Emit event for off-chain indexing after successful state save
     sol_log_data(&[
         b"InitializePool",
         ctx.accounts.pool.key.as_ref(),
@@ -218,5 +221,5 @@ pub fn initialize_pool<'a>(
         &reward_rate.to_le_bytes(),
     ]);
 
-    pool_data.save(ctx.accounts.pool)
+    Ok(())
 }

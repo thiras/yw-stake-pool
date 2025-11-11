@@ -230,7 +230,11 @@ pub fn stake<'a>(
         ctx.accounts.pool.key
     );
 
-    // Emit event for off-chain indexing
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+    stake_account_data.save(ctx.accounts.stake_account)?;
+
+    // Emit event for off-chain indexing after successful state save
     sol_log_data(&[
         b"Stake",
         ctx.accounts.pool.key.as_ref(),
@@ -239,9 +243,7 @@ pub fn stake<'a>(
         &index.to_le_bytes(),
     ]);
 
-    // Save state
-    pool_data.save(ctx.accounts.pool)?;
-    stake_account_data.save(ctx.accounts.stake_account)
+    Ok(())
 }
 
 pub fn unstake<'a>(
@@ -433,7 +435,11 @@ pub fn unstake<'a>(
         forfeited_rewards
     );
 
-    // Emit event for off-chain indexing
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+    stake_account_data.save(ctx.accounts.stake_account)?;
+
+    // Emit event for off-chain indexing after successful state save
     sol_log_data(&[
         b"Unstake",
         ctx.accounts.pool.key.as_ref(),
@@ -442,7 +448,5 @@ pub fn unstake<'a>(
         &forfeited_rewards.to_le_bytes(),
     ]);
 
-    // Save state
-    pool_data.save(ctx.accounts.pool)?;
-    stake_account_data.save(ctx.accounts.stake_account)
+    Ok(())
 }

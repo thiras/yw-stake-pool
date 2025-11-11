@@ -140,7 +140,11 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         stake_account_data.claimed_rewards
     );
 
-    // Emit event for off-chain indexing
+    // Save updated accounts first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+    stake_account_data.save(ctx.accounts.stake_account)?;
+
+    // Emit event for off-chain indexing after successful state save
     sol_log_data(&[
         b"ClaimRewards",
         ctx.accounts.pool.key.as_ref(),
@@ -148,10 +152,6 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         &unclaimed_rewards.to_le_bytes(),
         &actual_amount.to_le_bytes(),
     ]);
-
-    // Save updated accounts
-    pool_data.save(ctx.accounts.pool)?;
-    stake_account_data.save(ctx.accounts.stake_account)?;
 
     Ok(())
 }
@@ -231,6 +231,7 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
     msg!("Funded pool with {} reward tokens", actual_amount);
 
     // Emit event for off-chain indexing
+    // Note: fund_rewards doesn't modify pool state, so event can be emitted immediately
     sol_log_data(&[
         b"FundRewards",
         ctx.accounts.pool.key.as_ref(),
