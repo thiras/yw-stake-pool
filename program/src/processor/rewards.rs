@@ -103,7 +103,9 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     seeds_with_bump.push(vec![pool_data.bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
 
-    transfer_tokens_with_fee(
+    // Transfer rewards (with PDA signer)
+    // Capture actual amount transferred in case of transfer fees
+    let actual_amount = transfer_tokens_with_fee(
         ctx.accounts.reward_vault,
         ctx.accounts.user_reward_account,
         ctx.accounts.reward_mint,
@@ -113,16 +115,16 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         &[&seeds_refs],
     )?;
 
-    // Update claimed rewards tracking
+    // Update claimed rewards tracking with actual amount transferred
     stake_account_data.claimed_rewards = stake_account_data
         .claimed_rewards
-        .checked_add(unclaimed_rewards)
+        .checked_add(actual_amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
     // Update pool's total rewards owed (these rewards have now been paid out)
     pool_data.total_rewards_owed = pool_data
         .total_rewards_owed
-        .checked_sub(unclaimed_rewards)
+        .checked_sub(actual_amount)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
     // Save updated accounts
@@ -131,7 +133,7 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
 
     msg!(
         "Claimed {} reward tokens (total claimed: {})",
-        unclaimed_rewards,
+        actual_amount,
         stake_account_data.claimed_rewards
     );
 
@@ -187,7 +189,7 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
     )?;
 
     // Transfer reward tokens to pool
-    transfer_tokens_with_fee(
+    let actual_amount = transfer_tokens_with_fee(
         ctx.accounts.funder_token_account,
         ctx.accounts.reward_vault,
         ctx.accounts.reward_mint,
@@ -197,6 +199,6 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
         &[],
     )?;
 
-    msg!("Funded pool with {} reward tokens", amount);
+    msg!("Funded pool with {} reward tokens", actual_amount);
     Ok(())
 }
