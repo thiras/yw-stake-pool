@@ -303,8 +303,8 @@ Derive Program Derived Addresses (PDAs) for pools and stake accounts:
 ```typescript
 import { getAddressEncoder, getProgramDerivedAddress } from '@solana/kit';
 
-// Pool PDA (includes poolId for multi-pool support)
-const poolId = 0n; // First pool
+// Pool PDA (scoped by stake mint and poolId)
+const poolId = 0n; // First pool for this token
 
 // Encode poolId as little-endian u64
 const poolIdBytes = new Uint8Array(8);
@@ -314,7 +314,6 @@ const [poolPda] = await getProgramDerivedAddress({
   programAddress: programId,
   seeds: [
     'stake_pool',
-    getAddressEncoder().encode(authority),
     getAddressEncoder().encode(stakeMint),
     poolIdBytes,
   ],
@@ -338,7 +337,7 @@ const [stakeAccountPda] = await getProgramDerivedAddress({
 
 ### Multiple Pools Per Token
 
-A single authority can create multiple stake pools for the same token by using different `poolId` values:
+Multiple stake pools can be created for the same token by using different `poolId` values:
 
 ```typescript
 // Encode poolId as little-endian u64
@@ -350,7 +349,6 @@ const [pool1] = await getProgramDerivedAddress({
   programAddress: programId,
   seeds: [
     'stake_pool',
-    getAddressEncoder().encode(authority),
     getAddressEncoder().encode(stakeMint),
     poolIdBytes1,
   ],
@@ -365,12 +363,13 @@ const [pool2] = await getProgramDerivedAddress({
   programAddress: programId,
   seeds: [
     'stake_pool',
-    getAddressEncoder().encode(authority),
     getAddressEncoder().encode(stakeMint),
     poolIdBytes2,
   ],
 });
 ```
+
+Pool IDs are scoped per token, allowing different authorities to create pools for the same token without conflicts.
 
 ## Examples
 

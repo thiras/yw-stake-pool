@@ -67,6 +67,7 @@ export type StakePool = {
   poolEndDate: Option<bigint>;
   pendingRewardRate: Option<bigint>;
   rewardRateChangeTimestamp: Option<bigint>;
+  lastRateChange: Option<bigint>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -90,6 +91,7 @@ export type StakePoolArgs = {
   poolEndDate: OptionOrNullable<number | bigint>;
   pendingRewardRate: OptionOrNullable<number | bigint>;
   rewardRateChangeTimestamp: OptionOrNullable<number | bigint>;
+  lastRateChange: OptionOrNullable<number | bigint>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -114,7 +116,8 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
     ['poolEndDate', getOptionEncoder(getI64Encoder())],
     ['pendingRewardRate', getOptionEncoder(getU64Encoder())],
     ['rewardRateChangeTimestamp', getOptionEncoder(getI64Encoder())],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 16)],
+    ['lastRateChange', getOptionEncoder(getI64Encoder())],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 7)],
   ]);
 }
 
@@ -139,7 +142,8 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['poolEndDate', getOptionDecoder(getI64Decoder())],
     ['pendingRewardRate', getOptionDecoder(getU64Decoder())],
     ['rewardRateChangeTimestamp', getOptionDecoder(getI64Decoder())],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 16)],
+    ['lastRateChange', getOptionDecoder(getI64Decoder())],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 7)],
   ]);
 }
 

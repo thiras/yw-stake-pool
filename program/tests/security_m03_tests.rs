@@ -226,7 +226,7 @@ fn test_initialize_pool_rejects_stake_mint_with_freeze_authority() {
     );
 
     // Derive pool PDA
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, 0);
+    let (pool_pda, _) = get_pool_pda(&stake_mint, 0);
 
     // Create vault token accounts (owned by pool PDA)
     let stake_vault = create_token_account(&mut svm, &payer, &stake_mint, &pool_pda);
@@ -349,7 +349,7 @@ fn test_initialize_pool_rejects_reward_mint_with_freeze_authority() {
     println!("   Freeze authority: {}", freeze_authority.pubkey());
 
     // Derive pool PDA
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, 0);
+    let (pool_pda, _) = get_pool_pda(&stake_mint, 0);
 
     // Create vault token accounts
     let stake_vault = create_token_account(&mut svm, &payer, &stake_mint, &pool_pda);
@@ -457,7 +457,7 @@ fn test_initialize_pool_succeeds_without_freeze_authority() {
     );
 
     // Derive pool PDA
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, 0);
+    let (pool_pda, _) = get_pool_pda(&stake_mint, 0);
 
     // Create vault token accounts
     let stake_vault = create_token_account(&mut svm, &payer, &stake_mint, &pool_pda);

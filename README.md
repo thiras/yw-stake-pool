@@ -65,6 +65,173 @@ Program Structure:
 
 **Program ID**: `8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx`
 
+### Operational Workflows
+
+The following diagrams illustrate key multi-step operations in the stake pool:
+
+#### Authority Transfer Flow
+
+```mermaid
+sequenceDiagram
+    participant OldAuth as Old Authority
+    participant Pool as Pool State
+    participant NewAuth as New Authority
+    
+    Note over Pool: authority = OldAuth<br/>pending_authority = None
+    
+    OldAuth->>Pool: NominateNewAuthority(NewAuth)
+    Note over Pool: authority = OldAuth<br/>pending_authority = NewAuth
+    
+    NewAuth->>Pool: AcceptAuthority()
+    Note over Pool: authority = NewAuth<br/>pending_authority = None
+    
+    Note over Pool: Transfer Complete!
+```
+
+#### Reward Rate Change Flow (Time-Locked)
+
+```mermaid
+sequenceDiagram
+    participant Auth as Authority
+    participant Pool as Pool State
+    participant Anyone as Anyone (Permissionless)
+    participant Users as Users
+    
+    Note over Pool: reward_rate = 10%<br/>pending_reward_rate = None
+    
+    Auth->>Pool: UpdatePool(reward_rate: 50%)
+    Note over Pool: reward_rate = 10%<br/>pending_reward_rate = 50%<br/>reward_rate_change_timestamp = Now
+    
+    Note over Users: 7-day notice period<br/>Users can unstake if they disagree
+    
+    rect rgb(255, 240, 200)
+        Note over Anyone: Wait 7 days...
+    end
+    
+    Anyone->>Pool: FinalizeRewardRateChange()
+    Note over Pool: reward_rate = 50%<br/>pending_reward_rate = None<br/>last_rate_change = Now
+    
+    Note over Pool: Cooldown enforced<br/>Cannot propose new rate<br/>for another 7 days
+```
+
+#### Staking Workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant StakeAccount as Stake Account (PDA)
+    participant Pool as Pool State
+    participant StakeVault as Stake Vault
+    participant RewardVault as Reward Vault
+    
+    User->>Pool: Stake(amount, index)
+    
+    Note over Pool: Validate:<br/>- Pool not paused<br/>- Pool not ended<br/>- Amount >= min_stake
+    
+    Pool->>RewardVault: Check sufficient rewards
+    Note over RewardVault: balance >= total_owed + new_rewards
+    
+    Pool->>StakeAccount: Create PDA (if new)
+    Note over StakeAccount: owner = User<br/>index = index<br/>amount_staked = 0
+    
+    User->>StakeVault: Transfer tokens
+    Note over StakeVault: balance += amount
+    
+    Pool->>Pool: Update state
+    Note over Pool: total_staked += amount<br/>total_rewards_owed += expected_rewards
+    
+    Pool->>StakeAccount: Initialize/Update
+    Note over StakeAccount: amount_staked = amount<br/>stake_timestamp = Now<br/>claimed_rewards = 0
+    
+    Note over User: Staking complete!<br/>Rewards accrue after lockup period
+```
+
+#### Claiming Rewards Workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant StakeAccount as Stake Account
+    participant Pool as Pool State
+    participant RewardVault as Reward Vault
+    participant UserRewardAccount as User Reward Account
+    
+    User->>Pool: ClaimRewards()
+    
+    Pool->>StakeAccount: Load stake data
+    Note over StakeAccount: amount_staked<br/>stake_timestamp<br/>claimed_rewards
+    
+    Pool->>Pool: Calculate rewards
+    alt Lockup period complete
+        Note over Pool: rewards = (amount * rate) / 1e9
+    else Lockup incomplete
+        Note over Pool: rewards = 0
+    end
+    
+    Note over Pool: unclaimed = total_rewards - claimed_rewards
+    
+    alt unclaimed > 0
+        Pool->>RewardVault: Check balance
+        RewardVault->>UserRewardAccount: Transfer unclaimed rewards
+        Note over UserRewardAccount: balance += actual_amount<br/>(after transfer fees)
+        
+        Pool->>Pool: Update state
+        Note over Pool: total_rewards_owed -= unclaimed
+        
+        Pool->>StakeAccount: Update claimed
+        Note over StakeAccount: claimed_rewards += unclaimed
+        
+        Note over User: Rewards claimed!
+    else unclaimed == 0
+        Note over User: No rewards available yet
+    end
+```
+
+#### Unstaking Workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant StakeAccount as Stake Account
+    participant Pool as Pool State
+    participant StakeVault as Stake Vault
+    participant UserTokenAccount as User Token Account
+    
+    User->>Pool: Unstake(amount)
+    
+    Pool->>StakeAccount: Load stake data
+    Note over StakeAccount: amount_staked<br/>stake_timestamp
+    
+    Pool->>Pool: Check lockup
+    alt enforce_lockup = true AND lockup not complete
+        Note over User: Error: LockupNotExpired
+    else enforce_lockup = false OR lockup complete
+        Note over Pool: Continue unstaking
+    end
+    
+    Pool->>Pool: Calculate forfeited rewards
+    alt Partial unstake
+        Note over Pool: forfeit = proportional_unclaimed_rewards
+    else Full unstake
+        Note over Pool: forfeit = all_unclaimed_rewards
+    end
+    
+    StakeVault->>UserTokenAccount: Transfer tokens
+    Note over UserTokenAccount: balance += actual_amount<br/>(after transfer fees)
+    
+    Pool->>Pool: Update state
+    Note over Pool: total_staked -= amount<br/>total_rewards_owed -= forfeited_rewards
+    
+    Pool->>StakeAccount: Update or reset
+    alt Partial unstake
+        Note over StakeAccount: amount_staked -= amount
+    else Full unstake
+        Note over StakeAccount: amount_staked = 0<br/>stake_timestamp = 0<br/>claimed_rewards = 0
+    end
+    
+    Note over User: Unstaking complete!
+```
+
 ## Quick Start
 
 ### Installation
@@ -165,23 +332,41 @@ See [clients/js/README.md](./clients/js/README.md) for full API documentation.
 
 ### Multiple Pools Per Token
 
-A single authority can create multiple stake pools for the same token by using different `poolId` values. This allows pool operators to:
+Multiple stake pools can be created for the same token by using different `poolId` values. This allows:
 
-- Run multiple pools with different reward rates and lockup periods
-- Segment user groups (e.g., VIP vs standard pools)
-- Test new configurations without affecting existing pools
-- Create time-limited promotional pools
+- Running multiple pools with different reward rates and lockup periods
+- Segmenting user groups (e.g., VIP vs standard pools)
+- Testing new configurations without affecting existing pools
+- Creating time-limited promotional pools
 
-Each pool is identified by the combination of `(authority, stakeMint, poolId)`, so use:
-- `poolId: 0n` for your first pool
-- `poolId: 1n` for your second pool
+Pool PDAs are derived from `(stakeMint, poolId)`:
+- `poolId: 0n` for the first pool for this token
+- `poolId: 1n` for the second pool for this token
 - And so on...
 
 **Built-in Safeguards:**
 The program validates that the pool address matches the provided `pool_id`. If you:
 - ❌ Use the wrong `pool_id` when deriving the PDA → Transaction fails (address mismatch)
-- ❌ Try to reuse an existing `pool_id` → Transaction fails (account not empty)
+- ❌ Try to reuse an existing `pool_id` for the same token → Transaction fails (account already exists)
 - ✅ Always use `findPoolPda()` helper → Correct address is guaranteed
+
+**Pool ID Management:**
+Since pool IDs are scoped per token (not per authority), coordinate `pool_id` allocation:
+- **Query existing pools**: Check which pool IDs are already in use for a token
+- **Increment from highest**: Use `max(pool_id) + 1` when creating new pools
+- **Document your pools**: Maintain off-chain records of pool purposes and configurations
+
+**Example**:
+```typescript
+// First USDC staking pool (10% APY, 7-day lockup)
+const pool0 = await findPoolPda(USDC_MINT, 0n)
+
+// Second USDC staking pool (15% APY, 30-day lockup)  
+const pool1 = await findPoolPda(USDC_MINT, 1n)
+
+// These are different pools for the same token
+// Users can choose which pool suits their needs
+```
 
 ## Documentation
 

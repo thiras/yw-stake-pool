@@ -61,7 +61,7 @@ fn test_propose_reward_rate_change() {
     svm.airdrop(&authority.pubkey(), 10_000_000_000).unwrap();
 
     // Initialize pool with 10% reward rate
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint.pubkey(), 0);
+    let (pool_pda, _) = get_pool_pda(&stake_mint.pubkey(), 0);
 
     // ... (pool initialization code would go here)
     // For this test, we'll focus on the update_pool logic
@@ -143,13 +143,14 @@ fn test_stake_pool_structure_has_new_fields() {
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000),
         reward_rate_change_timestamp: Some(1700000000),
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify new fields are accessible
     assert_eq!(pool.pending_reward_rate, Some(50_000_000));
     assert_eq!(pool.reward_rate_change_timestamp, Some(1700000000));
-    assert_eq!(pool._reserved.len(), 16); // Verify reduced from 32 to 16
+    assert_eq!(pool._reserved.len(), 7); // Verify reduced from 16 to 7
 }
 
 /// Test that instruction enum has FinalizeRewardRateChange variant
@@ -214,7 +215,8 @@ fn test_finalize_validates_rate_bounds() {
         pool_end_date: None,
         pending_reward_rate: Some(2_000_000_000_000), // Invalid: > 1_000_000_000_000
         reward_rate_change_timestamp: Some(1700000000),
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify the pending rate exceeds the maximum
@@ -248,7 +250,8 @@ fn test_propose_current_rate_cancels_pending() {
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000), // Pending different rate
         reward_rate_change_timestamp: Some(1700000000),
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify there's a pending change different from current
@@ -283,7 +286,8 @@ fn test_propose_current_rate_no_pending() {
         pool_end_date: None,
         pending_reward_rate: None, // No pending change
         reward_rate_change_timestamp: None,
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify no pending change
@@ -357,7 +361,8 @@ fn test_future_timestamp_scenario() {
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000),
         reward_rate_change_timestamp: Some(9999999999), // Far future timestamp
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Verify timestamp is far in the future

@@ -253,7 +253,6 @@ The stake pool uses PDAs for deterministic account addressing:
 // Pool PDA (includes poolId for multi-pool support)
 const poolId = 0n; // First pool (use 1n, 2n, etc. for additional pools)
 const [poolAddress] = await findPoolPda(
-  authority.address,
   stakeMint,
   poolId,
   programId
@@ -511,7 +510,7 @@ The examples demonstrate:
 
 - [Program Documentation](../README.md)
 - [Client Library Documentation](../clients/js/README.md)
-- [Security Audit](../SECURITY_AUDIT.md)
+- [Security Audit](../audit/SECURITY_AUDIT.md)
 - [Solana Documentation](https://docs.solana.com)
 
 ## License

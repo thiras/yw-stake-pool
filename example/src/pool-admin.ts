@@ -48,7 +48,7 @@ async function main() {
     // ========================================================================
     logStep(1, 'Initialize New Stake Pool');
 
-    const [poolAddress] = await findPoolPda(admin.address, stakeMint);
+    const [poolAddress] = await findPoolPda(stakeMint);
     console.log(`📍 Pool PDA: ${poolAddress}`);
 
     const initIx = getInitializePoolInstruction({

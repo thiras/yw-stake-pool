@@ -1,6 +1,7 @@
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
+    log::sol_log_data,
     msg,
     program_error::ProgramError,
     sysvar::{clock::Clock, Sysvar},
@@ -83,6 +84,28 @@ pub fn update_pool<'a>(
                 return Err(StakePoolError::PendingRewardRateChangeExists.into());
             }
 
+            // Enforce cooldown period since last rate change
+            // This prevents authority from bypassing the 7-day time-lock by:
+            // 1. Proposing rate A, waiting 7 days, finalizing
+            // 2. Immediately proposing rate B without another 7-day wait
+            // Users need consistent notice periods for all rate changes
+            if let Some(last_change) = pool_data.last_rate_change {
+                let time_since_last_change = current_time
+                    .checked_sub(last_change)
+                    .ok_or(StakePoolError::NumericalOverflow)?;
+
+                if time_since_last_change < REWARD_RATE_CHANGE_DELAY {
+                    let remaining = REWARD_RATE_CHANGE_DELAY
+                        .checked_sub(time_since_last_change)
+                        .unwrap_or(0);
+                    msg!(
+                        "Cannot propose new reward rate change yet. Cooldown period: {} seconds remaining since last change",
+                        remaining
+                    );
+                    return Err(StakePoolError::RewardRateChangeDelayNotElapsed.into());
+                }
+            }
+
             // Validate timestamp arithmetic before modifying state
             let finalization_time = current_time
                 .checked_add(REWARD_RATE_CHANGE_DELAY)
@@ -115,6 +138,20 @@ pub fn update_pool<'a>(
         pool_data.lockup_period = lockup;
     }
     if let Some(paused) = is_paused {
+        let status_change = if paused { "PAUSED" } else { "UNPAUSED" };
+        msg!("Pool {} {}", ctx.accounts.pool.key, status_change);
+
+        // Emit event for off-chain indexing
+        sol_log_data(&[
+            if paused {
+                b"PoolPaused"
+            } else {
+                b"PoolUnpaused"
+            },
+            ctx.accounts.pool.key.as_ref(),
+            ctx.accounts.authority.key.as_ref(),
+        ]);
+
         pool_data.is_paused = paused;
     }
     if let Some(enforce) = enforce_lockup {
@@ -341,6 +378,7 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
     pool_data.reward_rate = pending_rate;
     pool_data.pending_reward_rate = None;
     pool_data.reward_rate_change_timestamp = None;
+    pool_data.last_rate_change = Some(current_time);
 
     msg!(
         "Reward rate change finalized: {} -> {}",

@@ -11,7 +11,9 @@ use crate::instruction::accounts::*;
 use crate::state::{Key, StakeAccount, StakePool};
 use crate::utils::transfer_tokens_with_fee;
 
-use super::helpers::{get_token_account_balance, validate_current_timestamp, verify_token_account};
+use super::helpers::{
+    get_token_account_balance, validate_current_timestamp, verify_reward_token_accounts,
+};
 
 pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
@@ -53,17 +55,10 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     )?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(
+    verify_reward_token_accounts(
         ctx.accounts.user_reward_account,
-        &pool_data.reward_mint,
-        None,
-        None,
-    )?;
-    verify_token_account(
         ctx.accounts.reward_vault,
         &pool_data.reward_mint,
-        None,
-        None,
     )?;
 
     // Get current time
@@ -91,15 +86,16 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Check reward vault has sufficient balance
     let reward_vault_balance = get_token_account_balance(ctx.accounts.reward_vault)?;
     if reward_vault_balance < unclaimed_rewards {
+        msg!(
+            "Insufficient rewards in vault. Required: {}, Available: {}",
+            unclaimed_rewards,
+            reward_vault_balance
+        );
         return Err(StakePoolError::InsufficientRewards.into());
     }
 
     // Transfer rewards (with PDA signer)
-    let pool_seeds = StakePool::seeds(
-        &pool_data.authority,
-        &pool_data.stake_mint,
-        pool_data.pool_id,
-    );
+    let pool_seeds = StakePool::seeds(&pool_data.stake_mint, pool_data.pool_id);
     let mut seeds_with_bump = pool_seeds.clone();
     seeds_with_bump.push(vec![pool_data.bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
@@ -185,17 +181,10 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
     )?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(
+    verify_reward_token_accounts(
         ctx.accounts.funder_token_account,
-        &pool_data.reward_mint,
-        None,
-        None,
-    )?;
-    verify_token_account(
         ctx.accounts.reward_vault,
         &pool_data.reward_mint,
-        None,
-        None,
     )?;
 
     // Transfer reward tokens to pool

@@ -43,15 +43,10 @@ pub fn load_program() -> Vec<u8> {
 // ============================================================================
 
 /// Derive the pool PDA address
-pub fn get_pool_pda(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> (Pubkey, u8) {
+pub fn get_pool_pda(stake_mint: &Pubkey, pool_id: u64) -> (Pubkey, u8) {
     let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
     Pubkey::find_program_address(
-        &[
-            b"stake_pool",
-            authority.as_ref(),
-            stake_mint.as_ref(),
-            &pool_id.to_le_bytes(),
-        ],
+        &[b"stake_pool", stake_mint.as_ref(), &pool_id.to_le_bytes()],
         &program_id,
     )
 }

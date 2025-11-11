@@ -110,8 +110,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (continued from previous unreleased)
 - **Multi-Pool Support Enhancement**: New `pool_id` parameter for better pool management
   - `pool_id: u64` field added to `StakePool` state
-  - Enables multiple pools with same authority and stake_mint using unique IDs
-  - Pool PDA derivation now includes pool_id: `["stake_pool", authority, stake_mint, pool_id]`
+  - Enables multiple pools for the same stake_mint using unique IDs
+  - Pool PDA derivation: `["stake_pool", stake_mint, pool_id]`
   - Use `pool_id: 0` for first pool, `1` for second, etc.
   - Built-in validation ensures pool address matches provided pool_id
 

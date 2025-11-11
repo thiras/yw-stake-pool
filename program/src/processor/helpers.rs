@@ -27,6 +27,9 @@ pub fn validate_current_timestamp(timestamp: i64) -> Result<(), ProgramError> {
 /// This checks for both data corruption (stored timestamp is too old) and
 /// clock manipulation (stored timestamp is in the future compared to current time)
 ///
+/// **Use this for historical timestamps** like `stake_timestamp`, `last_rate_change`, etc.
+/// that should never be in the future.
+///
 /// # Errors
 /// Returns InvalidTimestamp if:
 /// - The stored timestamp is before MIN_VALID_TIMESTAMP (data corruption)
@@ -44,6 +47,32 @@ pub fn validate_stored_timestamp(stored: i64, current: i64) -> Result<(), Progra
             "Invalid timestamp: stored {} is in the future (current: {}). Possible clock manipulation.",
             stored,
             current
+        );
+        return Err(StakePoolError::InvalidTimestamp.into());
+    }
+    Ok(())
+}
+
+/// Validates that a timestamp is reasonable but allows future values
+///
+/// This only checks for data corruption (stored timestamp is too old) but does NOT
+/// reject future timestamps. This is appropriate for fields that are intended to be
+/// set to future dates, such as `pool_end_date` or other expiration timestamps.
+///
+/// **Use this for future-allowed timestamps** like `pool_end_date` that represent
+/// future expiration dates or deadlines.
+///
+/// # Errors
+/// Returns InvalidTimestamp if:
+/// - The stored timestamp is before MIN_VALID_TIMESTAMP (data corruption)
+///
+/// # Arguments
+/// * `timestamp` - The timestamp to validate
+pub fn validate_future_allowed_timestamp(timestamp: i64) -> Result<(), ProgramError> {
+    if timestamp < MIN_VALID_TIMESTAMP {
+        msg!(
+            "Data corruption detected: timestamp is before 2021-01-01: {}",
+            timestamp
         );
         return Err(StakePoolError::InvalidTimestamp.into());
     }
@@ -99,6 +128,7 @@ pub fn validate_token_extensions(
         ExtensionType::PermanentDelegate,
         ExtensionType::MintCloseAuthority,
         ExtensionType::DefaultAccountState,
+        ExtensionType::NonTransferable, // Tokens that can never be transferred would lock user funds
     ];
 
     // Check if any dangerous extensions are present
@@ -209,6 +239,86 @@ pub fn get_token_account_balance(token_account: &AccountInfo) -> Result<u64, Pro
     let account = StateWithExtensions::<TokenAccount>::unpack(&account_data)
         .map_err(|_| StakePoolError::InvalidTokenProgram)?;
     Ok(account.base.amount)
+}
+
+/// Validates both user token account and pool vault belong to the expected stake mint
+/// This reduces code duplication across stake/unstake operations
+///
+/// # Arguments
+/// * `user_account` - User's token account for the stake mint
+/// * `vault_account` - Pool's vault account for the stake mint
+/// * `expected_mint` - The expected stake mint pubkey
+///
+/// # Returns
+/// * `Ok(())` if both accounts are valid
+/// * `Err(ProgramError)` if validation fails
+pub fn verify_stake_token_accounts(
+    user_account: &AccountInfo,
+    vault_account: &AccountInfo,
+    expected_mint: &Pubkey,
+) -> Result<(), ProgramError> {
+    verify_token_account(user_account, expected_mint, None, None)?;
+    verify_token_account(vault_account, expected_mint, None, None)?;
+    Ok(())
+}
+
+/// Validates both user reward account and pool reward vault belong to the expected reward mint
+/// This reduces code duplication across reward operations
+///
+/// # Arguments
+/// * `user_account` - User's token account for the reward mint
+/// * `vault_account` - Pool's vault account for the reward mint
+/// * `expected_mint` - The expected reward mint pubkey
+///
+/// # Returns
+/// * `Ok(())` if both accounts are valid
+/// * `Err(ProgramError)` if validation fails
+pub fn verify_reward_token_accounts(
+    user_account: &AccountInfo,
+    vault_account: &AccountInfo,
+    expected_mint: &Pubkey,
+) -> Result<(), ProgramError> {
+    verify_token_account(user_account, expected_mint, None, None)?;
+    verify_token_account(vault_account, expected_mint, None, None)?;
+    Ok(())
+}
+
+/// Validates both vaults during pool initialization
+/// This ensures both stake and reward vaults are correctly configured
+///
+/// # Arguments
+/// * `stake_vault` - Pool's stake token vault
+/// * `reward_vault` - Pool's reward token vault
+/// * `stake_mint` - The stake token mint (for extension validation)
+/// * `reward_mint` - The reward token mint (for extension validation)
+/// * `stake_mint_key` - Expected stake mint pubkey
+/// * `reward_mint_key` - Expected reward mint pubkey
+///
+/// # Returns
+/// * `Ok(())` if both vaults are valid
+/// * `Err(ProgramError)` if validation fails
+pub fn verify_pool_vaults_at_init(
+    stake_vault: &AccountInfo,
+    reward_vault: &AccountInfo,
+    stake_mint: &AccountInfo,
+    reward_mint: &AccountInfo,
+    stake_mint_key: &Pubkey,
+    reward_mint_key: &Pubkey,
+) -> Result<(), ProgramError> {
+    // Verify token accounts have correct mints and validate Token-2022 extensions
+    verify_token_account(
+        stake_vault,
+        stake_mint_key,
+        Some(stake_mint),
+        Some("stake_mint"),
+    )?;
+    verify_token_account(
+        reward_vault,
+        reward_mint_key,
+        Some(reward_mint),
+        Some("reward_mint"),
+    )?;
+    Ok(())
 }
 
 /// Validates that a mint does not have a freeze authority set.

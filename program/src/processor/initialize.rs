@@ -13,7 +13,7 @@ use crate::utils::create_account;
 use solana_program::pubkey::Pubkey;
 
 use super::helpers::{
-    validate_current_timestamp, validate_no_freeze_authority, verify_token_account,
+    validate_current_timestamp, validate_no_freeze_authority, verify_pool_vaults_at_init,
     verify_vault_ownership,
 };
 
@@ -109,13 +109,9 @@ pub fn initialize_pool<'a>(
     }
 
     // Guards
-    // Derive the expected pool PDA from authority, stake_mint, and pool_id
+    // Derive the expected pool PDA from stake_mint and pool_id
     // This ensures the provided pool account matches the pool_id parameter
-    let pool_seeds = StakePool::seeds(
-        ctx.accounts.authority.key,
-        ctx.accounts.stake_mint.key,
-        pool_id,
-    );
+    let pool_seeds = StakePool::seeds(ctx.accounts.stake_mint.key, pool_id);
     let pool_seeds_refs: Vec<&[u8]> = pool_seeds.iter().map(|s| s.as_slice()).collect();
     let (pool_key, bump) = Pubkey::find_program_address(&pool_seeds_refs, &crate::ID);
 
@@ -141,18 +137,13 @@ pub fn initialize_pool<'a>(
     validate_no_freeze_authority(ctx.accounts.reward_mint, "reward_mint")?;
 
     // Verify token accounts have correct mints and validate Token-2022 extensions
-    // [M-02] Security Fix: Extension validation during pool initialization
-    verify_token_account(
+    verify_pool_vaults_at_init(
         ctx.accounts.stake_vault,
-        ctx.accounts.stake_mint.key,
-        Some(ctx.accounts.stake_mint),
-        Some("stake_mint"),
-    )?;
-    verify_token_account(
         ctx.accounts.reward_vault,
+        ctx.accounts.stake_mint,
+        ctx.accounts.reward_mint,
+        ctx.accounts.stake_mint.key,
         ctx.accounts.reward_mint.key,
-        Some(ctx.accounts.reward_mint),
-        Some("reward_mint"),
     )?;
 
     // CRITICAL SECURITY FIX [H-01]: Verify vault ownership
@@ -205,7 +196,8 @@ pub fn initialize_pool<'a>(
         pool_end_date,
         pending_reward_rate: None,
         reward_rate_change_timestamp: None,
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     pool_data.save(ctx.accounts.pool)

@@ -379,7 +379,7 @@ fn test_initialize_pool_with_real_tokens() {
     println!("✅ Created reward mint: {}", reward_mint);
 
     // Derive PDAs
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, 0);
+    let (pool_pda, _) = get_pool_pda(&stake_mint, 0);
 
     // Create vault token accounts (owned by pool PDA)
     let stake_vault_account = create_token_account(&mut svm, &payer, &stake_mint, &pool_pda);
@@ -486,7 +486,8 @@ fn test_stake_pool_serialized_size() {
         pool_end_date: None,
         pending_reward_rate: None,
         reward_rate_change_timestamp: None,
-        _reserved: [0; 16],
+        last_rate_change: None,
+        _reserved: [0; 7],
     };
 
     // Serialize it
@@ -524,7 +525,8 @@ fn test_stake_pool_serialized_size() {
         pool_end_date: Some(12345678),
         pending_reward_rate: Some(5_000_000_000),
         reward_rate_change_timestamp: Some(1700000000),
-        _reserved: [0; 16],
+        last_rate_change: Some(1699000000),
+        _reserved: [0; 7],
     };
 
     let serialized_with_optionals = pool_with_optionals.try_to_vec().unwrap();
@@ -610,7 +612,7 @@ fn test_initialize_pool_rejects_attacker_owned_vaults() {
     let reward_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
 
     // Derive pool PDA
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, 0);
+    let (pool_pda, _) = get_pool_pda(&stake_mint, 0);
 
     // ATTACK: Create vault token accounts owned by attacker (NOT by pool PDA)
     let malicious_stake_vault =
