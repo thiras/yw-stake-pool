@@ -51,26 +51,45 @@ pub fn update_pool<'a>(
             return Err(StakePoolError::InvalidParameters.into());
         }
 
-        // Check if there's already a pending reward rate change
-        // This prevents authority from indefinitely deferring changes by repeatedly proposing new rates
-        if pool_data.pending_reward_rate.is_some() {
+        // Special case: If proposing the current active rate, cancel any pending change
+        // This allows authority to revert/cancel unwanted proposals
+        if rate == pool_data.reward_rate {
+            if pool_data.pending_reward_rate.is_some() {
+                pool_data.pending_reward_rate = None;
+                pool_data.reward_rate_change_timestamp = None;
+                msg!(
+                    "Pending reward rate change cancelled. Keeping current rate: {}",
+                    pool_data.reward_rate
+                );
+            } else {
+                msg!(
+                    "Reward rate unchanged: {}. No pending change to cancel.",
+                    pool_data.reward_rate
+                );
+            }
+        } else {
+            // Proposing a new rate different from current
+            // Check if there's already a pending reward rate change
+            // This prevents authority from indefinitely deferring changes by repeatedly proposing new rates
+            if pool_data.pending_reward_rate.is_some() {
+                msg!(
+                    "Cannot propose new reward rate change while one is already pending. Finalize the current pending change first."
+                );
+                return Err(StakePoolError::PendingRewardRateChangeExists.into());
+            }
+
+            // Set pending reward rate change instead of immediate change
+            // This gives users 7 days to exit if they disagree
+            pool_data.pending_reward_rate = Some(rate);
+            pool_data.reward_rate_change_timestamp = Some(current_time);
+
             msg!(
-                "Cannot propose new reward rate change while one is already pending. Finalize the current pending change first."
+                "Reward rate change proposed: {} -> {}. Will take effect after {} (7 days from now)",
+                pool_data.reward_rate,
+                rate,
+                current_time + REWARD_RATE_CHANGE_DELAY
             );
-            return Err(StakePoolError::PendingRewardRateChangeExists.into());
         }
-
-        // Set pending reward rate change instead of immediate change
-        // This gives users 7 days to exit if they disagree
-        pool_data.pending_reward_rate = Some(rate);
-        pool_data.reward_rate_change_timestamp = Some(current_time);
-
-        msg!(
-            "Reward rate change proposed: {} -> {}. Will take effect after {} (7 days from now)",
-            pool_data.reward_rate,
-            rate,
-            current_time + REWARD_RATE_CHANGE_DELAY
-        );
     }
     if let Some(min_amount) = min_stake_amount {
         pool_data.min_stake_amount = min_amount;
