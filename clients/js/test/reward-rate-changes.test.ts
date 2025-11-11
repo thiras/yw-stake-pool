@@ -104,6 +104,9 @@ test('StakePool has pendingRewardRate field', (t) => {
 test('StakePool has rewardRateChangeTimestamp field', (t) => {
   const codec = getStakePoolCodec();
 
+  const currentTime = 1700000000n;
+  const proposalTime = currentTime;
+
   const stakePool = {
     key: 1,
     authority: address('11111111111111111111111111111111'),
@@ -122,17 +125,22 @@ test('StakePool has rewardRateChangeTimestamp field', (t) => {
     bump: 255,
     pendingAuthority: null,
     poolEndDate: null,
-    pendingRewardRate: null,
-    rewardRateChangeTimestamp: some(1700000000n),
+    pendingRewardRate: some(150_000_000n), // Must be Some when timestamp is Some
+    rewardRateChangeTimestamp: some(proposalTime),
     reserved: new Uint8Array(16),
   };
 
   const encoded = codec.encode(stakePool);
   const decoded = codec.decode(encoded);
 
+  // Verify both pending fields are in sync (invariant requirement)
+  t.deepEqual(decoded.pendingRewardRate, {
+    __option: 'Some',
+    value: 150_000_000n,
+  });
   t.deepEqual(decoded.rewardRateChangeTimestamp, {
     __option: 'Some',
-    value: 1700000000n,
+    value: proposalTime,
   });
 });
 
