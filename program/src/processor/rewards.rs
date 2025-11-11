@@ -1,6 +1,7 @@
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
+    log::sol_log_data,
     msg,
     sysvar::{clock::Clock, Sysvar},
 };
@@ -133,15 +134,24 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         .checked_sub(unclaimed_rewards)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    // Save updated accounts
-    pool_data.save(ctx.accounts.pool)?;
-    stake_account_data.save(ctx.accounts.stake_account)?;
-
     msg!(
         "Claimed {} reward tokens (actual received after fees), total committed: {}",
         actual_amount,
         stake_account_data.claimed_rewards
     );
+
+    // Emit event for off-chain indexing
+    sol_log_data(&[
+        b"ClaimRewards",
+        ctx.accounts.pool.key.as_ref(),
+        ctx.accounts.owner.key.as_ref(),
+        &unclaimed_rewards.to_le_bytes(),
+        &actual_amount.to_le_bytes(),
+    ]);
+
+    // Save updated accounts
+    pool_data.save(ctx.accounts.pool)?;
+    stake_account_data.save(ctx.accounts.stake_account)?;
 
     Ok(())
 }
@@ -219,5 +229,14 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
     )?;
 
     msg!("Funded pool with {} reward tokens", actual_amount);
+
+    // Emit event for off-chain indexing
+    sol_log_data(&[
+        b"FundRewards",
+        ctx.accounts.pool.key.as_ref(),
+        ctx.accounts.funder.key.as_ref(),
+        &actual_amount.to_le_bytes(),
+    ]);
+
     Ok(())
 }

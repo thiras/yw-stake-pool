@@ -1,6 +1,7 @@
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
+    log::sol_log_data,
     msg,
     sysvar::{clock::Clock, Sysvar},
 };
@@ -199,6 +200,23 @@ pub fn initialize_pool<'a>(
         last_rate_change: None,
         _reserved: [0; 7],
     };
+
+    msg!(
+        "Pool initialized: pool_id={}, reward_rate={}, lockup_period={}, min_stake_amount={}",
+        pool_id,
+        reward_rate,
+        lockup_period,
+        min_stake_amount
+    );
+
+    // Emit event for off-chain indexing
+    sol_log_data(&[
+        b"InitializePool",
+        ctx.accounts.pool.key.as_ref(),
+        ctx.accounts.authority.key.as_ref(),
+        &pool_id.to_le_bytes(),
+        &reward_rate.to_le_bytes(),
+    ]);
 
     pool_data.save(ctx.accounts.pool)
 }

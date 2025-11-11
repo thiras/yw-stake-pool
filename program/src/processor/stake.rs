@@ -1,6 +1,7 @@
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
+    log::sol_log_data,
     msg,
     pubkey::Pubkey,
     sysvar::{clock::Clock, Sysvar},
@@ -220,6 +221,23 @@ pub fn stake<'a>(
         bump,
     };
 
+    msg!(
+        "Staked {} tokens (actual: {}), index: {}, pool: {}",
+        amount,
+        transfer_amount,
+        index,
+        ctx.accounts.pool.key
+    );
+
+    // Emit event for off-chain indexing
+    sol_log_data(&[
+        b"Stake",
+        ctx.accounts.pool.key.as_ref(),
+        ctx.accounts.owner.key.as_ref(),
+        &transfer_amount.to_le_bytes(),
+        &index.to_le_bytes(),
+    ]);
+
     // Save state
     pool_data.save(ctx.accounts.pool)?;
     stake_account_data.save(ctx.accounts.stake_account)
@@ -413,6 +431,15 @@ pub fn unstake<'a>(
         actual_amount,
         forfeited_rewards
     );
+
+    // Emit event for off-chain indexing
+    sol_log_data(&[
+        b"Unstake",
+        ctx.accounts.pool.key.as_ref(),
+        ctx.accounts.owner.key.as_ref(),
+        &actual_amount.to_le_bytes(),
+        &forfeited_rewards.to_le_bytes(),
+    ]);
 
     // Save state
     pool_data.save(ctx.accounts.pool)?;
