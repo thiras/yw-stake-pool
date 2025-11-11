@@ -83,25 +83,25 @@ pub fn update_pool<'a>(
                 return Err(StakePoolError::PendingRewardRateChangeExists.into());
             }
 
+            // Validate timestamp arithmetic before modifying state
+            let finalization_time = current_time
+                .checked_add(REWARD_RATE_CHANGE_DELAY)
+                .ok_or_else(|| {
+                    msg!("Error: Reward rate change finalization time overflowed. Invalid timestamp.");
+                    StakePoolError::InvalidParameters
+                })?;
+
             // Set pending reward rate change instead of immediate change
             // This gives users 7 days to exit if they disagree
             pool_data.pending_reward_rate = Some(rate);
             pool_data.reward_rate_change_timestamp = Some(current_time);
 
-            match current_time.checked_add(REWARD_RATE_CHANGE_DELAY) {
-                Some(finalization_time) => {
-                    msg!(
-                        "Reward rate change proposed: {} -> {}. Will take effect after {} (7 days from now)",
-                        pool_data.reward_rate,
-                        rate,
-                        finalization_time
-                    );
-                }
-                None => {
-                    msg!("Error: Reward rate change finalization time overflowed. Invalid timestamp.");
-                    return Err(StakePoolError::InvalidParameters.into());
-                }
-            }
+            msg!(
+                "Reward rate change proposed: {} -> {}. Will take effect after {} (7 days from now)",
+                pool_data.reward_rate,
+                rate,
+                finalization_time
+            );
         }
     }
     if let Some(min_amount) = min_stake_amount {
