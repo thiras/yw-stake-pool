@@ -1,5 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use shank::{ShankContext, ShankInstruction};
+use solana_program::pubkey::Pubkey;
 
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug, ShankContext, ShankInstruction)]
 #[rustfmt::skip]
@@ -15,6 +16,7 @@ pub enum StakePoolInstruction {
     #[account(7, name="token_program", desc = "The token program")]
     #[account(8, name="system_program", desc = "The system program")]
     #[account(9, name="rent", desc = "Rent sysvar")]
+    #[account(10, name="program_authority", desc = "The program authority account (validates creator permission)")]
     InitializePool {
         /// Unique identifier to allow multiple pools for same authority + stake_mint (typically 0 for first pool, 1 for second, etc.)
         pool_id: u64,
@@ -123,4 +125,23 @@ pub enum StakePoolInstruction {
     /// call this after 7 days to apply the change.
     #[account(0, writable, name="pool", desc = "The stake pool")]
     FinalizeRewardRateChange,
+
+    /// Initialize the program authority (one-time setup)
+    /// This creates the global authority account that controls who can create pools
+    #[account(0, writable, name="program_authority", desc = "The program authority PDA to create")]
+    #[account(1, signer, name="initial_authority", desc = "The initial authority who will control authorized creators")]
+    #[account(2, writable, signer, name="payer", desc = "The account paying for rent")]
+    #[account(3, name="system_program", desc = "The system program")]
+    InitializeProgramAuthority,
+
+    /// Manage authorized pool creators (add or remove)
+    /// Only the program authority can call this
+    #[account(0, writable, name="program_authority", desc = "The program authority PDA")]
+    #[account(1, signer, name="authority", desc = "The program authority signer")]
+    ManageAuthorizedCreators {
+        /// Addresses to add to authorized creators list
+        add: Vec<Pubkey>,
+        /// Addresses to remove from authorized creators list
+        remove: Vec<Pubkey>,
+    },
 }

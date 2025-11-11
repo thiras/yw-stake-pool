@@ -10,6 +10,7 @@ mod admin;
 mod close;
 mod helpers;
 mod initialize;
+mod program_authority;
 mod rewards;
 mod stake;
 
@@ -19,6 +20,7 @@ pub use admin::{
 };
 pub use close::close_stake_account;
 pub use initialize::initialize_pool;
+pub use program_authority::{initialize_program_authority, manage_authorized_creators};
 pub use rewards::{claim_rewards, fund_rewards};
 pub use stake::{stake, unstake};
 
@@ -124,6 +126,14 @@ pub fn process_instruction<'a>(
         StakePoolInstruction::FinalizeRewardRateChange => {
             msg!("Instruction: FinalizeRewardRateChange");
             finalize_reward_rate_change(accounts)
+        }
+        StakePoolInstruction::InitializeProgramAuthority => {
+            msg!("Instruction: InitializeProgramAuthority");
+            initialize_program_authority(accounts)
+        }
+        StakePoolInstruction::ManageAuthorizedCreators { add, remove } => {
+            msg!("Instruction: ManageAuthorizedCreators");
+            manage_authorized_creators(accounts, add, remove)
         }
     }
 }

@@ -110,6 +110,21 @@ pub enum StakePoolError {
     /// 34 - Account size too small for serialized data
     #[error("Account size too small for serialized data")]
     AccountSizeTooSmall,
+    /// 35 - Unauthorized pool creator (only authorized admins can create pools)
+    #[error("Unauthorized pool creator (only authorized admins can create pools)")]
+    UnauthorizedPoolCreator,
+    /// 36 - Creator already authorized
+    #[error("Creator already authorized")]
+    CreatorAlreadyAuthorized,
+    /// 37 - Maximum number of authorized creators reached
+    #[error("Maximum number of authorized creators reached")]
+    MaxAuthorizedCreatorsReached,
+    /// 38 - Cannot remove main authority from authorized creators
+    #[error("Cannot remove main authority from authorized creators")]
+    CannotRemoveMainAuthority,
+    /// 39 - Creator not found in authorized list
+    #[error("Creator not found in authorized list")]
+    CreatorNotFound,
 }
 
 impl From<StakePoolError> for ProgramError {

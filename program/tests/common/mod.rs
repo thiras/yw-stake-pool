@@ -82,6 +82,56 @@ pub fn get_reward_vault_pda(pool: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[b"reward_vault", pool.as_ref()], &program_id)
 }
 
+/// Derive the program authority PDA address
+pub fn get_program_authority_pda() -> (Pubkey, u8) {
+    let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
+    Pubkey::find_program_address(&[b"program_authority"], &program_id)
+}
+
+/// Initialize the program authority account (required for pool creation)
+/// Returns the program authority PDA address
+pub fn initialize_program_authority(
+    svm: &mut LiteSVM,
+    payer: &solana_sdk::signature::Keypair,
+    authority: &solana_sdk::signature::Keypair,
+) -> Pubkey {
+    use borsh::BorshSerialize;
+    use solana_sdk::{
+        instruction::{AccountMeta, Instruction},
+        signature::Signer,
+        transaction::Transaction,
+    };
+    use your_wallet_stake_pool::instruction::StakePoolInstruction;
+
+    let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
+    let (program_authority_pda, _) = get_program_authority_pda();
+
+    let init_authority_ix = Instruction {
+        program_id,
+        accounts: vec![
+            AccountMeta::new(program_authority_pda, false),
+            AccountMeta::new_readonly(authority.pubkey(), true),
+            AccountMeta::new(payer.pubkey(), true),
+            AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
+        ],
+        data: StakePoolInstruction::InitializeProgramAuthority
+            .try_to_vec()
+            .unwrap(),
+    };
+
+    let tx = Transaction::new_signed_with_payer(
+        &[init_authority_ix],
+        Some(&payer.pubkey()),
+        &[payer, authority],
+        svm.latest_blockhash(),
+    );
+
+    svm.send_transaction(tx)
+        .expect("Failed to initialize program authority");
+
+    program_authority_pda
+}
+
 // ============================================================================
 // Account Deserialization
 // ============================================================================

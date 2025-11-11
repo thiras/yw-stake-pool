@@ -8,7 +8,7 @@ use solana_program::{
 use crate::assertions::*;
 use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
-use crate::state::{Key, StakePool};
+use crate::state::{Key, ProgramAuthority, StakePool};
 use crate::utils::create_account;
 use solana_program::pubkey::Pubkey;
 
@@ -94,6 +94,19 @@ pub fn initialize_pool<'a>(
 
     // Use ShankContext to parse accounts
     let ctx = InitializePoolAccounts::context(accounts)?;
+
+    // [Q-01] Security Fix: Validate pool creator is authorized
+    // Only addresses in the ProgramAuthority's authorized_creators list can create pools.
+    // This prevents spam/scam pools and maintains quality control.
+    let program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
+    if !program_authority.is_authorized(ctx.accounts.authority.key) {
+        msg!(
+            "Unauthorized pool creator: {}. Only authorized admins can create pools.",
+            ctx.accounts.authority.key
+        );
+        return Err(StakePoolError::UnauthorizedPoolCreator.into());
+    }
 
     // Guards
     // Derive the expected pool PDA from authority, stake_mint, and pool_id

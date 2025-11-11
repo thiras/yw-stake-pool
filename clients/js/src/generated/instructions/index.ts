@@ -12,6 +12,8 @@ export * from './closeStakeAccount';
 export * from './finalizeRewardRateChange';
 export * from './fundRewards';
 export * from './initializePool';
+export * from './initializeProgramAuthority';
+export * from './manageAuthorizedCreators';
 export * from './nominateNewAuthority';
 export * from './stake';
 export * from './unstake';

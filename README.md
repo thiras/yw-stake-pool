@@ -49,6 +49,7 @@ This program implements multiple security best practices:
 4. **Transfer Fee Support** - Properly handles Token-2022 transfer fees
 5. **Numerical Overflow Protection** - All arithmetic uses checked operations
 6. **Two-step Authority Transfer** - Prevents accidental authority loss
+7. **Admin-Only Pool Creation** - Only authorized addresses can create pools (prevents spam/scam pools)
 
 See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) for detailed security analysis.
 

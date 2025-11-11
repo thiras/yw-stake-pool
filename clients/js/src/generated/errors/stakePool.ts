@@ -84,11 +84,24 @@ export const STAKE_POOL_ERROR__INVALID_TIMESTAMP = 0x20; // 32
 export const STAKE_POOL_ERROR__DATA_CORRUPTION = 0x21; // 33
 /** AccountSizeTooSmall: Account size too small for serialized data */
 export const STAKE_POOL_ERROR__ACCOUNT_SIZE_TOO_SMALL = 0x22; // 34
+/** UnauthorizedPoolCreator: Unauthorized pool creator (only authorized admins can create pools) */
+export const STAKE_POOL_ERROR__UNAUTHORIZED_POOL_CREATOR = 0x23; // 35
+/** CreatorAlreadyAuthorized: Creator already authorized */
+export const STAKE_POOL_ERROR__CREATOR_ALREADY_AUTHORIZED = 0x24; // 36
+/** MaxAuthorizedCreatorsReached: Maximum number of authorized creators reached */
+export const STAKE_POOL_ERROR__MAX_AUTHORIZED_CREATORS_REACHED = 0x25; // 37
+/** CannotRemoveMainAuthority: Cannot remove main authority from authorized creators */
+export const STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY = 0x26; // 38
+/** CreatorNotFound: Creator not found in authorized list */
+export const STAKE_POOL_ERROR__CREATOR_NOT_FOUND = 0x27; // 39
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
   | typeof STAKE_POOL_ERROR__ACCOUNT_SIZE_TOO_SMALL
   | typeof STAKE_POOL_ERROR__AMOUNT_BELOW_MINIMUM
+  | typeof STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY
+  | typeof STAKE_POOL_ERROR__CREATOR_ALREADY_AUTHORIZED
+  | typeof STAKE_POOL_ERROR__CREATOR_NOT_FOUND
   | typeof STAKE_POOL_ERROR__DATA_CORRUPTION
   | typeof STAKE_POOL_ERROR__DESERIALIZATION_ERROR
   | typeof STAKE_POOL_ERROR__EXPECTED_EMPTY_ACCOUNT
@@ -108,6 +121,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM
   | typeof STAKE_POOL_ERROR__INVALID_VAULT_OWNER
   | typeof STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED
+  | typeof STAKE_POOL_ERROR__MAX_AUTHORIZED_CREATORS_REACHED
   | typeof STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY
   | typeof STAKE_POOL_ERROR__NO_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE
@@ -119,6 +133,7 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__REWARD_RATE_CHANGE_DELAY_NOT_ELAPSED
   | typeof STAKE_POOL_ERROR__SERIALIZATION_ERROR
   | typeof STAKE_POOL_ERROR__UNAUTHORIZED
+  | typeof STAKE_POOL_ERROR__UNAUTHORIZED_POOL_CREATOR
   | typeof STAKE_POOL_ERROR__UNEXPECTED_BALANCE_CHANGE
   | typeof STAKE_POOL_ERROR__UNSAFE_TOKEN_EXTENSION;
 
@@ -128,6 +143,9 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__ACCOUNT_MISMATCH]: `Account mismatch`,
     [STAKE_POOL_ERROR__ACCOUNT_SIZE_TOO_SMALL]: `Account size too small for serialized data`,
     [STAKE_POOL_ERROR__AMOUNT_BELOW_MINIMUM]: `Amount below minimum stake`,
+    [STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY]: `Cannot remove main authority from authorized creators`,
+    [STAKE_POOL_ERROR__CREATOR_ALREADY_AUTHORIZED]: `Creator already authorized`,
+    [STAKE_POOL_ERROR__CREATOR_NOT_FOUND]: `Creator not found in authorized list`,
     [STAKE_POOL_ERROR__DATA_CORRUPTION]: `Data corruption detected (state invariant violated)`,
     [STAKE_POOL_ERROR__DESERIALIZATION_ERROR]: `Error deserializing an account`,
     [STAKE_POOL_ERROR__EXPECTED_EMPTY_ACCOUNT]: `Expected empty account`,
@@ -147,6 +165,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM]: `Invalid token program`,
     [STAKE_POOL_ERROR__INVALID_VAULT_OWNER]: `Invalid vault owner (vault must be owned by pool PDA)`,
     [STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED]: `Lockup period not expired`,
+    [STAKE_POOL_ERROR__MAX_AUTHORIZED_CREATORS_REACHED]: `Maximum number of authorized creators reached`,
     [STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY]: `Mint has freeze authority (can lock user funds)`,
     [STAKE_POOL_ERROR__NO_PENDING_AUTHORITY]: `No pending authority transfer`,
     [STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE]: `No pending reward rate change`,
@@ -158,6 +177,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__REWARD_RATE_CHANGE_DELAY_NOT_ELAPSED]: `Reward rate change delay not elapsed`,
     [STAKE_POOL_ERROR__SERIALIZATION_ERROR]: `Error serializing an account`,
     [STAKE_POOL_ERROR__UNAUTHORIZED]: `Unauthorized`,
+    [STAKE_POOL_ERROR__UNAUTHORIZED_POOL_CREATOR]: `Unauthorized pool creator (only authorized admins can create pools)`,
     [STAKE_POOL_ERROR__UNEXPECTED_BALANCE_CHANGE]: `Unexpected token balance change during transfer`,
     [STAKE_POOL_ERROR__UNSAFE_TOKEN_EXTENSION]: `Unsafe Token-2022 extension detected`,
   };

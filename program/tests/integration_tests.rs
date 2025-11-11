@@ -95,6 +95,8 @@ impl TestEnvironment {
         enforce_lockup: bool,
         pool_end_date: Option<i64>,
     ) {
+        let (program_authority_pda, _) = get_program_authority_pda();
+
         let init_pool_ix = Instruction {
             program_id: self.program_id,
             accounts: vec![
@@ -108,6 +110,7 @@ impl TestEnvironment {
                 AccountMeta::new_readonly(spl_token_2022::id(), false),
                 AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
                 AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+                AccountMeta::new_readonly(program_authority_pda, false),
             ],
             data: StakePoolInstruction::InitializePool {
                 pool_id: 0,

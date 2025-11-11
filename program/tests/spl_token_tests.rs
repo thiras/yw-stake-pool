@@ -366,6 +366,9 @@ fn test_initialize_pool_with_real_tokens() {
     svm.airdrop(&payer.pubkey(), 10_000_000_000).unwrap();
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
 
+    // Initialize program authority (required for pool creation)
+    let program_authority_pda = initialize_program_authority(&mut svm, &payer, &authority);
+
     // Create mints
     let stake_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
     let reward_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
@@ -397,6 +400,7 @@ fn test_initialize_pool_with_real_tokens() {
             AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+            AccountMeta::new_readonly(program_authority_pda, false),
         ],
         data: StakePoolInstruction::InitializePool {
             pool_id: 0,
@@ -596,6 +600,9 @@ fn test_initialize_pool_rejects_attacker_owned_vaults() {
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&attacker.pubkey(), 1_000_000_000).unwrap();
 
+    // Initialize program authority (required for pool creation)
+    let program_authority_pda = initialize_program_authority(&mut svm, &payer, &authority);
+
     // Create mints
     let stake_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
     let reward_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
@@ -628,6 +635,7 @@ fn test_initialize_pool_rejects_attacker_owned_vaults() {
             AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+            AccountMeta::new_readonly(program_authority_pda, false),
         ],
         data: StakePoolInstruction::InitializePool {
             pool_id: 0,

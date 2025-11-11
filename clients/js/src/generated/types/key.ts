@@ -19,6 +19,7 @@ export enum Key {
   Uninitialized,
   StakePool,
   StakeAccount,
+  ProgramAuthority,
 }
 
 export type KeyArgs = Key;
