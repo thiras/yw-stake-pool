@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Uses checked conversion with proper error handling
   - Returns `ArithmeticOverflow` error if conversion would lose data
 
+- **Pool End Date Timestamp Validation**: Fixed validation to allow future timestamps for `pool_end_date`
+  - Added `validate_future_allowed_timestamp()` helper for expiration dates
+  - `pool_end_date` now accepts future timestamps (as intended for expiration)
+  - Historical timestamps (`reward_rate_change_timestamp`, `last_rate_change`) still validated as past-only
+  - Maintains security by detecting data corruption (timestamps before Jan 1, 2021)
+  - Comprehensive test suite with 11 tests covering all timestamp validation scenarios
+
 - **[L-02] Account Size Validation**: Added defensive checks for account size validation
   - Validates that provided accounts have sufficient data length before deserialization
   - Prevents potential buffer overflow or undefined behavior from undersized accounts
@@ -79,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Time-Locked Reward Rate Changes [L-01 Security Fix]**: 7-day delay for reward rate changes
   - `pending_reward_rate: Option<u64>` field added to `StakePool` state
   - `reward_rate_change_timestamp: Option<i64>` field added to `StakePool` state
+  - `last_rate_change: Option<i64>` field added to `StakePool` state (enforces cooldown)
   - `FinalizeRewardRateChange` instruction (permissionless, callable after 7-day delay)
   - `REWARD_RATE_CHANGE_DELAY` constant: 604800 seconds (7 days)
   - Cancellation mechanism: proposing current rate clears pending change
@@ -90,22 +98,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Authority transfer documentation: new authority can cancel by reproposing current rate
 
 ### Changed
+- **BREAKING CHANGE**: Pool PDA derivation no longer includes authority
+  - **Old derivation**: `["stake_pool", authority, stake_mint, pool_id]`
+  - **New derivation**: `["stake_pool", stake_mint, pool_id]`
+  - Pool addresses are now token-scoped instead of authority-scoped
+  - Eliminates confusion after authority transfers
+  - Pool IDs are now globally unique per token (not per authority)
+  - **Migration for TypeScript clients**:
+    - Update `findPoolPda()` calls to remove authority parameter
+    - `findPoolPda(stakeMint, poolId)` instead of `findPoolPda(authority, stakeMint, poolId)`
+  - **No on-chain migration needed** (not deployed to mainnet yet)
+  - All examples, tests, and documentation updated
+  - Client types regenerated with new PDA derivation
+
 - **BREAKING CHANGE**: `InitializePool` instruction now requires `program_authority` account
   - Account #10 (11th account): `program_authority` PDA (readonly)
   - **MIGRATION REQUIRED**: All clients must update to include this account
+  - Use `findProgramAuthorityPda()` helper to derive the PDA address
   - TypeScript client regenerated with new account structure
   - All test suites updated (68 tests passing)
 
 - **BREAKING CHANGE**: `StakePool` account structure modified (incompatible with existing pools)
-  - Added `pending_reward_rate` and `reward_rate_change_timestamp` fields
-  - Reduced `_reserved` from 32 bytes to 16 bytes
+  - Added `pending_reward_rate`, `reward_rate_change_timestamp`, and `last_rate_change` fields
+  - Reduced `_reserved` from 32 bytes to 7 bytes
   - Account size remains 288 bytes (when pending fields are Some)
   - **MIGRATION REQUIRED**: Existing pools MUST be drained, closed, and recreated
   - Old structure: `pool_end_date` + `[u8; 32]` reserved
-  - New structure: `pool_end_date` + `Option<u64>` + `Option<i64>` + `[u8; 16]` reserved
+  - New structure: `pool_end_date` + `Option<u64>` + `Option<i64>` + `Option<i64>` + `[u8; 7]` reserved
   - Deserialization of old accounts will fail or produce corrupted data
   - This is acceptable for devnet deployment with no production pools
   - **DO NOT deploy to clusters with existing pools without proper migration**
+
+- **Dependency Updates**: Updated to latest Solana toolchain versions
+  - `solana-program`: 2.2.1
+  - `shank`: 0.4.4
+  - Ensures compatibility with latest Solana features and security patches
+
+### Documentation
+- **MIN_ADDITIONAL_LAMPORTS Clarification**: Improved documentation for anti-griefing threshold
+  - Clarified this is NOT a dynamic rent-exempt calculation
+  - Explained as anti-griefing threshold to prevent micro-transfer attacks
+  - Documented why 890,880 lamports was chosen (typical rent-exempt for ~200 byte account)
+  - Value remains unchanged but purpose is now clearly documented
 
 ### Added (continued from previous unreleased)
 - **Multi-Pool Support Enhancement**: New `pool_id` parameter for better pool management

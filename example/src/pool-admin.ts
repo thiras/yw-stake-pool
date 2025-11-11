@@ -22,6 +22,7 @@ import {
   createRpc,
   createFundedKeypair,
   findPoolPda,
+  findProgramAuthorityPda,
   logSection,
   logStep,
   handleError,
@@ -51,6 +52,9 @@ async function main() {
     const [poolAddress] = await findPoolPda(stakeMint);
     console.log(`📍 Pool PDA: ${poolAddress}`);
 
+    // Get the program authority PDA
+    const [programAuthority] = await findProgramAuthorityPda();
+
     const initIx = getInitializePoolInstruction({
       pool: poolAddress,
       authority: admin,
@@ -62,6 +66,7 @@ async function main() {
       tokenProgram: config.tokenProgramId,
       systemProgram: config.systemProgramId,
       rent: address('SysvarRent111111111111111111111111111111111'),
+      programAuthority, // Required: validates creator permission
       poolId: 0n, // First pool for this authority + stake_mint
       rewardRate: config.defaultPoolConfig.rewardRate,
       minStakeAmount: config.defaultPoolConfig.minStakeAmount,

@@ -76,6 +76,26 @@ export async function findPoolPda(
 }
 
 /**
+ * Find Program Authority PDA
+ * 
+ * The program authority PDA controls who can create new pools.
+ * This is a singleton account per program.
+ * 
+ * @param programId - The stake pool program address
+ * @returns [programAuthorityAddress, bump] - The derived PDA and bump seed
+ */
+export async function findProgramAuthorityPda(
+  programId: Address = config.programId
+): Promise<[Address, number]> {
+  const [pda, bump] = await getProgramDerivedAddress({
+    programAddress: programId,
+    seeds: ['program_authority'],
+  });
+  
+  return [pda, bump];
+}
+
+/**
  * Find Stake Account PDA
  */
 export async function findStakeAccountPda(
