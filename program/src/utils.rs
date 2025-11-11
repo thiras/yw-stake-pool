@@ -269,7 +269,36 @@ pub fn transfer_lamports_from_pdas<'a>(
 }
 
 /// Transfer tokens with support for Token-2022 transfer fees
-/// Safely extracts decimals from the mint account using proper unpacking
+/// Returns the actual amount transferred (which may be less than requested if fees apply)
+///
+/// # Fee Calculation Method
+/// This function uses balance checking to determine actual transferred amounts.
+/// While this is generally reliable due to Solana's atomic transaction execution,
+/// there is a potential limitation: if the recipient account receives tokens from
+/// another source within the same transaction (via CPI), the calculated
+/// amount would be inflated.
+///
+/// However, this is not a practical concern in this protocol because:
+/// - For vault accounts: PDAs are owned by the protocol, so no external deposits are possible
+/// - For user accounts: The TransferHook extension is blocked, preventing CPI injection
+///   during transfers; users control their own accounts but cannot inject code
+///   into the protocol's transaction execution
+///
+/// # Why Balance Checking
+/// 1. Works for both Token and Token-2022 mints uniformly
+/// 2. Accounts for all fee scenarios without complex calculations
+/// 3. Solana's atomic transaction execution prevents concurrent modifications to the same accounts
+/// 4. The protocol design (vault accounts controlled by PDAs) prevents external deposits
+///
+/// # Security Properties
+/// - Vault accounts are PDAs owned by the protocol (no external deposits possible)
+/// - User accounts as recipients are safe because:
+///   * TransferHook extension is blocked during pool initialization, preventing
+///     mid-transfer balance manipulation via custom transfer logic
+///   * Users cannot inject additional CPIs into the protocol's execution flow
+///   * Balance checking occurs within the same atomic transaction
+/// - Solana's transaction atomicity prevents concurrent modifications to the same accounts
+/// - Balance differences accurately reflect actual transfer results
 pub fn transfer_tokens_with_fee<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
@@ -284,6 +313,20 @@ pub fn transfer_tokens_with_fee<'a>(
     let mint_state = StateWithExtensions::<Mint>::unpack(&mint_data)?;
     let decimals = mint_state.base.decimals;
     drop(mint_data);
+
+    // Get the recipient's balance before transfer to calculate actual amount received
+    // NOTE: This requires unpacking the account twice (before and after transfer).
+    // While this adds overhead, it's necessary because:
+    // 1. Cannot hold borrow across CPI boundary (transfer instruction)
+    // 2. No way to know if fees apply without checking balance difference
+    // 3. Both Token and Token-2022 use same account structure, so optimization
+    //    would require mint inspection adding similar overhead
+    // 4. Balance checking is the only reliable way to handle all fee scenarios
+    let to_data_before = to.try_borrow_data()?;
+    let to_account_before =
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(&to_data_before)?;
+    let balance_before = to_account_before.base.amount;
+    drop(to_data_before);
 
     let accounts = vec![from.clone(), to.clone(), mint.clone(), authority.clone()];
 
@@ -305,8 +348,40 @@ pub fn transfer_tokens_with_fee<'a>(
         invoke_signed(&transfer_ix, &accounts, signer_seeds)?;
     }
 
-    // For Token-2022 with transfer fees, the actual transferred amount may be less
-    // In production, you'd want to calculate the exact amount after fees
-    // For now, return the requested amount (simplified)
-    Ok(amount)
+    // Calculate the actual amount transferred by checking the balance difference
+    // This properly accounts for any transfer fees that may have been deducted
+    let to_data_after = to.try_borrow_data()?;
+    let to_account_after =
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(&to_data_after)?;
+    let balance_after = to_account_after.base.amount;
+    drop(to_data_after);
+
+    // Ensure balance increased (or stayed the same for zero transfers)
+    // If balance decreased, something unexpected happened - possibly concurrent modifications
+    // or an unvalidated extension causing balance changes
+    if balance_after < balance_before {
+        solana_program::msg!(
+            "Error: Token balance decreased during transfer. Before: {}, After: {}",
+            balance_before,
+            balance_after
+        );
+        return Err(StakePoolError::UnexpectedBalanceChange.into());
+    }
+
+    // Additional check: if amount > 0, balance must have increased
+    // This catches silent transfer failures that didn't error
+    if amount > 0 && balance_after == balance_before {
+        solana_program::msg!(
+            "Error: Transfer of {} tokens resulted in no balance change. Before: {}, After: {}",
+            amount,
+            balance_before,
+            balance_after
+        );
+        return Err(StakePoolError::UnexpectedBalanceChange.into());
+    }
+
+    // Safe: checks above guarantee balance_after >= balance_before and proper state change
+    let actual_transferred = balance_after - balance_before;
+
+    Ok(actual_transferred)
 }

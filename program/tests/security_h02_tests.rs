@@ -28,10 +28,6 @@
 // - Attack scenario prevention
 // - Edge cases and boundary conditions
 
-mod common;
-
-use your_wallet_stake_pool::state::{Key, StakePool};
-
 // ============================================================================
 // Module 1: Minimum Lockup Period Tests
 // ============================================================================

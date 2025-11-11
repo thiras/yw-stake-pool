@@ -53,8 +53,18 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     )?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(ctx.accounts.user_reward_account, &pool_data.reward_mint)?;
-    verify_token_account(ctx.accounts.reward_vault, &pool_data.reward_mint)?;
+    verify_token_account(
+        ctx.accounts.user_reward_account,
+        &pool_data.reward_mint,
+        None,
+        None,
+    )?;
+    verify_token_account(
+        ctx.accounts.reward_vault,
+        &pool_data.reward_mint,
+        None,
+        None,
+    )?;
 
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
@@ -93,7 +103,9 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     seeds_with_bump.push(vec![pool_data.bump]);
     let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
 
-    transfer_tokens_with_fee(
+    // Transfer rewards (with PDA signer)
+    // Capture actual amount transferred in case of transfer fees
+    let actual_amount = transfer_tokens_with_fee(
         ctx.accounts.reward_vault,
         ctx.accounts.user_reward_account,
         ctx.accounts.reward_mint,
@@ -103,13 +115,22 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         &[&seeds_refs],
     )?;
 
-    // Update claimed rewards tracking
+    // Update claimed rewards tracking with the COMMITTED amount (unclaimed_rewards)
+    // NOT the actual amount received after fees.
+    //
+    // Rationale: The protocol committed to pay 'unclaimed_rewards' tokens to the user.
+    // If transfer fees apply, the user receives less (actual_amount < unclaimed_rewards),
+    // but this is a cost borne by the user, not a reason to allow repeated claims.
+    // Recording the full committed amount ensures:
+    // - User cannot claim the same reward multiple times
+    // - total_rewards calculation remains consistent across claims
+    // - Transfer fees are properly accounted for as user cost
     stake_account_data.claimed_rewards = stake_account_data
         .claimed_rewards
         .checked_add(unclaimed_rewards)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    // Update pool's total rewards owed (these rewards have now been paid out)
+    // Update pool's total rewards owed by the full committed amount
     pool_data.total_rewards_owed = pool_data
         .total_rewards_owed
         .checked_sub(unclaimed_rewards)
@@ -120,8 +141,8 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     stake_account_data.save(ctx.accounts.stake_account)?;
 
     msg!(
-        "Claimed {} reward tokens (total claimed: {})",
-        unclaimed_rewards,
+        "Claimed {} reward tokens (actual received after fees), total committed: {}",
+        actual_amount,
         stake_account_data.claimed_rewards
     );
 
@@ -163,11 +184,41 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
     )?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(ctx.accounts.funder_token_account, &pool_data.reward_mint)?;
-    verify_token_account(ctx.accounts.reward_vault, &pool_data.reward_mint)?;
+    verify_token_account(
+        ctx.accounts.funder_token_account,
+        &pool_data.reward_mint,
+        None,
+        None,
+    )?;
+    verify_token_account(
+        ctx.accounts.reward_vault,
+        &pool_data.reward_mint,
+        None,
+        None,
+    )?;
 
     // Transfer reward tokens to pool
-    transfer_tokens_with_fee(
+    // NOTE: Captures actual_amount for accurate logging, but does NOT update pool state.
+    //
+    // Design Rationale:
+    // - total_rewards_owed tracks COMMITTED rewards (via stake operations)
+    // - Reward vault balance tracks AVAILABLE rewards (via fund operations)
+    // - These are intentionally separate concerns:
+    //   * Committed: What the protocol owes to stakers
+    //   * Available: What can actually be paid out
+    //
+    // If transfer fees apply (actual_amount < amount):
+    // - Funder's account is debited 'amount', vault receives 'actual_amount' after fees are deducted
+    // - This is the funder's responsibility to account for
+    // - claim_rewards() checks vault balance before paying out
+    // - If vault balance < committed rewards, claims fail with InsufficientRewards
+    //
+    // This design ensures:
+    // 1. Protocol never over-commits rewards (committed tracked separately)
+    // 2. Protocol never pays out more than available (runtime balance check)
+    // 3. Funders see accurate logs of what was actually deposited
+    // 4. No accounting mismatch in protocol state
+    let actual_amount = transfer_tokens_with_fee(
         ctx.accounts.funder_token_account,
         ctx.accounts.reward_vault,
         ctx.accounts.reward_mint,
@@ -177,6 +228,6 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
         &[],
     )?;
 
-    msg!("Funded pool with {} reward tokens", amount);
+    msg!("Funded pool with {} reward tokens", actual_amount);
     Ok(())
 }

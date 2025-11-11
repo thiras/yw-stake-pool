@@ -113,9 +113,20 @@ pub fn initialize_pool<'a>(
     assert_writable("reward_vault", ctx.accounts.reward_vault)?;
     assert_writable("payer", ctx.accounts.payer)?;
 
-    // Verify token accounts have correct mints
-    verify_token_account(ctx.accounts.stake_vault, ctx.accounts.stake_mint.key)?;
-    verify_token_account(ctx.accounts.reward_vault, ctx.accounts.reward_mint.key)?;
+    // Verify token accounts have correct mints and validate Token-2022 extensions
+    // [M-02] Security Fix: Extension validation during pool initialization
+    verify_token_account(
+        ctx.accounts.stake_vault,
+        ctx.accounts.stake_mint.key,
+        Some(ctx.accounts.stake_mint),
+        Some("stake_mint"),
+    )?;
+    verify_token_account(
+        ctx.accounts.reward_vault,
+        ctx.accounts.reward_mint.key,
+        Some(ctx.accounts.reward_mint),
+        Some("reward_mint"),
+    )?;
 
     // CRITICAL SECURITY FIX [H-01]: Verify vault ownership
     // This prevents an attacker from passing token accounts they control as pool vaults.
