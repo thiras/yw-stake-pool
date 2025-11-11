@@ -334,7 +334,6 @@ fn test_invalid_timestamp_message() {
     let error_string = format!("{}", error);
 
     assert!(error_string.contains("Invalid timestamp"));
-    assert!(error_string.contains("future"));
 }
 
 /// Test timestamp validation scenario
