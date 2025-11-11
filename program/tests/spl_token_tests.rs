@@ -204,8 +204,7 @@ fn create_token_account(
 
 fn initialize_program_authority(svm: &mut LiteSVM, payer: &Keypair, authority: &Keypair) -> Pubkey {
     let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
-    let (program_authority_pda, _) =
-        Pubkey::find_program_address(&[b"program_authority"], &program_id);
+    let (program_authority_pda, _) = get_program_authority_pda();
 
     let init_authority_ix = Instruction {
         program_id,
