@@ -9,6 +9,7 @@ use solana_program::{
 use crate::assertions::*;
 use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
+use crate::processor::helpers::{validate_current_timestamp, validate_stored_timestamp};
 use crate::state::{Key, StakePool};
 
 /// Minimum delay before a reward rate change can be finalized (7 days)
@@ -43,14 +44,7 @@ pub fn update_pool<'a>(
 
     // Get current time once for efficiency (Clock is a sysvar that shouldn't change during transaction)
     let current_time = Clock::get()?.unix_timestamp;
-
-    // Sanity check: reject timestamps before Jan 1, 2021 (1609459200) as likely clock misconfiguration
-    // Note: Negative Unix timestamps are technically valid (pre-1970), but for a modern blockchain
-    // launched after 2021, such timestamps indicate a serious system clock issue
-    if current_time < 1609459200 {
-        msg!("Invalid system time (before 2021-01-01): {}", current_time);
-        return Err(StakePoolError::InvalidTimestamp.into());
-    }
+    validate_current_timestamp(current_time)?;
 
     // Update fields
     if let Some(rate) = reward_rate {
@@ -306,28 +300,7 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
 
     // Check if the delay period has elapsed
     let current_time = Clock::get()?.unix_timestamp;
-
-    // Data corruption check: stored timestamp should be after Jan 1, 2021 (1609459200)
-    // When stored in update_pool, we validate current_time >= 1609459200, so a value below this
-    // indicates corrupted storage (e.g., manual account modification, deserialization bug)
-    // Note: Negative/old Unix timestamps are technically valid, but impossible for modern blockchain
-    if change_timestamp < 1609459200 {
-        msg!(
-            "Data corruption detected: stored timestamp is before 2021-01-01: {}",
-            change_timestamp
-        );
-        return Err(StakePoolError::InvalidTimestamp.into());
-    }
-
-    // Validate timestamp is not in the future (clock manipulation detection)
-    if change_timestamp > current_time {
-        msg!(
-            "Invalid timestamp: change timestamp {} is in the future (current: {}). Possible clock manipulation.",
-            change_timestamp,
-            current_time
-        );
-        return Err(StakePoolError::InvalidTimestamp.into());
-    }
+    validate_stored_timestamp(change_timestamp, current_time)?;
 
     let time_elapsed = current_time
         .checked_sub(change_timestamp)
