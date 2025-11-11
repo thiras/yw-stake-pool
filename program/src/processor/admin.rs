@@ -234,7 +234,18 @@ pub fn nominate_new_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramRes
         ctx.accounts.new_authority.key
     );
 
-    pool_data.save(ctx.accounts.pool)
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+
+    // Emit event for off-chain indexing after successful state save
+    sol_log_data(&[
+        b"AuthorityNominated",
+        ctx.accounts.pool.key.as_ref(),
+        ctx.accounts.current_authority.key.as_ref(),
+        ctx.accounts.new_authority.key.as_ref(),
+    ]);
+
+    Ok(())
 }
 
 pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
@@ -280,7 +291,18 @@ pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         pool_data.authority
     );
 
-    pool_data.save(ctx.accounts.pool)
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+
+    // Emit event for off-chain indexing after successful state save
+    sol_log_data(&[
+        b"AuthorityTransferred",
+        ctx.accounts.pool.key.as_ref(),
+        old_authority.as_ref(),
+        pool_data.authority.as_ref(),
+    ]);
+
+    Ok(())
 }
 
 /// Finalize a pending reward rate change after the delay period has elapsed
@@ -403,5 +425,16 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
         pool_data.reward_rate
     );
 
-    pool_data.save(ctx.accounts.pool)
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+
+    // Emit event for off-chain indexing after successful state save
+    sol_log_data(&[
+        b"RewardRateFinalized",
+        ctx.accounts.pool.key.as_ref(),
+        &old_rate.to_le_bytes(),
+        &pool_data.reward_rate.to_le_bytes(),
+    ]);
+
+    Ok(())
 }
