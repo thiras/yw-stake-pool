@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **[Q-02] Safe Integer Casting**: Replaced unsafe `u128` to `u64` cast with `try_from` in `calculate_rewards`
+  - Prevents potential overflow/truncation issues in reward calculations
+  - Uses checked conversion with proper error handling
+  - Returns `ArithmeticOverflow` error if conversion would lose data
+
+- **[L-02] Account Size Validation**: Added defensive checks for account size validation
+  - Validates that provided accounts have sufficient data length before deserialization
+  - Prevents potential buffer overflow or undefined behavior from undersized accounts
+  - Returns `AccountSizeTooSmall` error for insufficient account size
+  - Added comprehensive test coverage for size validation edge cases
+
+- **[M-03] Freeze Authority Validation**: Prevents pool initialization with mints that have freeze authority
+  - Validates both stake_mint and reward_mint to ensure no freeze authority is set
+  - Protects against centralized control where authority could freeze user funds
+  - Returns `MintHasFreezeAuthority` error if freeze authority is detected
+  - Comprehensive integration test coverage for both SPL Token and Token-2022
+
+- **[M-02] Token-2022 Extension Validation**: Comprehensive Token-2022 extension security
+  - Validates all Token-2022 mint extensions for dangerous configurations
+  - **Dangerous extensions rejected**: `MintCloseAuthority`, `PermanentDelegate`, `TransferHook`, 
+    `MetadataPointer`, `GroupPointer`, `GroupMemberPointer`, `ConfidentialTransferMint`, 
+    `ConfidentialTransferFeeConfig`
+  - **TransferFeeConfig fully supported**: Uses actual transferred amounts for accurate accounting
+  - Balance verification before/after transfers to detect unexpected behavior
+  - Fee costs borne by users, not pool - prevents fee-based reward re-claims
+  - Returns `UnsafeTokenExtension` error for dangerous extensions
+  - Returns `UnexpectedBalanceChange` error for balance verification failures
+  - Extensive test coverage for all extension types
+
+- **[M-01] PDA Front-Running DoS Prevention**: Protects PDA account creation from front-running attacks
+  - Validates account ownership and data state before initialization
+  - Rejects pre-allocated accounts with non-zero data
+  - Implements idempotency check with discriminator validation for already-initialized accounts
+  - Prevents attackers from blocking PDA creation by pre-funding accounts
+  - Returns `AccountAlreadyInitialized` error for pre-existing data
+  - Returns `AccountSizeTooSmall` error for insufficient pre-allocated space
+  - Comprehensive test coverage for all attack vectors
+
+- **[H-02] Reward Vault Drain Prevention**: Enforces minimum lockup period to prevent reward vault drain
+  - Minimum 1-second lockup period required for all pools
+  - Prevents zero-lockup exploit where users could stake/unstake rapidly to drain rewards
+  - Returns `InvalidLockupPeriod` error if lockup period is zero
+  - Maintains backward compatibility - pools can still use short lockups (e.g., 1 second)
+  - Critical security fix that prevents complete reward vault drainage
+
+- **[H-01] Vault Ownership Validation**: Validates reward vault ownership in pool initialization
+  - Ensures reward_vault is owned by the pool's PDA authority
+  - Prevents pools from being initialized with vaults they don't control
+  - Returns `InvalidVaultOwner` error if vault ownership is incorrect
+  - Protects against misconfiguration and potential fund theft
+
 ### Added
 - **Admin-Only Pool Creation [Q-01 Security Fix]**: Restricts pool creation to authorized admins
   - `ProgramAuthority` state account (365 bytes) with PDA seed `"program_authority"`
