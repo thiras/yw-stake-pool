@@ -366,6 +366,39 @@ impl StakePool {
 
         Ok(rewards)
     }
+
+    /// Check if the pool has sufficient rewards to cover all owed rewards.
+    ///
+    /// This is a solvency check that verifies the reward vault has enough tokens
+    /// to satisfy all committed rewards. Should be called periodically for monitoring
+    /// and before accepting new stakes.
+    ///
+    /// # Arguments
+    /// * `reward_vault_balance` - Current balance of the reward vault token account
+    ///
+    /// # Returns
+    /// - `Ok(())` if pool is solvent (vault balance >= total_rewards_owed)
+    /// - `Err(InsufficientRewards)` if reward vault balance < total_rewards_owed
+    ///
+    /// # Example
+    /// ```ignore
+    /// let vault_balance = get_token_account_balance(reward_vault)?;
+    /// pool.verify_solvency(vault_balance)?;
+    /// ```
+    pub fn verify_solvency(&self, reward_vault_balance: u64) -> Result<(), ProgramError> {
+        if reward_vault_balance < self.total_rewards_owed {
+            msg!(
+                "Pool insolvency detected! Owed: {}, Available: {}, Deficit: {}",
+                self.total_rewards_owed,
+                reward_vault_balance,
+                self.total_rewards_owed
+                    .checked_sub(reward_vault_balance)
+                    .unwrap_or(0)
+            );
+            return Err(StakePoolError::InsufficientRewards.into());
+        }
+        Ok(())
+    }
 }
 
 impl StakeAccount {
