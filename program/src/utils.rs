@@ -339,9 +339,21 @@ pub fn transfer_tokens_with_fee<'a>(
     let balance_after = to_account_after.base.amount;
     drop(to_data_after);
 
+    // Ensure balance increased (or stayed the same for zero transfers)
+    // If balance decreased, something unexpected happened - possibly concurrent modifications
+    // or an unvalidated extension causing balance changes
+    if balance_after < balance_before {
+        solana_program::msg!(
+            "Error: Token balance decreased during transfer. Before: {}, After: {}",
+            balance_before,
+            balance_after
+        );
+        return Err(StakePoolError::UnexpectedBalanceChange.into());
+    }
+
     let actual_transferred = balance_after
         .checked_sub(balance_before)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(StakePoolError::UnexpectedBalanceChange)?;
 
     Ok(actual_transferred)
 }

@@ -86,6 +86,9 @@ pub enum StakePoolError {
     /// 26 - Unsafe Token-2022 extension detected
     #[error("Unsafe Token-2022 extension detected")]
     UnsafeTokenExtension,
+    /// 27 - Unexpected token balance change during transfer
+    #[error("Unexpected token balance change during transfer")]
+    UnexpectedBalanceChange,
 }
 
 impl From<StakePoolError> for ProgramError {
