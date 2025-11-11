@@ -148,7 +148,7 @@ test('StakePool pending fields work together', (t) => {
 
   // Scenario: pending reward rate change
   const currentTime = 1700000000n;
-  const changeTime = currentTime + 604800n; // 7 days later
+  const proposalTime = currentTime; // When the change was proposed
 
   const stakePool = {
     key: 1,
@@ -169,7 +169,7 @@ test('StakePool pending fields work together', (t) => {
     pendingAuthority: null,
     poolEndDate: null,
     pendingRewardRate: some(200_000_000n), // Pending: 20%
-    rewardRateChangeTimestamp: some(changeTime),
+    rewardRateChangeTimestamp: some(proposalTime),
     reserved: new Uint8Array(16),
   };
 
@@ -183,7 +183,7 @@ test('StakePool pending fields work together', (t) => {
   });
   t.deepEqual(decoded.rewardRateChangeTimestamp, {
     __option: 'Some',
-    value: changeTime,
+    value: proposalTime,
   });
   t.is(decoded.rewardRate, 100_000_000n); // Current rate unchanged
 });
