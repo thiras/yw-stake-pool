@@ -46,7 +46,7 @@ try {
     systemProgram: address('11111111111111111111111111111111'),
     rent: address('SysvarRent111111111111111111111111111111111'),
     programAuthority: address('11111111111111111111111111111114'), // Program authority PDA
-    poolId: 0n, // First pool for this authority + stake_mint
+    poolId: 0n, // First pool for this stake_mint
     rewardRate: 100_000_000n,
     minStakeAmount: 1_000_000n,
     lockupPeriod: 86400n,

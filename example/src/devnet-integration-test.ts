@@ -158,7 +158,7 @@ async function main() {
       systemProgram: config.systemProgramId,
       rent: address('SysvarRent111111111111111111111111111111111'),
       programAuthority, // Required: validates creator permission
-      poolId: 0n, // First pool for this authority + stake_mint
+      poolId: 0n, // First pool for this stake_mint
       rewardRate: config.defaultPoolConfig.rewardRate,
       minStakeAmount: config.defaultPoolConfig.minStakeAmount,
       lockupPeriod: config.defaultPoolConfig.lockupPeriod,

@@ -130,8 +130,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **DO NOT deploy to clusters with existing pools without proper migration**
 
 - **Dependency Updates**: Updated to latest Solana toolchain versions
-  - `solana-program`: 2.2.1
-  - `shank`: 0.4.4
+  - `solana-program`: 2.3.0
+  - `shank`: 0.4.5
   - Ensures compatibility with latest Solana features and security patches
 
 ### Documentation
