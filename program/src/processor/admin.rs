@@ -296,10 +296,15 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
     // Check if the delay period has elapsed
     let current_time = Clock::get()?.unix_timestamp;
 
-    // Defensive validation: ensure stored timestamp is valid (non-negative)
-    // While we validate when storing, this protects against corrupted storage or edge cases
+    // Data corruption check: stored timestamp should never be negative
+    // When stored in update_pool, we validate current_time >= 0, so a negative value here
+    // indicates corrupted storage (e.g., manual account modification, deserialization bug)
+    // Note: Negative Unix timestamps are technically valid (pre-1970), but impossible here
     if change_timestamp < 0 {
-        msg!("Invalid stored timestamp: {}", change_timestamp);
+        msg!(
+            "Data corruption detected: stored timestamp is negative: {}",
+            change_timestamp
+        );
         return Err(StakePoolError::InvalidTimestamp.into());
     }
 
