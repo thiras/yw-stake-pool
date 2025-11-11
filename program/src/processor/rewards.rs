@@ -115,16 +115,25 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         &[&seeds_refs],
     )?;
 
-    // Update claimed rewards tracking with actual amount transferred
+    // Update claimed rewards tracking with the COMMITTED amount (unclaimed_rewards)
+    // NOT the actual amount received after fees.
+    //
+    // Rationale: The protocol committed to pay 'unclaimed_rewards' tokens to the user.
+    // If transfer fees apply, the user receives less (actual_amount < unclaimed_rewards),
+    // but this is a cost borne by the user, not a reason to allow repeated claims.
+    // Recording the full committed amount ensures:
+    // - User cannot claim the same reward multiple times
+    // - total_rewards calculation remains consistent across claims
+    // - Transfer fees are properly accounted for as user cost
     stake_account_data.claimed_rewards = stake_account_data
         .claimed_rewards
-        .checked_add(actual_amount)
+        .checked_add(unclaimed_rewards)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
-    // Update pool's total rewards owed (these rewards have now been paid out)
+    // Update pool's total rewards owed by the full committed amount
     pool_data.total_rewards_owed = pool_data
         .total_rewards_owed
-        .checked_sub(actual_amount)
+        .checked_sub(unclaimed_rewards)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
     // Save updated accounts
