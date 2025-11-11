@@ -281,20 +281,24 @@ impl StakePool {
         let current_time = Clock::get()?.unix_timestamp;
 
         // Import validation functions
-        use crate::processor::helpers::{validate_current_timestamp, validate_stored_timestamp};
+        use crate::processor::helpers::{
+            validate_current_timestamp, validate_future_allowed_timestamp,
+            validate_stored_timestamp,
+        };
         validate_current_timestamp(current_time)?;
 
-        // Validate pool_end_date if present
+        // Validate pool_end_date if present - allows future timestamps since it's an expiration date
         if let Some(end_date) = pool.pool_end_date {
-            validate_stored_timestamp(end_date, current_time)?;
+            validate_future_allowed_timestamp(end_date)?;
         }
 
-        // Validate reward_rate_change_timestamp if present
+        // Validate reward_rate_change_timestamp if present - should not be in future
+        // since it's set to current_time when a rate change is proposed
         if let Some(change_ts) = pool.reward_rate_change_timestamp {
             validate_stored_timestamp(change_ts, current_time)?;
         }
 
-        // Validate last_rate_change if present
+        // Validate last_rate_change if present - historical timestamp, should not be in future
         if let Some(last_change) = pool.last_rate_change {
             validate_stored_timestamp(last_change, current_time)?;
         }

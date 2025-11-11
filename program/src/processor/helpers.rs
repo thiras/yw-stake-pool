@@ -27,6 +27,9 @@ pub fn validate_current_timestamp(timestamp: i64) -> Result<(), ProgramError> {
 /// This checks for both data corruption (stored timestamp is too old) and
 /// clock manipulation (stored timestamp is in the future compared to current time)
 ///
+/// **Use this for historical timestamps** like `stake_timestamp`, `last_rate_change`, etc.
+/// that should never be in the future.
+///
 /// # Errors
 /// Returns InvalidTimestamp if:
 /// - The stored timestamp is before MIN_VALID_TIMESTAMP (data corruption)
@@ -44,6 +47,32 @@ pub fn validate_stored_timestamp(stored: i64, current: i64) -> Result<(), Progra
             "Invalid timestamp: stored {} is in the future (current: {}). Possible clock manipulation.",
             stored,
             current
+        );
+        return Err(StakePoolError::InvalidTimestamp.into());
+    }
+    Ok(())
+}
+
+/// Validates that a timestamp is reasonable but allows future values
+///
+/// This only checks for data corruption (stored timestamp is too old) but does NOT
+/// reject future timestamps. This is appropriate for fields that are intended to be
+/// set to future dates, such as `pool_end_date` or other expiration timestamps.
+///
+/// **Use this for future-allowed timestamps** like `pool_end_date` that represent
+/// future expiration dates or deadlines.
+///
+/// # Errors
+/// Returns InvalidTimestamp if:
+/// - The stored timestamp is before MIN_VALID_TIMESTAMP (data corruption)
+///
+/// # Arguments
+/// * `timestamp` - The timestamp to validate
+pub fn validate_future_allowed_timestamp(timestamp: i64) -> Result<(), ProgramError> {
+    if timestamp < MIN_VALID_TIMESTAMP {
+        msg!(
+            "Data corruption detected: timestamp is before 2021-01-01: {}",
+            timestamp
         );
         return Err(StakePoolError::InvalidTimestamp.into());
     }
