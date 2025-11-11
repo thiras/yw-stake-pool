@@ -189,6 +189,26 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
     )?;
 
     // Transfer reward tokens to pool
+    // NOTE: Captures actual_amount for accurate logging, but does NOT update pool state.
+    //
+    // Design Rationale:
+    // - total_rewards_owed tracks COMMITTED rewards (via stake operations)
+    // - Reward vault balance tracks AVAILABLE rewards (via fund operations)
+    // - These are intentionally separate concerns:
+    //   * Committed: What the protocol owes to stakers
+    //   * Available: What can actually be paid out
+    //
+    // If transfer fees apply (actual_amount < amount):
+    // - Funder pays 'amount' but vault receives 'actual_amount'
+    // - This is the funder's responsibility to account for
+    // - claim_rewards() checks vault balance before paying out
+    // - If vault balance < committed rewards, claims fail with InsufficientRewards
+    //
+    // This design ensures:
+    // 1. Protocol never over-commits rewards (committed tracked separately)
+    // 2. Protocol never pays out more than available (runtime balance check)
+    // 3. Funders see accurate logs of what was actually deposited
+    // 4. No accounting mismatch in protocol state
     let actual_amount = transfer_tokens_with_fee(
         ctx.accounts.funder_token_account,
         ctx.accounts.reward_vault,
