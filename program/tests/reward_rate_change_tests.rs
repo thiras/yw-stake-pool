@@ -310,7 +310,6 @@ fn test_cancellation_semantics() {
     let different_rate = 50_000_000u64;
 
     assert_ne!(current_rate, different_rate);
-    assert_eq!(current_rate, current_rate); // Tautology for clarity
 }
 
 /// Test invalid timestamp error exists
