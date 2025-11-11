@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.0] - 2025-11-11
+## [Unreleased]
 
 ### Fixed
 - **[Q-02] Safe Integer Casting**: Replaced unsafe `u128` to `u64` cast with `try_from` in `calculate_rewards`
