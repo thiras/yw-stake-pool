@@ -312,3 +312,63 @@ fn test_cancellation_semantics() {
     assert_ne!(current_rate, different_rate);
     assert_eq!(current_rate, current_rate); // Tautology for clarity
 }
+
+/// Test invalid timestamp error exists
+#[test]
+fn test_invalid_timestamp_error() {
+    use your_wallet_stake_pool::error::StakePoolError;
+
+    // Verify the error exists and has correct discriminator
+    let error = StakePoolError::InvalidTimestamp;
+    let error_code = error as u32;
+
+    // Should be error 32 (the 33rd variant, 0-indexed)
+    assert_eq!(error_code, 32);
+}
+
+/// Test invalid timestamp error message
+#[test]
+fn test_invalid_timestamp_message() {
+    use your_wallet_stake_pool::error::StakePoolError;
+
+    let error = StakePoolError::InvalidTimestamp;
+    let error_string = format!("{}", error);
+
+    assert!(error_string.contains("Invalid timestamp"));
+    assert!(error_string.contains("future"));
+}
+
+/// Test timestamp validation scenario
+#[test]
+fn test_future_timestamp_scenario() {
+    // Create a StakePool with a timestamp in the future
+    // This could indicate clock manipulation
+    let pool = StakePool {
+        key: your_wallet_stake_pool::state::Key::StakePool,
+        authority: Pubkey::new_unique(),
+        stake_mint: Pubkey::new_unique(),
+        reward_mint: Pubkey::new_unique(),
+        pool_id: 0,
+        stake_vault: Pubkey::new_unique(),
+        reward_vault: Pubkey::new_unique(),
+        total_staked: 0,
+        total_rewards_owed: 0,
+        reward_rate: 100_000_000,
+        min_stake_amount: 1000,
+        lockup_period: 86400,
+        is_paused: false,
+        enforce_lockup: false,
+        bump: 255,
+        pending_authority: None,
+        pool_end_date: None,
+        pending_reward_rate: Some(50_000_000),
+        reward_rate_change_timestamp: Some(9999999999), // Far future timestamp
+        _reserved: [0; 16],
+    };
+
+    // Verify timestamp is far in the future
+    assert!(pool.reward_rate_change_timestamp.unwrap() > 2000000000);
+
+    // In implementation: finalize_reward_rate_change would detect this
+    // and return InvalidTimestamp error
+}

@@ -101,6 +101,9 @@ pub enum StakePoolError {
     /// 31 - Pending reward rate change already exists
     #[error("Pending reward rate change already exists")]
     PendingRewardRateChangeExists,
+    /// 32 - Invalid timestamp (timestamp is in the future)
+    #[error("Invalid timestamp (timestamp is in the future)")]
+    InvalidTimestamp,
 }
 
 impl From<StakePoolError> for ProgramError {

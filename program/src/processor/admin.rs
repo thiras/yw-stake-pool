@@ -252,6 +252,17 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
 
     // Check if the delay period has elapsed
     let current_time = Clock::get()?.unix_timestamp;
+
+    // Validate timestamp is not in the future (clock manipulation detection)
+    if change_timestamp > current_time {
+        msg!(
+            "Invalid timestamp: change timestamp {} is in the future (current: {}). Possible clock manipulation.",
+            change_timestamp,
+            current_time
+        );
+        return Err(StakePoolError::InvalidTimestamp.into());
+    }
+
     let time_elapsed = current_time
         .checked_sub(change_timestamp)
         .ok_or(StakePoolError::NumericalOverflow)?;

@@ -956,6 +956,11 @@
       "code": 31,
       "name": "PendingRewardRateChangeExists",
       "msg": "Pending reward rate change already exists"
+    },
+    {
+      "code": 32,
+      "name": "InvalidTimestamp",
+      "msg": "Invalid timestamp (timestamp is in the future)"
     }
   ],
   "metadata": {
