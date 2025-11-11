@@ -41,6 +41,9 @@ pub fn update_pool<'a>(
     assert_writable("pool", ctx.accounts.pool)?;
     assert_same_pubkeys("authority", ctx.accounts.authority, &pool_data.authority)?;
 
+    // Get current time once for efficiency (Clock is a sysvar that shouldn't change during transaction)
+    let current_time = Clock::get()?.unix_timestamp;
+
     // Update fields
     if let Some(rate) = reward_rate {
         if rate > 1_000_000_000_000 {
@@ -50,7 +53,6 @@ pub fn update_pool<'a>(
 
         // Set pending reward rate change instead of immediate change
         // This gives users 7 days to exit if they disagree
-        let current_time = Clock::get()?.unix_timestamp;
         pool_data.pending_reward_rate = Some(rate);
         pool_data.reward_rate_change_timestamp = Some(current_time);
 
@@ -79,7 +81,6 @@ pub fn update_pool<'a>(
     }
     if let Some(end_date) = pool_end_date {
         // Prevent extending pool after end date has passed
-        let current_time = Clock::get()?.unix_timestamp;
         if let Some(existing_end) = pool_data.pool_end_date {
             if current_time >= existing_end {
                 // Pool has already ended
