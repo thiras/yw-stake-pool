@@ -264,6 +264,13 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
     // Check if the delay period has elapsed
     let current_time = Clock::get()?.unix_timestamp;
 
+    // Defensive validation: ensure stored timestamp is valid (non-negative)
+    // While we validate when storing, this protects against corrupted storage or edge cases
+    if change_timestamp < 0 {
+        msg!("Invalid stored timestamp: {}", change_timestamp);
+        return Err(StakePoolError::InvalidTimestamp.into());
+    }
+
     // Validate timestamp is not in the future (clock manipulation detection)
     if change_timestamp > current_time {
         msg!(
