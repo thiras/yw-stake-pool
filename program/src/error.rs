@@ -92,6 +92,12 @@ pub enum StakePoolError {
     /// 28 - Mint has freeze authority (can lock user funds)
     #[error("Mint has freeze authority (can lock user funds)")]
     MintHasFreezeAuthority,
+    /// 29 - Reward rate change delay not elapsed
+    #[error("Reward rate change delay not elapsed")]
+    RewardRateChangeDelayNotElapsed,
+    /// 30 - No pending reward rate change
+    #[error("No pending reward rate change")]
+    NoPendingRewardRateChange,
 }
 
 impl From<StakePoolError> for ProgramError {

@@ -478,7 +478,9 @@ fn test_stake_pool_serialized_size() {
         bump: 255,
         pending_authority: None,
         pool_end_date: None,
-        _reserved: [0; 32],
+        pending_reward_rate: None,
+        reward_rate_change_timestamp: None,
+        _reserved: [0; 16],
     };
 
     // Serialize it
@@ -514,7 +516,9 @@ fn test_stake_pool_serialized_size() {
         bump: 255,
         pending_authority: Some(Pubkey::new_unique()),
         pool_end_date: Some(12345678),
-        _reserved: [0; 32],
+        pending_reward_rate: Some(5_000_000_000),
+        reward_rate_change_timestamp: Some(1700000000),
+        _reserved: [0; 16],
     };
 
     let serialized_with_optionals = pool_with_optionals.try_to_vec().unwrap();
@@ -536,35 +540,35 @@ fn test_stake_pool_serialized_size() {
 
 #[test]
 fn test_spl_token_integration_summary() {
-    println!("\n╔═══════════════════════════════════════════════════════════╗");
-    println!("║   LiteSVM + SPL Token 2022 Integration - Summary         ║");
-    println!("╠═══════════════════════════════════════════════════════════╣");
-    println!("║                                                           ║");
-    println!("║ Strategy:                                                 ║");
-    println!("║  1. Auto-download SPL Token 2022 program (if needed)    ║");
-    println!("║  2. Load program into LiteSVM                            ║");
-    println!("║  3. Run full integration tests                           ║");
-    println!("║                                                           ║");
-    println!("║ Setup:                                                    ║");
-    println!("║  🚀 Automatic! Just run: cargo test --test spl_token_... ║");
-    println!("║  The program will be downloaded automatically if missing ║");
-    println!("║                                                           ║");
-    println!("║ Test Coverage:                                            ║");
-    println!("║  ✅ SPL Token program loading (auto-download)            ║");
-    println!("║  ✅ Mint creation                                        ║");
-    println!("║  ✅ Token account creation                               ║");
-    println!("║  ✅ Token minting                                        ║");
-    println!("║  ✅ Balance checking                                     ║");
-    println!("║  ✅ Pool initialization with real tokens                 ║");
-    println!("║                                                           ║");
-    println!("║ Benefits:                                                 ║");
-    println!("║  ⚡ Fast execution (< 1 second)                          ║");
-    println!("║  🎯 Full token operation testing                         ║");
-    println!("║  🔧 No validator needed                                  ║");
-    println!("║  🚀 Zero-config setup (auto-download)                    ║");
-    println!("║  ✅ Complete integration coverage                        ║");
-    println!("║                                                           ║");
-    println!("╚═══════════════════════════════════════════════════════════╝\n");
+    println!("\n================================================================");
+    println!("   LiteSVM + SPL Token 2022 Integration - Summary");
+    println!("================================================================");
+    println!("");
+    println!(" Strategy:");
+    println!("  1. Auto-download SPL Token 2022 program (if needed)");
+    println!("  2. Load program into LiteSVM");
+    println!("  3. Run full integration tests");
+    println!("");
+    println!(" Setup:");
+    println!("  - Automatic! Just run: cargo test --test spl_token_tests");
+    println!("  - The program will be downloaded automatically if missing");
+    println!("");
+    println!(" Test Coverage:");
+    println!("  - SPL Token program loading (auto-download)");
+    println!("  - Mint creation");
+    println!("  - Token account creation");
+    println!("  - Token minting");
+    println!("  - Balance checking");
+    println!("  - Pool initialization with real tokens");
+    println!("");
+    println!(" Benefits:");
+    println!("  - Fast execution (< 1 second)");
+    println!("  - Full token operation testing");
+    println!("  - No validator needed");
+    println!("  - Zero-config setup (auto-download)");
+    println!("  - Complete integration coverage");
+    println!("");
+    println!("================================================================\n");
 }
 
 // ============================================================================

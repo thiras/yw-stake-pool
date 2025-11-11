@@ -14,7 +14,9 @@ mod rewards;
 mod stake;
 
 // Re-export handler functions
-pub use admin::{accept_authority, nominate_new_authority, update_pool};
+pub use admin::{
+    accept_authority, finalize_reward_rate_change, nominate_new_authority, update_pool,
+};
 pub use close::close_stake_account;
 pub use initialize::initialize_pool;
 pub use rewards::{claim_rewards, fund_rewards};
@@ -118,6 +120,10 @@ pub fn process_instruction<'a>(
         StakePoolInstruction::CloseStakeAccount => {
             msg!("Instruction: CloseStakeAccount");
             close_stake_account(accounts)
+        }
+        StakePoolInstruction::FinalizeRewardRateChange => {
+            msg!("Instruction: FinalizeRewardRateChange");
+            finalize_reward_rate_change(accounts)
         }
     }
 }

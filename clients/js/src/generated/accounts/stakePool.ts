@@ -65,6 +65,8 @@ export type StakePool = {
   bump: number;
   pendingAuthority: Option<Address>;
   poolEndDate: Option<bigint>;
+  pendingRewardRate: Option<bigint>;
+  rewardRateChangeTimestamp: Option<bigint>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -86,6 +88,8 @@ export type StakePoolArgs = {
   bump: number;
   pendingAuthority: OptionOrNullable<Address>;
   poolEndDate: OptionOrNullable<number | bigint>;
+  pendingRewardRate: OptionOrNullable<number | bigint>;
+  rewardRateChangeTimestamp: OptionOrNullable<number | bigint>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -108,7 +112,9 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
     ['bump', getU8Encoder()],
     ['pendingAuthority', getOptionEncoder(getAddressEncoder())],
     ['poolEndDate', getOptionEncoder(getI64Encoder())],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
+    ['pendingRewardRate', getOptionEncoder(getU64Encoder())],
+    ['rewardRateChangeTimestamp', getOptionEncoder(getI64Encoder())],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 16)],
   ]);
 }
 
@@ -131,7 +137,9 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['bump', getU8Decoder()],
     ['pendingAuthority', getOptionDecoder(getAddressDecoder())],
     ['poolEndDate', getOptionDecoder(getI64Decoder())],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
+    ['pendingRewardRate', getOptionDecoder(getU64Decoder())],
+    ['rewardRateChangeTimestamp', getOptionDecoder(getI64Decoder())],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 16)],
   ]);
 }
 

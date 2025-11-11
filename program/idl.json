@@ -610,6 +610,24 @@
         "type": "u8",
         "value": 8
       }
+    },
+    {
+      "name": "FinalizeRewardRateChange",
+      "accounts": [
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The stake pool"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 9
+      }
     }
   ],
   "accounts": [
@@ -693,11 +711,23 @@
             }
           },
           {
+            "name": "pendingRewardRate",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "rewardRateChangeTimestamp",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                32
+                16
               ]
             }
           }
@@ -911,6 +941,16 @@
       "code": 28,
       "name": "MintHasFreezeAuthority",
       "msg": "Mint has freeze authority (can lock user funds)"
+    },
+    {
+      "code": 29,
+      "name": "RewardRateChangeDelayNotElapsed",
+      "msg": "Reward rate change delay not elapsed"
+    },
+    {
+      "code": 30,
+      "name": "NoPendingRewardRateChange",
+      "msg": "No pending reward rate change"
     }
   ],
   "metadata": {

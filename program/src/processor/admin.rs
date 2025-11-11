@@ -11,6 +11,10 @@ use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
 use crate::state::{Key, StakePool};
 
+/// Minimum delay before a reward rate change can be finalized (7 days)
+/// This gives users time to react and unstake if they disagree with the new rate
+const REWARD_RATE_CHANGE_DELAY: i64 = 604800; // 7 days in seconds
+
 pub fn update_pool<'a>(
     accounts: &'a [AccountInfo<'a>],
     reward_rate: Option<u64>,
@@ -43,7 +47,19 @@ pub fn update_pool<'a>(
             msg!("Reward rate too high: {}", rate);
             return Err(StakePoolError::InvalidParameters.into());
         }
-        pool_data.reward_rate = rate;
+
+        // Set pending reward rate change instead of immediate change
+        // This gives users 7 days to exit if they disagree
+        let current_time = Clock::get()?.unix_timestamp;
+        pool_data.pending_reward_rate = Some(rate);
+        pool_data.reward_rate_change_timestamp = Some(current_time);
+
+        msg!(
+            "Reward rate change proposed: {} -> {}. Will take effect after {} (7 days from now)",
+            pool_data.reward_rate,
+            rate,
+            current_time + REWARD_RATE_CHANGE_DELAY
+        );
     }
     if let Some(min_amount) = min_stake_amount {
         pool_data.min_stake_amount = min_amount;
@@ -166,6 +182,69 @@ pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         "Authority transfer complete. Old: {}, New: {}",
         old_authority,
         pool_data.authority
+    );
+
+    pool_data.save(ctx.accounts.pool)
+}
+
+/// Finalize a pending reward rate change after the delay period has elapsed
+///
+/// This completes the two-step process for changing reward rates:
+/// 1. Authority calls update_pool with new rate (sets pending)
+/// 2. After 7 days, anyone can call this to apply the change
+///
+/// # Security: L-01 Mitigation
+/// This time-locked mechanism prevents centralized surprise changes to reward rates.
+/// Users have 7 days notice to unstake if they disagree with the new rate.
+pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    // Parse accounts using ShankContext-generated struct
+    let ctx = FinalizeRewardRateChangeAccounts::context(accounts)?;
+
+    // Verify pool account discriminator before loading (Type Cosplay protection)
+    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+
+    // Verify program ownership
+    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
+
+    // Load pool
+    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+
+    // Guards
+    assert_writable("pool", ctx.accounts.pool)?;
+
+    // Check if there is a pending reward rate change
+    let pending_rate = pool_data
+        .pending_reward_rate
+        .ok_or(StakePoolError::NoPendingRewardRateChange)?;
+
+    let change_timestamp = pool_data
+        .reward_rate_change_timestamp
+        .ok_or(StakePoolError::NoPendingRewardRateChange)?;
+
+    // Check if the delay period has elapsed
+    let current_time = Clock::get()?.unix_timestamp;
+    let time_elapsed = current_time
+        .checked_sub(change_timestamp)
+        .ok_or(StakePoolError::NumericalOverflow)?;
+
+    if time_elapsed < REWARD_RATE_CHANGE_DELAY {
+        msg!(
+            "Reward rate change delay not elapsed. Time remaining: {} seconds",
+            REWARD_RATE_CHANGE_DELAY - time_elapsed
+        );
+        return Err(StakePoolError::RewardRateChangeDelayNotElapsed.into());
+    }
+
+    // Apply the pending change
+    let old_rate = pool_data.reward_rate;
+    pool_data.reward_rate = pending_rate;
+    pool_data.pending_reward_rate = None;
+    pool_data.reward_rate_change_timestamp = None;
+
+    msg!(
+        "Reward rate change finalized: {} -> {}",
+        old_rate,
+        pool_data.reward_rate
     );
 
     pool_data.save(ctx.accounts.pool)

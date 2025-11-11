@@ -99,9 +99,15 @@ pub struct StakePool {
     /// Optional pool end date (Unix timestamp). If set, no new stakes allowed after this time.
     /// None means the pool runs indefinitely.
     pub pool_end_date: Option<i64>,
+    /// Pending reward rate change (None if no change pending)
+    /// Set by update_pool, applied by finalize_reward_rate_change after delay
+    pub pending_reward_rate: Option<u64>,
+    /// Timestamp when pending reward rate change was proposed
+    /// Used to enforce REWARD_RATE_CHANGE_DELAY before finalizing
+    pub reward_rate_change_timestamp: Option<i64>,
     /// Reserved space for future use. Not currently used.
     /// This field allows for future upgrades without breaking compatibility.
-    pub _reserved: [u8; 32],
+    pub _reserved: [u8; 16],
 }
 
 /// Individual user stake account (one per deposit)
@@ -144,13 +150,15 @@ impl StakePool {
     // - bump (u8): 1 byte
     // - pending_authority (Option<Pubkey>): 1 byte when None, 33 bytes when Some
     // - pool_end_date (Option<i64>): 1 byte when None, 9 bytes when Some
-    // - _reserved: 32 bytes
+    // - pending_reward_rate (Option<u64>): 1 byte when None, 9 bytes when Some
+    // - reward_rate_change_timestamp (Option<i64>): 1 byte when None, 9 bytes when Some
+    // - _reserved: 16 bytes
     //
-    // We allocate for the maximum size (both Options as Some) to support future updates
-    // None: 1 + 32*5 + 8*5 + 1*3 + 1 + 1 + 32 = 246 bytes
-    // Some: 1 + 32*5 + 8*5 + 1*3 + 33 + 9 + 32 = 286 bytes
+    // We allocate for the maximum size (all Options as Some) to support future updates
+    // None: 1 + 32*5 + 8*5 + 1*3 + 1 + 1 + 1 + 1 + 16 = 246 bytes
+    // Some: 1 + 32*5 + 8*5 + 1*3 + 33 + 9 + 9 + 9 + 16 = 286 bytes
     pub const LEN: usize =
-        1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 32;
+        1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 9 + 9 + 16;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> Vec<Vec<u8>> {
         vec![
