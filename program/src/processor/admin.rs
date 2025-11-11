@@ -245,6 +245,13 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
         return Err(StakePoolError::RewardRateChangeDelayNotElapsed.into());
     }
 
+    // Validate pending rate is within acceptable bounds (defense in depth)
+    // Even though validated when proposed, validation logic could have changed
+    if pending_rate > 1_000_000_000_000 {
+        msg!("Pending reward rate too high: {}", pending_rate);
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+
     // Apply the pending change
     let old_rate = pool_data.reward_rate;
     pool_data.reward_rate = pending_rate;
