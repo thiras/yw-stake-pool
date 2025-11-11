@@ -1,6 +1,7 @@
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
+    msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     pubkey::Pubkey,
@@ -11,6 +12,10 @@ use solana_sdk_ids::system_program;
 use spl_token_2022::{extension::StateWithExtensions, instruction::transfer_checked, state::Mint};
 
 use crate::error::StakePoolError;
+
+/// Minimum rent-exempt balance for a typical account
+/// Used to prevent griefing attacks with tiny lamport transfers
+const MIN_ADDITIONAL_LAMPORTS: u64 = 890880;
 
 /// Create a new PDA account from the given size.
 ///
@@ -79,6 +84,18 @@ pub fn create_account<'a>(
         if current_lamports < required_lamports {
             // Safe: condition above guarantees required_lamports > current_lamports
             let additional_lamports = required_lamports - current_lamports;
+
+            // Prevent griefing: Reject if additional amount is too small
+            // This prevents attackers from forcing us to make uneconomical transfers
+            // or hitting edge cases with rent-exemption calculations
+            if additional_lamports < MIN_ADDITIONAL_LAMPORTS {
+                msg!(
+                    "Account has insufficient lamports and additional amount too small: {}. Expected at least: {}",
+                    additional_lamports,
+                    MIN_ADDITIONAL_LAMPORTS
+                );
+                return Err(StakePoolError::ExpectedEmptyAccount.into());
+            }
 
             // Transfer additional lamports to meet rent requirement
             let transfer_ix = solana_program::system_instruction::transfer(
