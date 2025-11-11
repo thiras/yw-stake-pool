@@ -405,7 +405,11 @@ fn test_creator_count_accuracy() {
 
     for (i, creator) in creators_to_remove.iter().enumerate() {
         program_authority.remove_creator(creator).unwrap();
-        assert_eq!(program_authority.creator_count, 4 - i as u8);
+        // Count should decrease: 5 -> 4 -> 3 -> 2 -> 1 -> 0
+        assert_eq!(
+            program_authority.creator_count,
+            (creators_to_remove.len() - 1 - i) as u8
+        );
     }
 }
 
