@@ -45,14 +45,6 @@ pub fn initialize_program_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> Prog
     )?;
     assert_signer("initial_authority", ctx.accounts.initial_authority)?;
     assert_signer("payer", ctx.accounts.payer)?;
-
-    // CRITICAL: Check if already initialized to prevent reinitialization attack
-    // This prevents an attacker from closing and recreating the account with a different authority
-    if ctx.accounts.program_authority.data_len() > 0 {
-        msg!("Program authority already initialized");
-        return Err(StakePoolError::AlreadyInitialized.into());
-    }
-
     assert_empty("program_authority", ctx.accounts.program_authority)?;
     assert_writable("program_authority", ctx.accounts.program_authority)?;
     assert_writable("payer", ctx.accounts.payer)?;
