@@ -966,6 +966,11 @@
       "code": 33,
       "name": "DataCorruption",
       "msg": "Data corruption detected (state invariant violated)"
+    },
+    {
+      "code": 34,
+      "name": "AccountSizeTooSmall",
+      "msg": "Account size too small for serialized data"
     }
   ],
   "metadata": {
