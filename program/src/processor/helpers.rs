@@ -16,14 +16,14 @@ use solana_program::{msg, pubkey::Pubkey};
 /// 1. **TransferHook**: Custom logic on transfers that can:
 ///    - Block transfers entirely, preventing unstaking
 ///    - Redirect tokens to different accounts
-///    - Charge unexpected fees
 ///    - Cause reentrancy issues
 ///
 /// 2. **PermanentDelegate**: Allows forcible transfer of tokens from any account,
 ///    including the protocol's vaults, bypassing all authorization checks.
 ///
-/// 3. **TransferFeeConfig**: Charges fees on transfers, causing accounting mismatches
-///    between expected and actual token amounts in vaults.
+/// 3. **TransferFeeConfig**: The current implementation of transfer_tokens_with_fee() does not
+///    properly calculate the actual amount after fees (returns requested amount instead).
+///    This would cause accounting mismatches. Blocked until properly implemented.
 ///
 /// 4. **MintCloseAuthority**: Allows closing the mint account, rendering all
 ///    staked tokens worthless and breaking the protocol entirely.
@@ -55,7 +55,7 @@ pub fn validate_token_extensions(
     const DANGEROUS_EXTENSIONS: &[ExtensionType] = &[
         ExtensionType::TransferHook,
         ExtensionType::PermanentDelegate,
-        ExtensionType::TransferFeeConfig,
+        ExtensionType::TransferFeeConfig, // Blocked: current implementation doesn't calculate actual fees
         ExtensionType::MintCloseAuthority,
         ExtensionType::DefaultAccountState,
     ];
