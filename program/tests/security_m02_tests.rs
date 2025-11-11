@@ -12,6 +12,7 @@
 //
 // Supported Extensions:
 // - TransferFeeConfig: Properly supported via balance checking in transfer_tokens_with_fee()
+//   Note: Transfer fees are deducted from user rewards (users pay the fees, not protocol)
 //
 // Security Impact: HIGH
 // Without these checks, malicious pool creators could:
@@ -38,6 +39,9 @@
 /// - **TransferFeeConfig** - Now properly supported! The transfer_tokens_with_fee()
 ///   function calculates actual transferred amounts by checking recipient balance
 ///   before and after transfer, ensuring accurate accounting even with fees.
+///   **Note:** Transfer fees are borne by users (deducted from reward amounts received),
+///   not by the protocol. The protocol tracks committed amounts; users receive less
+///   due to fees.
 ///
 /// # Fix Implementation
 /// - **File**: `program/src/error.rs`
@@ -63,7 +67,7 @@
 /// - ✅ Users are protected from token loss due to malicious extensions
 /// - ✅ Protocol invariants are preserved
 /// - ✅ Accounting remains accurate with proper fee calculation
-/// - ✅ TransferFeeConfig tokens are fully supported
+/// - ✅ TransferFeeConfig tokens are fully supported (fees deducted from user rewards)
 ///
 /// # Code Location
 /// - Error: `program/src/error.rs` (line 88)
