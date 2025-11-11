@@ -84,7 +84,7 @@ test('ProgramAuthority codec handles max creators', (t) => {
 
   // Use simple valid addresses (all same address for testing purposes)
   const creators = Array.from({ length: 10 }, () =>
-    address('11111111111111111111111111111111'),
+    address('11111111111111111111111111111111')
   );
 
   const programAuthority = {
@@ -125,7 +125,7 @@ test('ProgramAuthority has correct size', (t) => {
     key: Key.ProgramAuthority,
     authority: address('11111111111111111111111111111111'),
     authorizedCreators: Array(10).fill(
-      address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+      address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
     ),
     creatorCount: 10,
     bump: 255,
@@ -231,7 +231,7 @@ test('ManageAuthorizedCreators instruction data codec - max batch size', (t) => 
 
   // Use simple valid addresses (all same address for testing purposes)
   const creators = Array.from({ length: 10 }, () =>
-    address('11111111111111111111111111111111'),
+    address('11111111111111111111111111111111')
   );
 
   const data = {
@@ -315,22 +315,26 @@ test('ProgramAuthority round-trip with various states', (t) => {
 
     t.is(decoded.key, data.key, `${name}: key should match`);
     t.is(decoded.authority, data.authority, `${name}: authority should match`);
-    t.is(decoded.creatorCount, data.creatorCount, `${name}: count should match`);
+    t.is(
+      decoded.creatorCount,
+      data.creatorCount,
+      `${name}: count should match`
+    );
     t.is(decoded.bump, data.bump, `${name}: bump should match`);
-    
+
     // Check creators individually since decoded will have Option type
     data.authorizedCreators.forEach((creator, idx) => {
       if (creator === null) {
         t.deepEqual(
           decoded.authorizedCreators[idx],
           { __option: 'None' },
-          `${name}: creator ${idx} should be None`,
+          `${name}: creator ${idx} should be None`
         );
       } else {
         t.deepEqual(
           decoded.authorizedCreators[idx],
           { __option: 'Some', value: creator },
-          `${name}: creator ${idx} should match`,
+          `${name}: creator ${idx} should match`
         );
       }
     });
@@ -356,7 +360,7 @@ test('ManageAuthorizedCreators instruction size scales with operations', (t) => 
   // Use valid base58 addresses (all '1's is a valid address representing all zeros)
   const sizes = [0, 1, 5, 10].map((count) => {
     const creators = Array.from({ length: count }, () =>
-      address('11111111111111111111111111111111'),
+      address('11111111111111111111111111111111')
     );
 
     const data = { add: creators, remove: [] };
