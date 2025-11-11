@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Event Logging**: Emit `sol_log_data` events for key operations (InitializePool, Stake, Unstake, ClaimRewards, FundRewards)
+  - Enables off-chain indexing via Helius, TheGraph, or custom indexers
+  - Improves observability and enables real-time notifications
+  - Event data includes pool address, user address, amounts, and operation-specific details
+
+- **Architecture Documentation**: Added comprehensive ARCHITECTURE.md with Mermaid diagrams
+  - Account relationship diagrams showing PDA derivation and ownership
+  - Detailed operational workflow diagrams (staking, unstaking, claiming, authority transfer, reward rate changes)
+  - Security model and data flow documentation
+  - Moved workflow diagrams from README.md to centralized architecture doc
+
+### Changed
+- **Constants Module**: Extract magic numbers to `constants.rs`
+  - Added `MAX_REWARD_RATE` (1000% ceiling) and `REWARD_SCALE` (1e9 precision)
+  - Replaced hardcoded literals throughout codebase for better maintainability
+  - Improves code clarity and reduces risk of inconsistent values
+
 ### Fixed
 - **[Q-02] Safe Integer Casting**: Replaced unsafe `u128` to `u64` cast with `try_from` in `calculate_rewards`
   - Prevents potential overflow/truncation issues in reward calculations
