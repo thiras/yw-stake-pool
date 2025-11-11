@@ -82,9 +82,12 @@ export const STAKE_POOL_ERROR__PENDING_REWARD_RATE_CHANGE_EXISTS = 0x1f; // 31
 export const STAKE_POOL_ERROR__INVALID_TIMESTAMP = 0x20; // 32
 /** DataCorruption: Data corruption detected (state invariant violated) */
 export const STAKE_POOL_ERROR__DATA_CORRUPTION = 0x21; // 33
+/** AccountSizeTooSmall: Account size too small for serialized data */
+export const STAKE_POOL_ERROR__ACCOUNT_SIZE_TOO_SMALL = 0x22; // 34
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
+  | typeof STAKE_POOL_ERROR__ACCOUNT_SIZE_TOO_SMALL
   | typeof STAKE_POOL_ERROR__AMOUNT_BELOW_MINIMUM
   | typeof STAKE_POOL_ERROR__DATA_CORRUPTION
   | typeof STAKE_POOL_ERROR__DESERIALIZATION_ERROR
@@ -123,6 +126,7 @@ let stakePoolErrorMessages: Record<StakePoolError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   stakePoolErrorMessages = {
     [STAKE_POOL_ERROR__ACCOUNT_MISMATCH]: `Account mismatch`,
+    [STAKE_POOL_ERROR__ACCOUNT_SIZE_TOO_SMALL]: `Account size too small for serialized data`,
     [STAKE_POOL_ERROR__AMOUNT_BELOW_MINIMUM]: `Amount below minimum stake`,
     [STAKE_POOL_ERROR__DATA_CORRUPTION]: `Data corruption detected (state invariant violated)`,
     [STAKE_POOL_ERROR__DESERIALIZATION_ERROR]: `Error deserializing an account`,

@@ -7,6 +7,41 @@ use solana_program::{
 
 use crate::error::StakePoolError;
 
+/// Helper function to safely write serialized data to an account with size validation
+/// This prevents silent data truncation if new fields are added in future versions
+fn save_account_data<T: BorshSerialize>(
+    account: &AccountInfo,
+    data: &T,
+    account_type: &str,
+) -> ProgramResult {
+    // Serialize to a vec first to get the exact size
+    let serialized = borsh::to_vec(data).map_err(|error| {
+        msg!("{} serialization error: {}", account_type, error);
+        ProgramError::from(StakePoolError::SerializationError)
+    })?;
+
+    // Defensive check: Ensure account is large enough for serialized data
+    let account_size = account.data_len();
+    if serialized.len() > account_size {
+        msg!(
+            "{} account size too small: need {} bytes, have {} bytes",
+            account_type,
+            serialized.len(),
+            account_size
+        );
+        return Err(StakePoolError::AccountSizeTooSmall.into());
+    }
+
+    // Zero-fill the account data
+    let mut account_data = account.data.borrow_mut();
+    account_data[..].fill(0);
+
+    // Copy serialized data
+    account_data[..serialized.len()].copy_from_slice(&serialized);
+
+    Ok(())
+}
+
 /// Generic function to validate and deserialize account data
 /// This prevents the UnvalidatedAccount vulnerability by ensuring:
 /// 1. Account is owned by this program
@@ -223,20 +258,7 @@ impl StakePool {
     }
 
     pub fn save(&self, account: &AccountInfo) -> ProgramResult {
-        // Serialize to a vec first to get the exact size
-        let serialized = borsh::to_vec(self).map_err(|error| {
-            msg!("Serialization error: {}", error);
-            ProgramError::from(StakePoolError::SerializationError)
-        })?;
-
-        // Zero-fill the account data
-        let mut data = account.data.borrow_mut();
-        data[..].fill(0);
-
-        // Copy serialized data
-        data[..serialized.len()].copy_from_slice(&serialized);
-
-        Ok(())
+        save_account_data(account, self, "StakePool")
     }
 
     /// Calculate rewards for a stake based on fixed reward rate
@@ -331,19 +353,6 @@ impl StakeAccount {
     }
 
     pub fn save(&self, account: &AccountInfo) -> ProgramResult {
-        // Serialize to a vec first to get the exact size
-        let serialized = borsh::to_vec(self).map_err(|error| {
-            msg!("Serialization error: {}", error);
-            ProgramError::from(StakePoolError::SerializationError)
-        })?;
-
-        // Zero-fill the account data
-        let mut data = account.data.borrow_mut();
-        data[..].fill(0);
-
-        // Copy serialized data
-        data[..serialized.len()].copy_from_slice(&serialized);
-
-        Ok(())
+        save_account_data(account, self, "StakeAccount")
     }
 }
