@@ -99,6 +99,7 @@ pub fn validate_token_extensions(
         ExtensionType::PermanentDelegate,
         ExtensionType::MintCloseAuthority,
         ExtensionType::DefaultAccountState,
+        ExtensionType::NonTransferable, // Tokens that can never be transferred would lock user funds
     ];
 
     // Check if any dangerous extensions are present
@@ -209,6 +210,86 @@ pub fn get_token_account_balance(token_account: &AccountInfo) -> Result<u64, Pro
     let account = StateWithExtensions::<TokenAccount>::unpack(&account_data)
         .map_err(|_| StakePoolError::InvalidTokenProgram)?;
     Ok(account.base.amount)
+}
+
+/// Validates both user token account and pool vault belong to the expected stake mint
+/// This reduces code duplication across stake/unstake operations
+///
+/// # Arguments
+/// * `user_account` - User's token account for the stake mint
+/// * `vault_account` - Pool's vault account for the stake mint
+/// * `expected_mint` - The expected stake mint pubkey
+///
+/// # Returns
+/// * `Ok(())` if both accounts are valid
+/// * `Err(ProgramError)` if validation fails
+pub fn verify_stake_token_accounts(
+    user_account: &AccountInfo,
+    vault_account: &AccountInfo,
+    expected_mint: &Pubkey,
+) -> Result<(), ProgramError> {
+    verify_token_account(user_account, expected_mint, None, None)?;
+    verify_token_account(vault_account, expected_mint, None, None)?;
+    Ok(())
+}
+
+/// Validates both user reward account and pool reward vault belong to the expected reward mint
+/// This reduces code duplication across reward operations
+///
+/// # Arguments
+/// * `user_account` - User's token account for the reward mint
+/// * `vault_account` - Pool's vault account for the reward mint
+/// * `expected_mint` - The expected reward mint pubkey
+///
+/// # Returns
+/// * `Ok(())` if both accounts are valid
+/// * `Err(ProgramError)` if validation fails
+pub fn verify_reward_token_accounts(
+    user_account: &AccountInfo,
+    vault_account: &AccountInfo,
+    expected_mint: &Pubkey,
+) -> Result<(), ProgramError> {
+    verify_token_account(user_account, expected_mint, None, None)?;
+    verify_token_account(vault_account, expected_mint, None, None)?;
+    Ok(())
+}
+
+/// Validates both vaults during pool initialization
+/// This ensures both stake and reward vaults are correctly configured
+///
+/// # Arguments
+/// * `stake_vault` - Pool's stake token vault
+/// * `reward_vault` - Pool's reward token vault
+/// * `stake_mint` - The stake token mint (for extension validation)
+/// * `reward_mint` - The reward token mint (for extension validation)
+/// * `stake_mint_key` - Expected stake mint pubkey
+/// * `reward_mint_key` - Expected reward mint pubkey
+///
+/// # Returns
+/// * `Ok(())` if both vaults are valid
+/// * `Err(ProgramError)` if validation fails
+pub fn verify_pool_vaults_at_init(
+    stake_vault: &AccountInfo,
+    reward_vault: &AccountInfo,
+    stake_mint: &AccountInfo,
+    reward_mint: &AccountInfo,
+    stake_mint_key: &Pubkey,
+    reward_mint_key: &Pubkey,
+) -> Result<(), ProgramError> {
+    // Verify token accounts have correct mints and validate Token-2022 extensions
+    verify_token_account(
+        stake_vault,
+        stake_mint_key,
+        Some(stake_mint),
+        Some("stake_mint"),
+    )?;
+    verify_token_account(
+        reward_vault,
+        reward_mint_key,
+        Some(reward_mint),
+        Some("reward_mint"),
+    )?;
+    Ok(())
 }
 
 /// Validates that a mint does not have a freeze authority set.
