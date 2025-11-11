@@ -89,6 +89,9 @@ pub enum StakePoolError {
     /// 27 - Unexpected token balance change during transfer
     #[error("Unexpected token balance change during transfer")]
     UnexpectedBalanceChange,
+    /// 28 - Mint has freeze authority (can lock user funds)
+    #[error("Mint has freeze authority (can lock user funds)")]
+    MintHasFreezeAuthority,
 }
 
 impl From<StakePoolError> for ProgramError {

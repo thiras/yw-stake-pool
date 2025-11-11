@@ -12,7 +12,7 @@ use crate::state::{Key, StakePool};
 use crate::utils::create_account;
 use solana_program::pubkey::Pubkey;
 
-use super::helpers::{verify_token_account, verify_vault_ownership};
+use super::helpers::{validate_no_freeze_authority, verify_token_account, verify_vault_ownership};
 
 /// Minimum lockup period in seconds (1 day = 86400 seconds)
 /// This prevents reward vault drain attacks by ensuring a meaningful staking duration.
@@ -112,6 +112,16 @@ pub fn initialize_pool<'a>(
     assert_writable("stake_vault", ctx.accounts.stake_vault)?;
     assert_writable("reward_vault", ctx.accounts.reward_vault)?;
     assert_writable("payer", ctx.accounts.payer)?;
+
+    // [M-03] Security Fix: Validate mints don't have freeze authority
+    // The freeze_authority allows freezing token accounts, which would lock user funds permanently.
+    // This validation prevents malicious actors from creating pools with freezable tokens.
+    // Without this check, the freeze authority holder can:
+    // 1. Freeze any user's stake account after they deposit
+    // 2. Prevent unstaking and token transfers
+    // 3. Cause permanent loss of user funds
+    validate_no_freeze_authority(ctx.accounts.stake_mint, "stake_mint")?;
+    validate_no_freeze_authority(ctx.accounts.reward_mint, "reward_mint")?;
 
     // Verify token accounts have correct mints and validate Token-2022 extensions
     // [M-02] Security Fix: Extension validation during pool initialization
