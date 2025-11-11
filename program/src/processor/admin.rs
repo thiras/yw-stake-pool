@@ -98,7 +98,7 @@ pub fn update_pool<'a>(
                 "Reward rate change proposed: {} -> {}. Will take effect after {} (7 days from now)",
                 pool_data.reward_rate,
                 rate,
-                current_time + REWARD_RATE_CHANGE_DELAY
+                current_time.checked_add(REWARD_RATE_CHANGE_DELAY).unwrap_or(i64::MAX)
             );
         }
     }
