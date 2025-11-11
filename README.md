@@ -366,20 +366,24 @@ After transferring pool authority (via `NominateNewAuthority` + `AcceptAuthority
 
 **Example Scenario**:
 ```typescript
-// Before transfer: Alice owns Pool ID 0 for USDC
-// Alice transfers authority to Bob
-// Bob now controls the existing Pool ID 0
+// Before transfer: Alice creates Pool ID 0 for USDC
+const originalPool = PDA(Alice, USDC, 0)  // Alice is the authority seed
 
-// Later, Alice creates a NEW Pool ID 0 for USDC
-// This creates a DIFFERENT pool (different PDA)
-// but same (old_authority, USDC, 0) identifier
+// Alice transfers operational authority to Bob
+// The pool.authority field updates to Bob, but PDA seeds remain unchanged
+// Result: PDA(Alice, USDC, 0) is controlled by Bob
 
-// Result: Two pools with confusingly similar identifiers
-// - Alice's new pool: PDA(Alice, USDC, 0)
-// - Bob's transferred pool: PDA(Alice, USDC, 0) ← Same authority in PDA!
+// Later, Alice creates a NEW Pool ID 0 for USDC under her control
+const newPool = PDA(Alice, USDC, 0)  // Same seeds!
+// ❌ Transaction FAILS - this PDA already exists (created earlier)
+
+// Alice must use a different pool_id:
+const alicePool = PDA(Alice, USDC, 1)  // Different pool_id = different PDA
 ```
 
-The pools are technically separate (Bob controls one, Alice controls the other), but the shared identifier scheme can cause confusion. Use the best practices above to avoid this.
+**Why this happens**: Pool PDAs use the **original creator's address** in seeds, even after authority transfer. When Alice transfers pool 0 to Bob, the PDA remains `PDA(Alice, USDC, 0)`. If Alice tries to create another pool 0, it's the same PDA address - causing a collision.
+
+**Solution**: After receiving a transferred pool, the new authority should maintain records of which pool IDs are in use for each (original_creator, token) combination to avoid attempting to create pools with taken IDs.
 
 ## Documentation
 
