@@ -14,9 +14,25 @@ use crate::instruction::accounts::*;
 use crate::processor::helpers::{validate_current_timestamp, validate_stored_timestamp};
 use crate::state::{Key, StakePool};
 
-/// Minimum delay before a reward rate change can be finalized (7 days)
-/// This gives users time to react and unstake if they disagree with the new rate
-const REWARD_RATE_CHANGE_DELAY: i64 = 604800; // 7 days in seconds
+/// Time delay before a reward rate change can be finalized (7 days = 604800 seconds).
+///
+/// **Security [L-01]:**
+/// Provides users notice to unstake if they disagree with new rate.
+/// Prevents centralized surprise changes to reward rates.
+///
+/// **Design Rationale:**
+/// - 7 days balances user protection vs operational flexibility
+/// - Industry standard for time-locked governance operations
+/// - Sufficient time for users to monitor and react to changes
+/// - Aligns with common DeFi governance timelock periods
+///
+/// **Cooldown Enforcement:**
+/// After finalization, another 7-day cooldown is enforced before
+/// proposing a new rate change (prevents authority from chaining
+/// rapid rate changes to bypass the time-lock).
+///
+/// **Current Value**: 604800 seconds (7 days)
+const REWARD_RATE_CHANGE_DELAY: i64 = 604800;
 
 pub fn update_pool<'a>(
     accounts: &'a [AccountInfo<'a>],
