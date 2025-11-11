@@ -1,0 +1,14 @@
+# Solana Security.txt
+# This follows the Solana security.txt standard for on-chain programs
+# https://github.com/neodyme-labs/solana-security-txt
+
+name: "YourWallet Stake Pool"
+project_url: "https://github.com/yourwalletio/yw-stake-pool"
+contacts: "email:hello@yourwallet.tr"
+policy: "https://github.com/yourwalletio/yw-stake-pool/blob/main/SECURITY.md"
+preferred_languages: "en"
+source_code: "https://github.com/yourwalletio/yw-stake-pool"
+source_release: "https://github.com/yourwalletio/yw-stake-pool/releases"
+encryption: ""
+auditors: ""
+acknowledgements: ""
