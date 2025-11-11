@@ -12,7 +12,10 @@ use crate::state::{Key, StakePool};
 use crate::utils::create_account;
 use solana_program::pubkey::Pubkey;
 
-use super::helpers::{validate_no_freeze_authority, verify_token_account, verify_vault_ownership};
+use super::helpers::{
+    validate_current_timestamp, validate_no_freeze_authority, verify_token_account,
+    verify_vault_ownership,
+};
 
 /// Minimum lockup period in seconds (1 day = 86400 seconds)
 /// This prevents reward vault drain attacks by ensuring a meaningful staking duration.
@@ -78,6 +81,7 @@ pub fn initialize_pool<'a>(
 
     if let Some(end_date) = pool_end_date {
         let current_time = Clock::get()?.unix_timestamp;
+        validate_current_timestamp(current_time)?;
         if end_date <= current_time {
             msg!(
                 "Pool end date must be in the future. Current: {}, End date: {}",

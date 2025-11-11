@@ -12,7 +12,7 @@ use crate::instruction::accounts::*;
 use crate::state::{Key, StakeAccount, StakePool};
 use crate::utils::{create_account, transfer_tokens_with_fee};
 
-use super::helpers::{get_token_account_balance, verify_token_account};
+use super::helpers::{get_token_account_balance, validate_current_timestamp, verify_token_account};
 
 pub fn stake<'a>(
     accounts: &'a [AccountInfo<'a>],
@@ -99,6 +99,7 @@ pub fn stake<'a>(
     // Check if pool has ended
     if let Some(end_date) = pool_data.pool_end_date {
         let current_time = Clock::get()?.unix_timestamp;
+        validate_current_timestamp(current_time)?;
         if current_time >= end_date {
             msg!(
                 "Pool has ended. End date: {}, Current time: {}",
@@ -152,6 +153,7 @@ pub fn stake<'a>(
 
     // Get current time
     let clock = Clock::get()?;
+    validate_current_timestamp(clock.unix_timestamp)?;
 
     // Create the new stake account
     let mut seeds_with_bump = stake_account_seeds.clone();
