@@ -94,13 +94,10 @@ export const STAKE_POOL_ERROR__MAX_AUTHORIZED_CREATORS_REACHED = 0x25; // 37
 export const STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY = 0x26; // 38
 /** CreatorNotFound: Creator not found in authorized list */
 export const STAKE_POOL_ERROR__CREATOR_NOT_FOUND = 0x27; // 39
-/** AlreadyInitialized: Account already initialized */
-export const STAKE_POOL_ERROR__ALREADY_INITIALIZED = 0x28; // 40
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
   | typeof STAKE_POOL_ERROR__ACCOUNT_SIZE_TOO_SMALL
-  | typeof STAKE_POOL_ERROR__ALREADY_INITIALIZED
   | typeof STAKE_POOL_ERROR__AMOUNT_BELOW_MINIMUM
   | typeof STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY
   | typeof STAKE_POOL_ERROR__CREATOR_ALREADY_AUTHORIZED
@@ -145,7 +142,6 @@ if (process.env.NODE_ENV !== 'production') {
   stakePoolErrorMessages = {
     [STAKE_POOL_ERROR__ACCOUNT_MISMATCH]: `Account mismatch`,
     [STAKE_POOL_ERROR__ACCOUNT_SIZE_TOO_SMALL]: `Account size too small for serialized data`,
-    [STAKE_POOL_ERROR__ALREADY_INITIALIZED]: `Account already initialized`,
     [STAKE_POOL_ERROR__AMOUNT_BELOW_MINIMUM]: `Amount below minimum stake`,
     [STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY]: `Cannot remove main authority from authorized creators`,
     [STAKE_POOL_ERROR__CREATOR_ALREADY_AUTHORIZED]: `Creator already authorized`,

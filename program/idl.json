@@ -1125,11 +1125,6 @@
       "code": 39,
       "name": "CreatorNotFound",
       "msg": "Creator not found in authorized list"
-    },
-    {
-      "code": 40,
-      "name": "AlreadyInitialized",
-      "msg": "Account already initialized"
     }
   ],
   "metadata": {
