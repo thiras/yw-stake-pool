@@ -13,8 +13,27 @@ use spl_token_2022::{extension::StateWithExtensions, instruction::transfer_check
 
 use crate::error::StakePoolError;
 
-/// Minimum rent-exempt balance for a typical account
-/// Used to prevent griefing attacks with tiny lamport transfers
+/// Anti-griefing threshold: minimum additional lamports required when topping up a front-run account.
+///
+/// This is NOT the actual rent-exempt minimum, which varies based on account size and current rent rates.
+/// Instead, this threshold prevents griefing attacks where an attacker sends just enough lamports to
+/// trigger the front-running DoS scenario, but forces the protocol to make uneconomical micro-transfers
+/// to complete account creation.
+///
+/// Why 890,880 lamports (~0.00089 SOL)?
+/// - This is approximately the rent-exempt balance for small accounts (~200 bytes)
+/// - Small enough to not burden legitimate use cases (StakePool accounts need ~2M lamports total)
+/// - Large enough to make griefing attacks uneconomical for attackers
+///
+/// Context: When an account has been front-run (has lamports but no data), we need to add more
+/// lamports to reach rent-exemption. If the additional amount is too small (e.g., 1 lamport),
+/// it could indicate:
+/// 1. A griefing attempt to force many tiny transactions
+/// 2. Edge cases in rent calculation that could cause issues
+/// 3. An attacker probing for vulnerabilities with minimal cost
+///
+/// For legitimate cases where the account needs more lamports, users should ensure the account
+/// has significantly less than the required rent-exempt amount, or none at all.
 const MIN_ADDITIONAL_LAMPORTS: u64 = 890880;
 
 /// Create a new PDA account from the given size.
@@ -85,12 +104,17 @@ pub fn create_account<'a>(
             // Safe: condition above guarantees required_lamports > current_lamports
             let additional_lamports = required_lamports - current_lamports;
 
-            // Prevent griefing: Reject if additional amount is too small
-            // This prevents attackers from forcing us to make uneconomical transfers
-            // or hitting edge cases with rent-exemption calculations
+            // Anti-griefing check: Reject if additional amount is too small
+            // This prevents attackers from forcing us to make many tiny, uneconomical transfers.
+            // If an account was legitimately partially funded, it should either:
+            // 1. Have no lamports (we create normally in Case 3)
+            // 2. Have significantly less than required (so additional_lamports > MIN_ADDITIONAL_LAMPORTS)
+            //
+            // Attackers sending just enough to trigger Case 2 but not enough to pass this check
+            // will cause the transaction to fail, making the DoS attack costly and ineffective.
             if additional_lamports < MIN_ADDITIONAL_LAMPORTS {
                 msg!(
-                    "Account has insufficient lamports and additional amount too small: {}. Expected at least: {}",
+                    "Account has insufficient lamports and additional amount too small: {} lamports. Minimum required: {} lamports",
                     additional_lamports,
                     MIN_ADDITIONAL_LAMPORTS
                 );
