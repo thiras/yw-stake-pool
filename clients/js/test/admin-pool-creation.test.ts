@@ -9,7 +9,6 @@ import {
   STAKE_POOL_ERROR__MAX_AUTHORIZED_CREATORS_REACHED,
   STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY,
   STAKE_POOL_ERROR__CREATOR_NOT_FOUND,
-  STAKE_POOL_ERROR__ALREADY_INITIALIZED,
 } from '../src';
 import { address } from '@solana/kit';
 
@@ -260,7 +259,7 @@ test('Admin pool creation error codes are defined', (t) => {
   t.is(STAKE_POOL_ERROR__MAX_AUTHORIZED_CREATORS_REACHED, 37);
   t.is(STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY, 38);
   t.is(STAKE_POOL_ERROR__CREATOR_NOT_FOUND, 39);
-  t.is(STAKE_POOL_ERROR__ALREADY_INITIALIZED, 40);
+  // Note: AlreadyInitialized error removed - assert_empty provides sufficient validation
 });
 
 // ============================================================================
