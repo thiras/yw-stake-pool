@@ -960,7 +960,7 @@
     {
       "code": 32,
       "name": "InvalidTimestamp",
-      "msg": "Invalid timestamp (timestamp is in the future)"
+      "msg": "Invalid timestamp"
     },
     {
       "code": 33,

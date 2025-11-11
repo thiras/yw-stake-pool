@@ -78,7 +78,7 @@ export const STAKE_POOL_ERROR__REWARD_RATE_CHANGE_DELAY_NOT_ELAPSED = 0x1d; // 2
 export const STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE = 0x1e; // 30
 /** PendingRewardRateChangeExists: Pending reward rate change already exists */
 export const STAKE_POOL_ERROR__PENDING_REWARD_RATE_CHANGE_EXISTS = 0x1f; // 31
-/** InvalidTimestamp: Invalid timestamp (timestamp is in the future) */
+/** InvalidTimestamp: Invalid timestamp */
 export const STAKE_POOL_ERROR__INVALID_TIMESTAMP = 0x20; // 32
 /** DataCorruption: Data corruption detected (state invariant violated) */
 export const STAKE_POOL_ERROR__DATA_CORRUPTION = 0x21; // 33
@@ -139,7 +139,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__INVALID_PDA]: `Invalid PDA derivation`,
     [STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY]: `Invalid pending authority`,
     [STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER]: `Invalid program owner`,
-    [STAKE_POOL_ERROR__INVALID_TIMESTAMP]: `Invalid timestamp (timestamp is in the future)`,
+    [STAKE_POOL_ERROR__INVALID_TIMESTAMP]: `Invalid timestamp`,
     [STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM]: `Invalid token program`,
     [STAKE_POOL_ERROR__INVALID_VAULT_OWNER]: `Invalid vault owner (vault must be owned by pool PDA)`,
     [STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED]: `Lockup period not expired`,
