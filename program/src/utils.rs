@@ -15,17 +15,31 @@ use crate::error::StakePoolError;
 
 /// Anti-griefing threshold: minimum additional lamports required when topping up a front-run account.
 ///
+/// **Current Value**: 890,880 lamports (~0.00089 SOL at current rates)
+///
 /// This is NOT the actual rent-exempt minimum, which varies based on account size and current rent rates.
 /// Instead, this threshold prevents griefing attacks where an attacker sends just enough lamports to
 /// trigger the front-running DoS scenario, but forces the protocol to make uneconomical micro-transfers
 /// to complete account creation.
 ///
-/// Why 890,880 lamports (~0.00089 SOL)?
-/// - This is approximately the rent-exempt balance for small accounts (~200 bytes)
+/// **Why 890,880 lamports?**
+/// - Approximately the rent-exempt balance for small accounts (~200 bytes)
 /// - Small enough to not burden legitimate use cases (StakePool accounts need ~2M lamports total)
 /// - Large enough to make griefing attacks uneconomical for attackers
 ///
-/// Context: When an account has been front-run (has lamports but no data), we need to add more
+/// **Operational Guidance**:
+/// If you encounter "Account has insufficient lamports and additional amount too small" errors:
+/// 1. Check if account was front-run (has lamports but no data)
+/// 2. Ensure payer has sufficient SOL for full rent-exemption + this threshold
+/// 3. Consider retrying with a fresh transaction if consistently failing
+/// 4. Verify the account hasn't been maliciously pre-allocated
+///
+/// **Economic Analysis**:
+/// - Attacker cost: 0.00089 SOL per griefing attempt
+/// - Protocol cost to defend: 0.00089 SOL additional lamports required
+/// - Net result: Attacker burns SOL with no benefit, making the attack uneconomical
+///
+/// **Context**: When an account has been front-run (has lamports but no data), we need to add more
 /// lamports to reach rent-exemption. If the additional amount is too small (e.g., 1 lamport),
 /// it could indicate:
 /// 1. A griefing attempt to force many tiny transactions

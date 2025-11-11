@@ -14,9 +14,25 @@ use crate::instruction::accounts::*;
 use crate::processor::helpers::{validate_current_timestamp, validate_stored_timestamp};
 use crate::state::{Key, StakePool};
 
-/// Minimum delay before a reward rate change can be finalized (7 days)
-/// This gives users time to react and unstake if they disagree with the new rate
-const REWARD_RATE_CHANGE_DELAY: i64 = 604800; // 7 days in seconds
+/// Time delay before a reward rate change can be finalized (7 days = 604800 seconds).
+///
+/// **Security [L-01]:**
+/// Provides users notice to unstake if they disagree with new rate.
+/// Prevents centralized surprise changes to reward rates.
+///
+/// **Design Rationale:**
+/// - 7 days balances user protection vs operational flexibility
+/// - Industry standard for time-locked governance operations
+/// - Sufficient time for users to monitor and react to changes
+/// - Aligns with common DeFi governance timelock periods
+///
+/// **Cooldown Enforcement:**
+/// After finalization, another 7-day cooldown is enforced before
+/// proposing a new rate change (prevents authority from chaining
+/// rapid rate changes to bypass the time-lock).
+///
+/// **Current Value**: 604800 seconds (7 days)
+const REWARD_RATE_CHANGE_DELAY: i64 = 604800;
 
 pub fn update_pool<'a>(
     accounts: &'a [AccountInfo<'a>],
@@ -218,7 +234,18 @@ pub fn nominate_new_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramRes
         ctx.accounts.new_authority.key
     );
 
-    pool_data.save(ctx.accounts.pool)
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+
+    // Emit event for off-chain indexing after successful state save
+    sol_log_data(&[
+        b"AuthorityNominated",
+        ctx.accounts.pool.key.as_ref(),
+        ctx.accounts.current_authority.key.as_ref(),
+        ctx.accounts.new_authority.key.as_ref(),
+    ]);
+
+    Ok(())
 }
 
 pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
@@ -264,7 +291,18 @@ pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
         pool_data.authority
     );
 
-    pool_data.save(ctx.accounts.pool)
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+
+    // Emit event for off-chain indexing after successful state save
+    sol_log_data(&[
+        b"AuthorityTransferred",
+        ctx.accounts.pool.key.as_ref(),
+        old_authority.as_ref(),
+        pool_data.authority.as_ref(),
+    ]);
+
+    Ok(())
 }
 
 /// Finalize a pending reward rate change after the delay period has elapsed
@@ -387,5 +425,16 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
         pool_data.reward_rate
     );
 
-    pool_data.save(ctx.accounts.pool)
+    // Save state first to ensure persistence before emitting event
+    pool_data.save(ctx.accounts.pool)?;
+
+    // Emit event for off-chain indexing after successful state save
+    sol_log_data(&[
+        b"RewardRateFinalized",
+        ctx.accounts.pool.key.as_ref(),
+        &old_rate.to_le_bytes(),
+        &pool_data.reward_rate.to_le_bytes(),
+    ]);
+
+    Ok(())
 }

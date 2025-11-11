@@ -19,10 +19,22 @@ use super::helpers::{
     verify_vault_ownership,
 };
 
-/// Minimum lockup period in seconds (1 day = 86400 seconds)
-/// This prevents reward vault drain attacks by ensuring a meaningful staking duration.
-/// See [H-02] security fix.
-const MIN_LOCKUP_PERIOD: i64 = 86400; // 1 day
+/// Minimum lockup period enforced during pool initialization (1 day = 86400 seconds).
+///
+/// **Security Rationale [H-02]:**
+/// Prevents reward vault drain attacks where attackers could:
+/// 1. Set lockup to 1 second
+/// 2. Stake tokens
+/// 3. Wait 1 second
+/// 4. Claim full rewards instantly
+/// 5. Drain the reward vault
+///
+/// **Business Rationale:**
+/// Ensures meaningful staking commitment and prevents gaming of reward mechanics.
+/// Can be adjusted per deployment requirements (7 days, 30 days, etc.)
+///
+/// **Current Value**: 86400 seconds (1 day)
+const MIN_LOCKUP_PERIOD: i64 = 86400;
 
 /// Initialize a new staking pool with the provided parameters.
 ///

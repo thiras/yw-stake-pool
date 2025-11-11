@@ -8,6 +8,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Admin Event Logging**: Added governance event logs for administrative operations
+  - `RewardRateFinalized` event emitted when reward rate changes are finalized (includes old and new rates)
+  - `AuthorityNominated` event emitted when new authority is nominated (includes current and new authority)
+  - `AuthorityTransferred` event emitted when authority transfer completes (includes old and new authority)
+  - Improves off-chain monitoring and governance tracking
+  - Enables better audit trails for sensitive operations
+  - Follows existing pattern: save state before emitting events
+
+- **Pool Solvency Helper**: Added `verify_solvency()` method to `StakePool` state
+  - Checks if reward vault balance can cover all owed rewards
+  - Provides detailed error message with deficit amount when insolvent
+  - Enables proactive monitoring of pool health
+  - Includes usage example in documentation
+  - Uses checked arithmetic to prevent overflow in calculations
+  - Returns `InsufficientRewards` error if pool is insolvent
+
+### Documentation
+- **Enhanced Constant Documentation**: Comprehensive inline documentation for security-critical constants
+  - **MIN_LOCKUP_PERIOD** (initialize.rs):
+    - Added detailed security rationale explaining H-02 attack vector (reward vault drain prevention)
+    - Documented business justification for 1-day minimum requirement
+    - Noted configurability for different deployment requirements
+    - Improved readability with structured markdown-style format
+  - **REWARD_RATE_CHANGE_DELAY** (admin.rs):
+    - Added comprehensive documentation for L-01 mitigation (centralized rate change prevention)
+    - Explained 7-day delay selection and alignment with industry standards
+    - Documented cooldown enforcement mechanism to prevent rapid successive changes
+    - Clarified balance between user protection and operational flexibility
+  - **MIN_ADDITIONAL_LAMPORTS** (utils.rs):
+    - Enhanced with operational guidance section for troubleshooting
+    - Added step-by-step resolution for "insufficient lamports" errors
+    - Included economic analysis of attack/defense costs (~0.00089 SOL)
+    - Provided current SOL value estimates for user reference
+    - Clarified purpose as anti-griefing threshold vs dynamic rent calculation
+
+## [1.6.0] - 2025-11-10
+
+### Added
 - **Event Logging**: Emit `sol_log_data` events for key operations (InitializePool, Stake, Unstake, ClaimRewards, FundRewards)
   - Enables off-chain indexing via Helius, TheGraph, or custom indexers
   - Improves observability and enables real-time notifications
@@ -229,21 +267,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `StakePool` state size increased to accommodate `pending_authority` field
-
-## [1.1.0] - 2025-10-19
-
-### Added
-- **Frontrunning Protection**: Optional parameters to lock in expected pool conditions
-  - `expected_reward_rate` parameter in `Stake` and `Unstake` instructions
-  - `expected_lockup_period` parameter in `Stake` instruction
-  - `PoolParametersChanged` error to revert transactions when parameters mismatch
-  - Backward compatible (protection is optional)
-
-### Changed
-- `Stake` instruction signature updated with optional frontrunning protection parameters
-- `Unstake` instruction signature updated with optional `expected_reward_rate` parameter
-
----
 
 ## [1.1.0] - 2025-10-19
 
