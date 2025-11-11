@@ -108,31 +108,28 @@ pub struct StakePool {
     pub stake_mint: Pubkey,
     /// The token mint for rewards (supports Token-2022)
     pub reward_mint: Pubkey,
-    /// Unique identifier to allow multiple pools for same authority + stake_mint
+    /// Unique identifier to allow multiple pools for the same stake_mint
     ///
-    /// **IMPORTANT: Pool ID Collision Risk After Authority Transfer**
+    /// Pool PDAs are derived from: ["stake_pool", stake_mint, pool_id]
     ///
-    /// After transferring pool authority via the two-step transfer process
-    /// (NominateNewAuthority + AcceptAuthority), be aware that:
+    /// **IMPORTANT: Authority Transfer Implications**
     ///
-    /// 1. The old authority can still create NEW pools with the same pool_id
-    ///    for the same stake_mint, because pool PDAs are derived from:
-    ///    ["stake_pool", authority, stake_mint, pool_id]
+    /// Note that the pool PDA is NOT derived from the authority. This design choice
+    /// has the following implications:
     ///
-    /// 2. This creates separate, independent pools with different addresses:
-    ///    - Old pool: PDA(old_authority, stake_mint, pool_id)
-    ///    - New pool: PDA(old_authority, stake_mint, pool_id) - Same as above!
+    /// 1. When authority is transferred via the two-step process (NominateNewAuthority
+    ///    + AcceptAuthority), the pool address remains unchanged.
     ///
-    /// 3. To avoid confusion:
-    ///    - Use unique pool_ids after authority transfer
-    ///    - Document which authority controls which pool_id
-    ///    - Consider using pool_id as a version/generation number
+    /// 2. The pool_id uniquely identifies a pool for a given stake_mint, regardless
+    ///    of who the current authority is.
+    ///
+    /// 3. Multiple pools can exist for the same stake_mint by using different pool_ids.
     ///
     /// Example:
-    /// - Old authority creates Pool ID 0 for USDC
-    /// - Authority transferred to new authority  
-    /// - Old authority should use Pool ID 1+ for new USDC pools
-    /// - Or new authority should start with a high pool_id range (e.g., 1000+)
+    /// - Pool ID 0 for USDC: PDA(USDC, 0)
+    /// - Pool ID 1 for USDC: PDA(USDC, 1)
+    /// - After authority transfer, both pools maintain their addresses
+    ///   and the new authority controls both pools
     pub pool_id: u64,
     /// The pool's stake token vault
     pub stake_vault: Pubkey,
