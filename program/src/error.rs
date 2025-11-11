@@ -83,6 +83,9 @@ pub enum StakePoolError {
     /// 25 - Invalid vault owner (vault must be owned by pool PDA)
     #[error("Invalid vault owner (vault must be owned by pool PDA)")]
     InvalidVaultOwner,
+    /// 26 - Unsafe Token-2022 extension detected
+    #[error("Unsafe Token-2022 extension detected")]
+    UnsafeTokenExtension,
 }
 
 impl From<StakePoolError> for ProgramError {

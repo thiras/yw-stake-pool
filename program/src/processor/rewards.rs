@@ -53,8 +53,18 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     )?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(ctx.accounts.user_reward_account, &pool_data.reward_mint)?;
-    verify_token_account(ctx.accounts.reward_vault, &pool_data.reward_mint)?;
+    verify_token_account(
+        ctx.accounts.user_reward_account,
+        &pool_data.reward_mint,
+        None,
+        None,
+    )?;
+    verify_token_account(
+        ctx.accounts.reward_vault,
+        &pool_data.reward_mint,
+        None,
+        None,
+    )?;
 
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
@@ -163,8 +173,18 @@ pub fn fund_rewards<'a>(accounts: &'a [AccountInfo<'a>], amount: u64) -> Program
     )?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(ctx.accounts.funder_token_account, &pool_data.reward_mint)?;
-    verify_token_account(ctx.accounts.reward_vault, &pool_data.reward_mint)?;
+    verify_token_account(
+        ctx.accounts.funder_token_account,
+        &pool_data.reward_mint,
+        None,
+        None,
+    )?;
+    verify_token_account(
+        ctx.accounts.reward_vault,
+        &pool_data.reward_mint,
+        None,
+        None,
+    )?;
 
     // Transfer reward tokens to pool
     transfer_tokens_with_fee(

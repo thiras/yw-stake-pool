@@ -84,8 +84,13 @@ pub fn stake<'a>(
     assert_same_pubkeys("stake_mint", ctx.accounts.stake_mint, &pool_data.stake_mint)?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(ctx.accounts.user_token_account, &pool_data.stake_mint)?;
-    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint)?;
+    verify_token_account(
+        ctx.accounts.user_token_account,
+        &pool_data.stake_mint,
+        None,
+        None,
+    )?;
+    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint, None, None)?;
 
     if pool_data.is_paused {
         return Err(StakePoolError::PoolPaused.into());
@@ -268,8 +273,13 @@ pub fn unstake<'a>(
     assert_same_pubkeys("stake_mint", ctx.accounts.stake_mint, &pool_data.stake_mint)?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(ctx.accounts.user_token_account, &pool_data.stake_mint)?;
-    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint)?;
+    verify_token_account(
+        ctx.accounts.user_token_account,
+        &pool_data.stake_mint,
+        None,
+        None,
+    )?;
+    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint, None, None)?;
 
     if stake_account_data.amount_staked < amount {
         return Err(StakePoolError::InsufficientStakedBalance.into());
