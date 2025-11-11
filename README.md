@@ -65,6 +65,173 @@ Program Structure:
 
 **Program ID**: `8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx`
 
+### Operational Workflows
+
+The following diagrams illustrate key multi-step operations in the stake pool:
+
+#### Authority Transfer Flow
+
+```mermaid
+sequenceDiagram
+    participant OldAuth as Old Authority
+    participant Pool as Pool State
+    participant NewAuth as New Authority
+    
+    Note over Pool: authority = OldAuth<br/>pending_authority = None
+    
+    OldAuth->>Pool: NominateNewAuthority(NewAuth)
+    Note over Pool: authority = OldAuth<br/>pending_authority = NewAuth
+    
+    NewAuth->>Pool: AcceptAuthority()
+    Note over Pool: authority = NewAuth<br/>pending_authority = None
+    
+    Note over Pool: Transfer Complete!
+```
+
+#### Reward Rate Change Flow (Time-Locked)
+
+```mermaid
+sequenceDiagram
+    participant Auth as Authority
+    participant Pool as Pool State
+    participant Anyone as Anyone (Permissionless)
+    participant Users as Users
+    
+    Note over Pool: reward_rate = 10%<br/>pending_reward_rate = None
+    
+    Auth->>Pool: UpdatePool(reward_rate: 50%)
+    Note over Pool: reward_rate = 10%<br/>pending_reward_rate = 50%<br/>reward_rate_change_timestamp = Now
+    
+    Note over Users: 7-day notice period<br/>Users can unstake if they disagree
+    
+    rect rgb(255, 240, 200)
+        Note over Anyone: Wait 7 days...
+    end
+    
+    Anyone->>Pool: FinalizeRewardRateChange()
+    Note over Pool: reward_rate = 50%<br/>pending_reward_rate = None<br/>last_rate_change = Now
+    
+    Note over Pool: Cooldown enforced<br/>Cannot propose new rate<br/>for another 7 days
+```
+
+#### Staking Workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant StakeAccount as Stake Account (PDA)
+    participant Pool as Pool State
+    participant StakeVault as Stake Vault
+    participant RewardVault as Reward Vault
+    
+    User->>Pool: Stake(amount, index)
+    
+    Note over Pool: Validate:<br/>- Pool not paused<br/>- Pool not ended<br/>- Amount >= min_stake
+    
+    Pool->>RewardVault: Check sufficient rewards
+    Note over RewardVault: balance >= total_owed + new_rewards
+    
+    Pool->>StakeAccount: Create PDA (if new)
+    Note over StakeAccount: owner = User<br/>index = index<br/>amount_staked = 0
+    
+    User->>StakeVault: Transfer tokens
+    Note over StakeVault: balance += amount
+    
+    Pool->>Pool: Update state
+    Note over Pool: total_staked += amount<br/>total_rewards_owed += expected_rewards
+    
+    Pool->>StakeAccount: Initialize/Update
+    Note over StakeAccount: amount_staked = amount<br/>stake_timestamp = Now<br/>claimed_rewards = 0
+    
+    Note over User: Staking complete!<br/>Rewards accrue after lockup period
+```
+
+#### Claiming Rewards Workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant StakeAccount as Stake Account
+    participant Pool as Pool State
+    participant RewardVault as Reward Vault
+    participant UserRewardAccount as User Reward Account
+    
+    User->>Pool: ClaimRewards()
+    
+    Pool->>StakeAccount: Load stake data
+    Note over StakeAccount: amount_staked<br/>stake_timestamp<br/>claimed_rewards
+    
+    Pool->>Pool: Calculate rewards
+    alt Lockup period complete
+        Note over Pool: rewards = (amount * rate) / 1e9
+    else Lockup incomplete
+        Note over Pool: rewards = 0
+    end
+    
+    Note over Pool: unclaimed = total_rewards - claimed_rewards
+    
+    alt unclaimed > 0
+        Pool->>RewardVault: Check balance
+        RewardVault->>UserRewardAccount: Transfer unclaimed rewards
+        Note over UserRewardAccount: balance += actual_amount<br/>(after transfer fees)
+        
+        Pool->>Pool: Update state
+        Note over Pool: total_rewards_owed -= unclaimed
+        
+        Pool->>StakeAccount: Update claimed
+        Note over StakeAccount: claimed_rewards += unclaimed
+        
+        Note over User: Rewards claimed!
+    else unclaimed == 0
+        Note over User: No rewards available yet
+    end
+```
+
+#### Unstaking Workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant StakeAccount as Stake Account
+    participant Pool as Pool State
+    participant StakeVault as Stake Vault
+    participant UserTokenAccount as User Token Account
+    
+    User->>Pool: Unstake(amount)
+    
+    Pool->>StakeAccount: Load stake data
+    Note over StakeAccount: amount_staked<br/>stake_timestamp
+    
+    Pool->>Pool: Check lockup
+    alt enforce_lockup = true AND lockup not complete
+        Note over User: Error: LockupNotExpired
+    else enforce_lockup = false OR lockup complete
+        Note over Pool: Continue unstaking
+    end
+    
+    Pool->>Pool: Calculate forfeited rewards
+    alt Partial unstake
+        Note over Pool: forfeit = proportional_unclaimed_rewards
+    else Full unstake
+        Note over Pool: forfeit = all_unclaimed_rewards
+    end
+    
+    StakeVault->>UserTokenAccount: Transfer tokens
+    Note over UserTokenAccount: balance += actual_amount<br/>(after transfer fees)
+    
+    Pool->>Pool: Update state
+    Note over Pool: total_staked -= amount<br/>total_rewards_owed -= forfeited_rewards
+    
+    Pool->>StakeAccount: Update or reset
+    alt Partial unstake
+        Note over StakeAccount: amount_staked -= amount
+    else Full unstake
+        Note over StakeAccount: amount_staked = 0<br/>stake_timestamp = 0<br/>claimed_rewards = 0
+    end
+    
+    Note over User: Unstaking complete!
+```
+
 ## Quick Start
 
 ### Installation
@@ -182,6 +349,37 @@ The program validates that the pool address matches the provided `pool_id`. If y
 - ❌ Use the wrong `pool_id` when deriving the PDA → Transaction fails (address mismatch)
 - ❌ Try to reuse an existing `pool_id` → Transaction fails (account not empty)
 - ✅ Always use `findPoolPda()` helper → Correct address is guaranteed
+
+**⚠️ IMPORTANT: Pool ID After Authority Transfer**
+
+After transferring pool authority (via `NominateNewAuthority` + `AcceptAuthority`), be aware of pool ID management:
+
+1. **Old authority can still create new pools**: The previous authority can create new pools for the same token with any pool_id, since pool PDAs are derived from `(authority, stakeMint, poolId)`
+
+2. **No automatic collision prevention**: The program doesn't track which authority created which pool_id
+
+3. **Best practices after authority transfer**:
+   - **Document pool ownership**: Maintain off-chain records of which pool_ids belong to which authority
+   - **Use different pool_id ranges**: Old authority uses 0-999, new authority uses 1000+
+   - **Increment from highest**: Always query existing pools and use `max(pool_id) + 1`
+   - **Avoid reusing pool_ids**: Even though PDAs differ, user confusion may occur
+
+**Example Scenario**:
+```typescript
+// Before transfer: Alice owns Pool ID 0 for USDC
+// Alice transfers authority to Bob
+// Bob now controls the existing Pool ID 0
+
+// Later, Alice creates a NEW Pool ID 0 for USDC
+// This creates a DIFFERENT pool (different PDA)
+// but same (old_authority, USDC, 0) identifier
+
+// Result: Two pools with confusingly similar identifiers
+// - Alice's new pool: PDA(Alice, USDC, 0)
+// - Bob's transferred pool: PDA(Alice, USDC, 0) ← Same authority in PDA!
+```
+
+The pools are technically separate (Bob controls one, Alice controls the other), but the shared identifier scheme can cause confusion. Use the best practices above to avoid this.
 
 ## Documentation
 
