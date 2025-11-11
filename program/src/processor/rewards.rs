@@ -141,7 +141,7 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     stake_account_data.save(ctx.accounts.stake_account)?;
 
     msg!(
-        "Claimed {} reward tokens (total claimed: {})",
+        "Claimed {} reward tokens (actual received after fees), total committed: {}",
         actual_amount,
         stake_account_data.claimed_rewards
     );
