@@ -67,8 +67,8 @@
 ///
 /// # Code Location
 /// - Error: `program/src/error.rs` (line 89-91)
-/// - Validation: `program/src/processor/helpers.rs` (lines 10-68)
-/// - Integration: `program/src/processor/helpers.rs` (lines 70-129)
+/// - Validation: `program/src/processor/helpers.rs` (lines 40-75)
+/// - Integration: `program/src/processor/helpers.rs` (lines 77-129)
 /// - Usage: `program/src/processor/initialize.rs` (lines 116-129)
 /// - Fee Handling: `program/src/utils.rs` (lines 273-328)
 #[test]
