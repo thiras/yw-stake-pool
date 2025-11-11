@@ -101,12 +101,42 @@ pub struct StakePool {
     pub pool_end_date: Option<i64>,
     /// Pending reward rate change (None if no change pending)
     /// Set by update_pool, applied by finalize_reward_rate_change after delay
+    ///
+    /// BREAKING CHANGE [L-01 Security Fix]:
+    /// These two fields (pending_reward_rate + reward_rate_change_timestamp) were added
+    /// to implement time-locked reward rate changes with a 7-day delay, preventing
+    /// centralized surprise changes to reward rates.
+    ///
+    /// COMPATIBILITY WARNING:
+    /// This change BREAKS compatibility with existing deployed pools. The old structure
+    /// had _reserved: [u8; 32] after pool_end_date, but the new structure adds two new
+    /// Option fields before reducing reserved space to 16 bytes.
+    ///
+    /// When deserializing existing pool accounts:
+    /// - Old structure: pool_end_date + [u8; 32] reserved
+    /// - New structure: pool_end_date + Option<u64> + Option<i64> + [u8; 16] reserved
+    ///
+    /// The first 1-2 bytes of the old reserved space will be misinterpreted as Option
+    /// discriminators for the new fields, causing data corruption.
+    ///
+    /// MIGRATION REQUIRED:
+    /// If you have existing pools deployed, you MUST:
+    /// 1. Drain all stakes and rewards from existing pools
+    /// 2. Close existing pool accounts
+    /// 3. Redeploy the new program version
+    /// 4. Recreate pools with new structure
+    ///
+    /// This is a fresh devnet deployment with no production pools, so the breaking
+    /// change is acceptable. DO NOT deploy this to a cluster with existing pools
+    /// without proper migration.
     pub pending_reward_rate: Option<u64>,
     /// Timestamp when pending reward rate change was proposed
     /// Used to enforce REWARD_RATE_CHANGE_DELAY before finalizing
+    /// Must always be in sync with pending_reward_rate (both Some or both None)
     pub reward_rate_change_timestamp: Option<i64>,
     /// Reserved space for future use. Not currently used.
     /// This field allows for future upgrades without breaking compatibility.
+    /// REDUCED from 32 bytes to 16 bytes to accommodate new time-lock fields.
     pub _reserved: [u8; 16],
 }
 

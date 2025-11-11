@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Time-Locked Reward Rate Changes [L-01 Security Fix]**: 7-day delay for reward rate changes
+  - `pending_reward_rate: Option<u64>` field added to `StakePool` state
+  - `reward_rate_change_timestamp: Option<i64>` field added to `StakePool` state
+  - `FinalizeRewardRateChange` instruction (permissionless, callable after 7-day delay)
+  - `REWARD_RATE_CHANGE_DELAY` constant: 604800 seconds (7 days)
+  - Cancellation mechanism: proposing current rate clears pending change
+  - Defense-in-depth: rate bounds validation in both proposal and finalization
+  - Comprehensive timestamp validation with `MIN_VALID_TIMESTAMP` (Jan 1, 2021)
+  - New error codes: `RewardRateChangeDelayNotElapsed`, `NoPendingRewardRateChange`, 
+    `PendingRewardRateChangeExists`, `InvalidTimestamp`, `DataCorruption`
+  - Prevents centralized surprise changes to reward rates
+  - Authority transfer documentation: new authority can cancel by reproposing current rate
+
+### Changed
+- **BREAKING CHANGE**: `StakePool` account structure modified (incompatible with existing pools)
+  - Added `pending_reward_rate` and `reward_rate_change_timestamp` fields
+  - Reduced `_reserved` from 32 bytes to 16 bytes
+  - Account size remains 288 bytes (when pending fields are Some)
+  - **MIGRATION REQUIRED**: Existing pools MUST be drained, closed, and recreated
+  - Old structure: `pool_end_date` + `[u8; 32]` reserved
+  - New structure: `pool_end_date` + `Option<u64>` + `Option<i64>` + `[u8; 16]` reserved
+  - Deserialization of old accounts will fail or produce corrupted data
+  - This is acceptable for devnet deployment with no production pools
+  - **DO NOT deploy to clusters with existing pools without proper migration**
+
+### Added (continued from previous unreleased)
 - **Multi-Pool Support Enhancement**: New `pool_id` parameter for better pool management
   - `pool_id: u64` field added to `StakePool` state
   - Enables multiple pools with same authority and stake_mint using unique IDs
@@ -15,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Use `pool_id: 0` for first pool, `1` for second, etc.
   - Built-in validation ensures pool address matches provided pool_id
 
-### Changed
+### Changed (continued from previous unreleased)
 - `StakePool` state size increased to accommodate new `pool_id` field
 - `InitializePool` instruction now requires `pool_id: u64` parameter
 - Pool PDA derivation updated to include pool_id in seed array
@@ -27,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated all PDA helper functions to include pool_id parameter
 - Client library auto-generated with new pool_id field
 - Example code updated to demonstrate pool_id usage
+- 14 comprehensive reward rate change tests added
+- 17 client tests validating time-lock functionality
+- Timestamp validation helpers extracted to `helpers.rs` module
+- All `Clock::get()` calls protected with timestamp validation
 
 ## [1.5.0] - 2025-10-22
 
