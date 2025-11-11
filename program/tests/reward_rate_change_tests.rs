@@ -61,7 +61,7 @@ fn test_propose_reward_rate_change() {
     svm.airdrop(&authority.pubkey(), 10_000_000_000).unwrap();
 
     // Initialize pool with 10% reward rate
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint.pubkey(), 0);
+    let (pool_pda, _) = get_pool_pda(&stake_mint.pubkey(), 0);
 
     // ... (pool initialization code would go here)
     // For this test, we'll focus on the update_pool logic
@@ -150,7 +150,7 @@ fn test_stake_pool_structure_has_new_fields() {
     // Verify new fields are accessible
     assert_eq!(pool.pending_reward_rate, Some(50_000_000));
     assert_eq!(pool.reward_rate_change_timestamp, Some(1700000000));
-    assert_eq!(pool._reserved.len(), 16); // Verify reduced from 32 to 16
+    assert_eq!(pool._reserved.len(), 7); // Verify reduced from 16 to 7
 }
 
 /// Test that instruction enum has FinalizeRewardRateChange variant

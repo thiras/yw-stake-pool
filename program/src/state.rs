@@ -255,23 +255,17 @@ impl StakePool {
     pub const LEN: usize =
         1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 9 + 9 + 9 + 7;
 
-    pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> Vec<Vec<u8>> {
+    pub fn seeds(stake_mint: &Pubkey, pool_id: u64) -> Vec<Vec<u8>> {
         vec![
             b"stake_pool".to_vec(),
-            authority.as_ref().to_vec(),
             stake_mint.as_ref().to_vec(),
             pool_id.to_le_bytes().to_vec(),
         ]
     }
 
-    pub fn find_pda(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> (Pubkey, u8) {
+    pub fn find_pda(stake_mint: &Pubkey, pool_id: u64) -> (Pubkey, u8) {
         let pool_id_bytes = pool_id.to_le_bytes();
-        let seeds: Vec<&[u8]> = vec![
-            b"stake_pool",
-            authority.as_ref(),
-            stake_mint.as_ref(),
-            &pool_id_bytes,
-        ];
+        let seeds: Vec<&[u8]> = vec![b"stake_pool", stake_mint.as_ref(), &pool_id_bytes];
         Pubkey::find_program_address(&seeds, &crate::ID)
     }
 

@@ -90,7 +90,7 @@ async function main() {
     // Derive pool PDA with pool_id = 0 (first pool for this authority + mint)
     // NOTE: The pool_id used here MUST match the one passed to initializePool
     // Otherwise the transaction will fail with "address mismatch"
-    const [poolAddress] = await findPoolPda(authority.address, stakeMint, 0n);
+    const [poolAddress] = await findPoolPda(stakeMint, 0n);
     console.log(`\n📍 Derived Pool PDA: ${poolAddress}`);
     console.log('   (Will be used as vault owner)\n');
 

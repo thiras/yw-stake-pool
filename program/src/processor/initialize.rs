@@ -109,13 +109,9 @@ pub fn initialize_pool<'a>(
     }
 
     // Guards
-    // Derive the expected pool PDA from authority, stake_mint, and pool_id
+    // Derive the expected pool PDA from stake_mint and pool_id
     // This ensures the provided pool account matches the pool_id parameter
-    let pool_seeds = StakePool::seeds(
-        ctx.accounts.authority.key,
-        ctx.accounts.stake_mint.key,
-        pool_id,
-    );
+    let pool_seeds = StakePool::seeds(ctx.accounts.stake_mint.key, pool_id);
     let pool_seeds_refs: Vec<&[u8]> = pool_seeds.iter().map(|s| s.as_slice()).collect();
     let (pool_key, bump) = Pubkey::find_program_address(&pool_seeds_refs, &crate::ID);
 

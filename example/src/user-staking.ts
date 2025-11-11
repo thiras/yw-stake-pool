@@ -45,7 +45,7 @@ async function main() {
     const stakeMint = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const rewardMint = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     
-    const [poolAddress] = await findPoolPda(poolAuthorityAddress, stakeMint);
+    const [poolAddress] = await findPoolPda(stakeMint);
     console.log(`📍 Using Pool: ${poolAddress}`);
 
     // Token accounts (placeholders)

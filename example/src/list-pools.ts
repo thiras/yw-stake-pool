@@ -64,7 +64,6 @@ async function checkPool(
 
   // Find the pool PDA
   const [poolAddress, bump] = await findPoolPda(
-    authorityAddress,
     stakeMintAddress
   );
 

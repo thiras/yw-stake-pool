@@ -29,7 +29,7 @@ fn test_m01_frontrunning_dos_resistance() {
 
     let stake_mint = Keypair::new().pubkey();
     let pool_id = 0u64;
-    let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint, pool_id);
+    let (pool_pda, _) = get_pool_pda(&stake_mint, pool_id);
 
     // ATTACK: Send lamports to PDA before creation
     let tx = Transaction::new_signed_with_payer(

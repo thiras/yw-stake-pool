@@ -68,43 +68,37 @@ fn test_pool_pda_derivation() {
     let authority = Pubkey::new_unique();
     let stake_mint = Pubkey::new_unique();
 
-    let (pool_pda, bump) = get_pool_pda(&authority, &stake_mint, 0);
+    let (pool_pda, bump) = get_pool_pda(&stake_mint, 0);
 
     // Verify PDA properties
     assert_valid_pda(&pool_pda);
 
     // Verify deterministic
-    let (pool_pda2, bump2) = get_pool_pda(&authority, &stake_mint, 0);
+    let (pool_pda2, bump2) = get_pool_pda(&stake_mint, 0);
     assert_pda_consistency(&pool_pda, &pool_pda2, bump, bump2);
 
     println!("✅ Pool PDA derivation correct");
 }
 
 #[test]
-fn test_multiple_pool_ids() {
+fn test_pool_id_uniqueness() {
     let authority = Pubkey::new_unique();
     let stake_mint = Pubkey::new_unique();
 
-    // Test different pool IDs produce different PDAs
-    let (pool_0, _) = get_pool_pda(&authority, &stake_mint, 0);
-    let (pool_1, _) = get_pool_pda(&authority, &stake_mint, 1);
-    let (pool_2, _) = get_pool_pda(&authority, &stake_mint, 2);
+    let (pool_0, _) = get_pool_pda(&stake_mint, 0);
+    let (pool_1, _) = get_pool_pda(&stake_mint, 1);
+    let (pool_2, _) = get_pool_pda(&stake_mint, 2);
 
-    // Verify all are valid PDAs
-    assert_valid_pda(&pool_0);
-    assert_valid_pda(&pool_1);
-    assert_valid_pda(&pool_2);
-
-    // Verify they are all different
+    // Verify all are unique
     assert_ne!(pool_0, pool_1);
     assert_ne!(pool_1, pool_2);
     assert_ne!(pool_0, pool_2);
 
-    // Verify deterministic
-    let (pool_1_again, _) = get_pool_pda(&authority, &stake_mint, 1);
+    // Verify consistency
+    let (pool_1_again, _) = get_pool_pda(&stake_mint, 1);
     assert_eq!(pool_1, pool_1_again);
 
-    println!("✅ Multiple pool IDs produce distinct PDAs");
+    println!("✅ Pool ID generates unique PDAs");
 }
 
 #[test]

@@ -332,58 +332,41 @@ See [clients/js/README.md](./clients/js/README.md) for full API documentation.
 
 ### Multiple Pools Per Token
 
-A single authority can create multiple stake pools for the same token by using different `poolId` values. This allows pool operators to:
+Multiple stake pools can be created for the same token by using different `poolId` values. This allows:
 
-- Run multiple pools with different reward rates and lockup periods
-- Segment user groups (e.g., VIP vs standard pools)
-- Test new configurations without affecting existing pools
-- Create time-limited promotional pools
+- Running multiple pools with different reward rates and lockup periods
+- Segmenting user groups (e.g., VIP vs standard pools)
+- Testing new configurations without affecting existing pools
+- Creating time-limited promotional pools
 
-Each pool is identified by the combination of `(authority, stakeMint, poolId)`, so use:
-- `poolId: 0n` for your first pool
-- `poolId: 1n` for your second pool
+Pool PDAs are derived from `(stakeMint, poolId)`:
+- `poolId: 0n` for the first pool for this token
+- `poolId: 1n` for the second pool for this token
 - And so on...
 
 **Built-in Safeguards:**
 The program validates that the pool address matches the provided `pool_id`. If you:
 - ❌ Use the wrong `pool_id` when deriving the PDA → Transaction fails (address mismatch)
-- ❌ Try to reuse an existing `pool_id` → Transaction fails (account not empty)
+- ❌ Try to reuse an existing `pool_id` for the same token → Transaction fails (account already exists)
 - ✅ Always use `findPoolPda()` helper → Correct address is guaranteed
 
-**⚠️ IMPORTANT: Pool ID After Authority Transfer**
+**Pool ID Management:**
+Since pool IDs are scoped per token (not per authority), coordinate `pool_id` allocation:
+- **Query existing pools**: Check which pool IDs are already in use for a token
+- **Increment from highest**: Use `max(pool_id) + 1` when creating new pools
+- **Document your pools**: Maintain off-chain records of pool purposes and configurations
 
-After transferring pool authority (via `NominateNewAuthority` + `AcceptAuthority`), be aware of pool ID management:
-
-1. **Old authority can still create new pools**: The previous authority can create new pools for the same token with any pool_id, since pool PDAs are derived from `(authority, stakeMint, poolId)`
-
-2. **No automatic collision prevention**: The program doesn't track which authority created which pool_id
-
-3. **Best practices after authority transfer**:
-   - **Document pool ownership**: Maintain off-chain records of which pool_ids belong to which authority
-   - **Use different pool_id ranges**: Old authority uses 0-999, new authority uses 1000+
-   - **Increment from highest**: Always query existing pools and use `max(pool_id) + 1`
-   - **Avoid reusing pool_ids**: Even though PDAs differ, user confusion may occur
-
-**Example Scenario**:
+**Example**:
 ```typescript
-// Before transfer: Alice creates Pool ID 0 for USDC
-const originalPool = PDA(Alice, USDC, 0)  // Alice is the authority seed
+// First USDC staking pool (10% APY, 7-day lockup)
+const pool0 = await findPoolPda(USDC_MINT, 0n)
 
-// Alice transfers operational authority to Bob
-// The pool.authority field updates to Bob, but PDA seeds remain unchanged
-// Result: PDA(Alice, USDC, 0) is controlled by Bob
+// Second USDC staking pool (15% APY, 30-day lockup)  
+const pool1 = await findPoolPda(USDC_MINT, 1n)
 
-// Later, Alice creates a NEW Pool ID 0 for USDC under her control
-const newPool = PDA(Alice, USDC, 0)  // Same seeds!
-// ❌ Transaction FAILS - this PDA already exists (created earlier)
-
-// Alice must use a different pool_id:
-const alicePool = PDA(Alice, USDC, 1)  // Different pool_id = different PDA
+// These are different pools for the same token
+// Users can choose which pool suits their needs
 ```
-
-**Why this happens**: Pool PDAs use the **original creator's address** in seeds, even after authority transfer. When Alice transfers pool 0 to Bob, the PDA remains `PDA(Alice, USDC, 0)`. If Alice tries to create another pool 0, it's the same PDA address - causing a collision.
-
-**Solution**: After receiving a transferred pool, the new authority should maintain records of which pool IDs are in use for each (original_creator, token) combination to avoid attempting to create pools with taken IDs.
 
 ## Documentation
 

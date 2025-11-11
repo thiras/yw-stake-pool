@@ -49,14 +49,12 @@ export function createRpcSubscriptions() {
  * The pool_id must match what you pass to initializePool instruction.
  * If the addresses don't match, the transaction will fail.
  * 
- * @param authority - The pool authority public key
  * @param stakeMint - The token mint being staked
- * @param poolId - Unique pool identifier (0 for first pool, 1 for second, etc.)
+ * @param poolId - Unique pool identifier per token (0 for first pool, 1 for second, etc.)
  * @param programId - The stake pool program address
  * @returns [poolAddress, bump] - The derived PDA and bump seed
  */
 export async function findPoolPda(
-  authority: Address,
   stakeMint: Address,
   poolId: bigint = 0n,
   programId: Address = config.programId
@@ -69,7 +67,6 @@ export async function findPoolPda(
     programAddress: programId,
     seeds: [
       'stake_pool',
-      encoder.encode(authority),
       encoder.encode(stakeMint),
       poolIdBytes,
     ],
