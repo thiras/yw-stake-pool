@@ -284,6 +284,17 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
     // Guards
     assert_writable("pool", ctx.accounts.pool)?;
 
+    // Invariant check: pending_reward_rate and reward_rate_change_timestamp must be in sync
+    // Both should be Some or both should be None. Mismatch indicates data corruption or a bug.
+    if pool_data.pending_reward_rate.is_some() != pool_data.reward_rate_change_timestamp.is_some() {
+        msg!(
+            "Data corruption: inconsistent pending reward rate state (pending_rate: {:?}, timestamp: {:?})",
+            pool_data.pending_reward_rate,
+            pool_data.reward_rate_change_timestamp
+        );
+        return Err(StakePoolError::InvalidAccountDiscriminator.into());
+    }
+
     // Check if there is a pending reward rate change
     let pending_rate = pool_data
         .pending_reward_rate
