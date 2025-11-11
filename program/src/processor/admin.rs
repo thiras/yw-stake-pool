@@ -300,6 +300,7 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
 
     // Check if the delay period has elapsed
     let current_time = Clock::get()?.unix_timestamp;
+    validate_current_timestamp(current_time)?;
     validate_stored_timestamp(change_timestamp, current_time)?;
 
     let time_elapsed = current_time
