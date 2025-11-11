@@ -125,6 +125,9 @@ pub enum StakePoolError {
     /// 39 - Creator not found in authorized list
     #[error("Creator not found in authorized list")]
     CreatorNotFound,
+    /// 40 - Account already initialized
+    #[error("Account already initialized")]
+    AlreadyInitialized,
 }
 
 impl From<StakePoolError> for ProgramError {

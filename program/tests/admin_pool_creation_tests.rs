@@ -434,6 +434,50 @@ fn test_deserialization_roundtrip() {
     assert!(deserialized.is_authorized(&creator2));
 }
 
+#[test]
+fn test_array_compaction_after_removal() {
+    let authority = Pubkey::new_unique();
+    let creators: Vec<Pubkey> = (0..5).map(|_| Pubkey::new_unique()).collect();
+
+    let mut program_authority = ProgramAuthority {
+        key: Key::ProgramAuthority,
+        authority,
+        authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
+        creator_count: 0,
+        bump: 255,
+    };
+
+    // Add 5 creators
+    for creator in &creators {
+        program_authority.add_creator(*creator).unwrap();
+    }
+
+    // Remove creators at positions 1 and 3
+    program_authority.remove_creator(&creators[1]).unwrap();
+    program_authority.remove_creator(&creators[3]).unwrap();
+
+    // After compaction, array should have no holes
+    // Should be: [creators[0], creators[2], creators[4], None, None, ...]
+    let mut found_none = false;
+    for slot in &program_authority.authorized_creators {
+        if slot.is_none() {
+            found_none = true;
+        } else if found_none {
+            panic!("Found Some after None - array not compacted!");
+        }
+    }
+
+    // Verify remaining creators are still authorized
+    assert!(program_authority.is_authorized(&creators[0]));
+    assert!(!program_authority.is_authorized(&creators[1])); // removed
+    assert!(program_authority.is_authorized(&creators[2]));
+    assert!(!program_authority.is_authorized(&creators[3])); // removed
+    assert!(program_authority.is_authorized(&creators[4]));
+
+    // Verify count is correct
+    assert_eq!(program_authority.creator_count, 3);
+}
+
 // ============================================================================
 // Integration Notes
 // ============================================================================

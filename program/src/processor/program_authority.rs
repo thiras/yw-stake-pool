@@ -1,3 +1,4 @@
+use solana_program::log::sol_log_data;
 use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey};
 
 use crate::assertions::*;
@@ -44,6 +45,14 @@ pub fn initialize_program_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> Prog
     )?;
     assert_signer("initial_authority", ctx.accounts.initial_authority)?;
     assert_signer("payer", ctx.accounts.payer)?;
+
+    // CRITICAL: Check if already initialized to prevent reinitialization attack
+    // This prevents an attacker from closing and recreating the account with a different authority
+    if ctx.accounts.program_authority.data_len() > 0 {
+        msg!("Program authority already initialized");
+        return Err(StakePoolError::AlreadyInitialized.into());
+    }
+
     assert_empty("program_authority", ctx.accounts.program_authority)?;
     assert_writable("program_authority", ctx.accounts.program_authority)?;
     assert_writable("payer", ctx.accounts.payer)?;
@@ -78,6 +87,12 @@ pub fn initialize_program_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> Prog
         ctx.accounts.initial_authority.key
     );
 
+    // Log event for off-chain indexing
+    sol_log_data(&[
+        b"ProgramAuthorityInitialized",
+        ctx.accounts.initial_authority.key.as_ref(),
+    ]);
+
     Ok(())
 }
 
@@ -111,6 +126,24 @@ pub fn manage_authorized_creators<'a>(
 ) -> ProgramResult {
     let ctx = ManageAuthorizedCreatorsAccounts::context(accounts)?;
 
+    // DoS Protection: Limit vector sizes to prevent excessive computation
+    if add.len() > ProgramAuthority::MAX_CREATORS {
+        msg!(
+            "Too many creators to add: {}. Maximum: {}",
+            add.len(),
+            ProgramAuthority::MAX_CREATORS
+        );
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+    if remove.len() > ProgramAuthority::MAX_CREATORS {
+        msg!(
+            "Too many creators to remove: {}. Maximum: {}",
+            remove.len(),
+            ProgramAuthority::MAX_CREATORS
+        );
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+
     // Load and validate program authority
     let mut program_authority_data = ProgramAuthority::load(ctx.accounts.program_authority)?;
 
@@ -131,12 +164,26 @@ pub fn manage_authorized_creators<'a>(
     for creator in &remove {
         program_authority_data.remove_creator(creator)?;
         msg!("Removed authorized creator: {}", creator);
+
+        // Log event for off-chain indexing
+        sol_log_data(&[
+            b"AuthorizedCreatorRemoved",
+            creator.as_ref(),
+            ctx.accounts.authority.key.as_ref(),
+        ]);
     }
 
     // Add new creators
     for creator in &add {
         program_authority_data.add_creator(*creator)?;
         msg!("Added authorized creator: {}", creator);
+
+        // Log event for off-chain indexing
+        sol_log_data(&[
+            b"AuthorizedCreatorAdded",
+            creator.as_ref(),
+            ctx.accounts.authority.key.as_ref(),
+        ]);
     }
 
     // Save updated state

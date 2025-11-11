@@ -15,9 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `ManageAuthorizedCreators` instruction to add/remove authorized creators
   - Authorization check in `InitializePool` - only authorized creators can create pools
   - New error codes: `UnauthorizedPoolCreator`, `CreatorAlreadyAuthorized`, 
-    `MaxAuthorizedCreatorsReached`, `CannotRemoveMainAuthority`, `CreatorNotFound`
+    `MaxAuthorizedCreatorsReached`, `CannotRemoveMainAuthority`, `CreatorNotFound`, `AlreadyInitialized`
   - Prevents permissionless spam/scam pool creation
-  - Full test coverage with 17 unit tests
+  - **Security Enhancements**:
+    - Reinitialization attack prevention (checks if account already has data)
+    - DoS protection (limits vector sizes in ManageAuthorizedCreators)
+    - Array compaction (prevents fragmentation after creator removal)
+    - Event logging (enables off-chain tracking of authorization changes)
+  - Full test coverage with 18 unit tests
 
 - **Time-Locked Reward Rate Changes [L-01 Security Fix]**: 7-day delay for reward rate changes
   - `pending_reward_rate: Option<u64>` field added to `StakePool` state

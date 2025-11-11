@@ -430,6 +430,21 @@ impl ProgramAuthority {
         false
     }
 
+    /// Compact the authorized_creators array by moving all Some values to the front
+    /// This prevents fragmentation and improves iteration efficiency
+    fn compact_creators(&mut self) {
+        let mut write_idx = 0;
+        for read_idx in 0..self.authorized_creators.len() {
+            if let Some(creator) = self.authorized_creators[read_idx] {
+                if write_idx != read_idx {
+                    self.authorized_creators[write_idx] = Some(creator);
+                    self.authorized_creators[read_idx] = None;
+                }
+                write_idx += 1;
+            }
+        }
+    }
+
     /// Add a new authorized creator
     pub fn add_creator(&mut self, creator: Pubkey) -> Result<(), ProgramError> {
         // Check if already exists
@@ -476,6 +491,10 @@ impl ProgramAuthority {
                         .creator_count
                         .checked_sub(1)
                         .ok_or(StakePoolError::NumericalOverflow)?;
+
+                    // Compact array to prevent fragmentation
+                    self.compact_creators();
+
                     return Ok(());
                 }
             }
