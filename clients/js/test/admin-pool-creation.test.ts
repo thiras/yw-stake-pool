@@ -117,7 +117,8 @@ test('ProgramAuthority has correct size', (t) => {
   };
 
   const encodedEmpty = codec.encode(emptyAuthority);
-  // Size: 1 (key) + 32 (authority) + 10 (10 * 1 for None) + 1 (count) + 1 (bump) = 45 bytes
+  // Size: 1 (key) + 32 (authority) + 10 (10 * 1 byte for Option::None) + 1 (count) + 1 (bump) = 45 bytes
+  // Note: Borsh encodes Option::None as 1 byte (0x00), Option::Some as 1 byte (0x01) + value
   t.is(encodedEmpty.length, 45);
 
   // Test full creators list (all Some)
@@ -132,7 +133,8 @@ test('ProgramAuthority has correct size', (t) => {
   };
 
   const encodedFull = codec.encode(fullAuthority);
-  // Size: 1 (key) + 32 (authority) + 330 (10 * 33 for Some) + 1 (count) + 1 (bump) = 365 bytes
+  // Size: 1 (key) + 32 (authority) + 330 (10 * 33 bytes for Option::Some + Pubkey) + 1 (count) + 1 (bump) = 365 bytes
+  // Note: Each Option::Some(Pubkey) is 1 byte discriminator + 32 bytes pubkey = 33 bytes
   t.is(encodedFull.length, 365);
 });
 
