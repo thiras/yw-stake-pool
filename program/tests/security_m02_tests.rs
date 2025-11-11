@@ -66,11 +66,11 @@
 /// - ✅ TransferFeeConfig tokens are fully supported
 ///
 /// # Code Location
-/// - Error: `program/src/error.rs` (line 89-91)
+/// - Error: `program/src/error.rs` (line 88)
 /// - Validation: `program/src/processor/helpers.rs` (lines 40-75)
-/// - Integration: `program/src/processor/helpers.rs` (lines 77-129)
-/// - Usage: `program/src/processor/initialize.rs` (lines 116-129)
-/// - Fee Handling: `program/src/utils.rs` (lines 273-328)
+/// - Integration: `program/src/processor/helpers.rs` (lines 95-121)
+/// - Usage: `program/src/processor/initialize.rs` (lines 118-129)
+/// - Fee Handling: `program/src/utils.rs` (lines 273-329)
 #[test]
 fn test_m02_vulnerability_documentation() {
     // This test serves as documentation for the security fix.
