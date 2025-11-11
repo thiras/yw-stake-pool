@@ -278,6 +278,12 @@ pub fn transfer_lamports_from_pdas<'a>(
 /// another source within the same transaction (via CPI), the calculated
 /// amount would be inflated.
 ///
+/// This limitation is mitigated in practice:
+/// - For vault accounts: PDAs owned by protocol, no external deposits possible
+/// - For user accounts: TransferHook extension blocked, preventing CPI injection
+///   during transfers; users control their own accounts but cannot inject code
+///   into the protocol's transaction execution
+///
 /// # Why Balance Checking
 /// 1. Works for both Token and Token-2022 mints uniformly
 /// 2. Accounts for all fee scenarios without complex calculations
@@ -286,7 +292,11 @@ pub fn transfer_lamports_from_pdas<'a>(
 ///
 /// # Security Properties
 /// - Vault accounts are PDAs owned by the protocol (no external deposits possible)
-/// - User accounts are validated to belong to correct mints
+/// - User accounts as recipients are safe because:
+///   * TransferHook extension is blocked during pool initialization, preventing
+///     mid-transfer balance manipulation via custom transfer logic
+///   * Users cannot inject additional CPIs into the protocol's execution flow
+///   * Balance checking occurs within the same atomic transaction
 /// - Solana's transaction atomicity prevents concurrent modifications to the same accounts
 /// - Balance differences accurately reflect actual transfer results
 pub fn transfer_tokens_with_fee<'a>(
