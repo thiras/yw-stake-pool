@@ -703,17 +703,13 @@
         {
           "name": "add",
           "type": {
-            "vec": {
-              "defined": "solana_program"
-            }
+            "vec": "publicKey"
           }
         },
         {
           "name": "remove",
           "type": {
-            "vec": {
-              "defined": "solana_program"
-            }
+            "vec": "publicKey"
           }
         }
       ],

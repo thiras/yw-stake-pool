@@ -1,5 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use shank::{ShankContext, ShankInstruction};
+use solana_program::pubkey::Pubkey;
 
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug, ShankContext, ShankInstruction)]
 #[rustfmt::skip]
@@ -139,8 +140,8 @@ pub enum StakePoolInstruction {
     #[account(1, signer, name="authority", desc = "The program authority signer")]
     ManageAuthorizedCreators {
         /// Addresses to add to authorized creators list
-        add: Vec<solana_program::pubkey::Pubkey>,
+        add: Vec<Pubkey>,
         /// Addresses to remove from authorized creators list
-        remove: Vec<solana_program::pubkey::Pubkey>,
+        remove: Vec<Pubkey>,
     },
 }

@@ -8,6 +8,8 @@
 
 import {
   combineCodec,
+  getAddressDecoder,
+  getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
   getStructDecoder,
@@ -31,12 +33,6 @@ import {
 } from '@solana/kit';
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
-import {
-  getSolanaProgramDecoder,
-  getSolanaProgramEncoder,
-  type SolanaProgram,
-  type SolanaProgramArgs,
-} from '../types';
 
 export const MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR = 11;
 
@@ -66,21 +62,21 @@ export type ManageAuthorizedCreatorsInstruction<
 
 export type ManageAuthorizedCreatorsInstructionData = {
   discriminator: number;
-  add: Array<SolanaProgram>;
-  remove: Array<SolanaProgram>;
+  add: Array<Address>;
+  remove: Array<Address>;
 };
 
 export type ManageAuthorizedCreatorsInstructionDataArgs = {
-  add: Array<SolanaProgramArgs>;
-  remove: Array<SolanaProgramArgs>;
+  add: Array<Address>;
+  remove: Array<Address>;
 };
 
 export function getManageAuthorizedCreatorsInstructionDataEncoder(): Encoder<ManageAuthorizedCreatorsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['add', getArrayEncoder(getSolanaProgramEncoder())],
-      ['remove', getArrayEncoder(getSolanaProgramEncoder())],
+      ['add', getArrayEncoder(getAddressEncoder())],
+      ['remove', getArrayEncoder(getAddressEncoder())],
     ]),
     (value) => ({
       ...value,
@@ -92,8 +88,8 @@ export function getManageAuthorizedCreatorsInstructionDataEncoder(): Encoder<Man
 export function getManageAuthorizedCreatorsInstructionDataDecoder(): Decoder<ManageAuthorizedCreatorsInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['add', getArrayDecoder(getSolanaProgramDecoder())],
-    ['remove', getArrayDecoder(getSolanaProgramDecoder())],
+    ['add', getArrayDecoder(getAddressDecoder())],
+    ['remove', getArrayDecoder(getAddressDecoder())],
   ]);
 }
 
