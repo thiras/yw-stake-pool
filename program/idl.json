@@ -812,11 +812,17 @@
             }
           },
           {
+            "name": "lastRateChange",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                16
+                7
               ]
             }
           }
