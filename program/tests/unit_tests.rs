@@ -65,7 +65,6 @@ fn test_program_loading() {
 
 #[test]
 fn test_pool_pda_derivation() {
-    let authority = Pubkey::new_unique();
     let stake_mint = Pubkey::new_unique();
 
     let (pool_pda, bump) = get_pool_pda(&stake_mint, 0);
@@ -82,7 +81,6 @@ fn test_pool_pda_derivation() {
 
 #[test]
 fn test_pool_id_uniqueness() {
-    let authority = Pubkey::new_unique();
     let stake_mint = Pubkey::new_unique();
 
     let (pool_0, _) = get_pool_pda(&stake_mint, 0);
