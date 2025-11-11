@@ -93,7 +93,8 @@ test('StakePool has pendingRewardRate field', (t) => {
     poolEndDate: null,
     pendingRewardRate: some(150_000_000n),
     rewardRateChangeTimestamp: some(1700000000n),
-    reserved: new Uint8Array(16),
+    lastRateChange: null,
+    reserved: new Uint8Array(7),
   };
 
   // Should not throw
@@ -127,7 +128,8 @@ test('StakePool has rewardRateChangeTimestamp field', (t) => {
     poolEndDate: null,
     pendingRewardRate: some(150_000_000n), // Must be Some when timestamp is Some
     rewardRateChangeTimestamp: some(proposalTime),
-    reserved: new Uint8Array(16),
+    lastRateChange: null,
+    reserved: new Uint8Array(7),
   };
 
   const encoded = codec.encode(stakePool);
@@ -178,7 +180,8 @@ test('StakePool pending fields work together', (t) => {
     poolEndDate: null,
     pendingRewardRate: some(200_000_000n), // Pending: 20%
     rewardRateChangeTimestamp: some(proposalTime),
-    reserved: new Uint8Array(16),
+    lastRateChange: null,
+    reserved: new Uint8Array(7),
   };
 
   const encoded = codec.encode(stakePool);
@@ -219,7 +222,8 @@ test('StakePool with no pending changes', (t) => {
     poolEndDate: null,
     pendingRewardRate: null,
     rewardRateChangeTimestamp: null,
-    reserved: new Uint8Array(16),
+    lastRateChange: null,
+    reserved: new Uint8Array(7),
   };
 
   const encoded = codec.encode(stakePool);
@@ -272,7 +276,8 @@ test('Cancellation mechanism - proposing current rate', (t) => {
     poolEndDate: null,
     pendingRewardRate: some(200_000_000n),
     rewardRateChangeTimestamp: some(1700000000n),
-    reserved: new Uint8Array(16),
+    lastRateChange: null,
+    reserved: new Uint8Array(7),
   };
 
   // After proposing current rate (simulated state after on-chain cancellation)
@@ -280,6 +285,7 @@ test('Cancellation mechanism - proposing current rate', (t) => {
     ...poolBeforeCancellation,
     pendingRewardRate: null,
     rewardRateChangeTimestamp: null,
+    lastRateChange: null,
   };
 
   const encoded = codec.encode(poolAfterCancellation);

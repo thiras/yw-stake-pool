@@ -26,7 +26,8 @@ test('StakePool codec encodes and decodes correctly', (t) => {
     poolEndDate: null,
     pendingRewardRate: null,
     rewardRateChangeTimestamp: null,
-    reserved: new Uint8Array(16),
+    lastRateChange: null,
+    reserved: new Uint8Array(7),
   };
 
   const encoded = codec.encode(stakePool);
@@ -73,7 +74,8 @@ test('StakePool has correct reward_rate field', (t) => {
     poolEndDate: null,
     pendingRewardRate: null,
     rewardRateChangeTimestamp: null,
-    reserved: new Uint8Array(16),
+    lastRateChange: null,
+    reserved: new Uint8Array(7),
   };
 
   const encoded = codec.encode(stakePool);
