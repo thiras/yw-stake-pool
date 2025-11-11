@@ -107,6 +107,9 @@ pub enum StakePoolError {
     /// 33 - Data corruption detected (state invariant violated)
     #[error("Data corruption detected (state invariant violated)")]
     DataCorruption,
+    /// 34 - Account size too small for serialized data
+    #[error("Account size too small for serialized data")]
+    AccountSizeTooSmall,
 }
 
 impl From<StakePoolError> for ProgramError {
