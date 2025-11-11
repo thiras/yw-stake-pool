@@ -72,10 +72,21 @@ export const STAKE_POOL_ERROR__UNSAFE_TOKEN_EXTENSION = 0x1a; // 26
 export const STAKE_POOL_ERROR__UNEXPECTED_BALANCE_CHANGE = 0x1b; // 27
 /** MintHasFreezeAuthority: Mint has freeze authority (can lock user funds) */
 export const STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY = 0x1c; // 28
+/** RewardRateChangeDelayNotElapsed: Reward rate change delay not elapsed */
+export const STAKE_POOL_ERROR__REWARD_RATE_CHANGE_DELAY_NOT_ELAPSED = 0x1d; // 29
+/** NoPendingRewardRateChange: No pending reward rate change */
+export const STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE = 0x1e; // 30
+/** PendingRewardRateChangeExists: Pending reward rate change already exists */
+export const STAKE_POOL_ERROR__PENDING_REWARD_RATE_CHANGE_EXISTS = 0x1f; // 31
+/** InvalidTimestamp: Invalid timestamp */
+export const STAKE_POOL_ERROR__INVALID_TIMESTAMP = 0x20; // 32
+/** DataCorruption: Data corruption detected (state invariant violated) */
+export const STAKE_POOL_ERROR__DATA_CORRUPTION = 0x21; // 33
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
   | typeof STAKE_POOL_ERROR__AMOUNT_BELOW_MINIMUM
+  | typeof STAKE_POOL_ERROR__DATA_CORRUPTION
   | typeof STAKE_POOL_ERROR__DESERIALIZATION_ERROR
   | typeof STAKE_POOL_ERROR__EXPECTED_EMPTY_ACCOUNT
   | typeof STAKE_POOL_ERROR__EXPECTED_NON_EMPTY_ACCOUNT
@@ -90,15 +101,19 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__INVALID_PDA
   | typeof STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY
   | typeof STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER
+  | typeof STAKE_POOL_ERROR__INVALID_TIMESTAMP
   | typeof STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM
   | typeof STAKE_POOL_ERROR__INVALID_VAULT_OWNER
   | typeof STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED
   | typeof STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY
   | typeof STAKE_POOL_ERROR__NO_PENDING_AUTHORITY
+  | typeof STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE
   | typeof STAKE_POOL_ERROR__NUMERICAL_OVERFLOW
+  | typeof STAKE_POOL_ERROR__PENDING_REWARD_RATE_CHANGE_EXISTS
   | typeof STAKE_POOL_ERROR__POOL_ENDED
   | typeof STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED
   | typeof STAKE_POOL_ERROR__POOL_PAUSED
+  | typeof STAKE_POOL_ERROR__REWARD_RATE_CHANGE_DELAY_NOT_ELAPSED
   | typeof STAKE_POOL_ERROR__SERIALIZATION_ERROR
   | typeof STAKE_POOL_ERROR__UNAUTHORIZED
   | typeof STAKE_POOL_ERROR__UNEXPECTED_BALANCE_CHANGE
@@ -109,6 +124,7 @@ if (process.env.NODE_ENV !== 'production') {
   stakePoolErrorMessages = {
     [STAKE_POOL_ERROR__ACCOUNT_MISMATCH]: `Account mismatch`,
     [STAKE_POOL_ERROR__AMOUNT_BELOW_MINIMUM]: `Amount below minimum stake`,
+    [STAKE_POOL_ERROR__DATA_CORRUPTION]: `Data corruption detected (state invariant violated)`,
     [STAKE_POOL_ERROR__DESERIALIZATION_ERROR]: `Error deserializing an account`,
     [STAKE_POOL_ERROR__EXPECTED_EMPTY_ACCOUNT]: `Expected empty account`,
     [STAKE_POOL_ERROR__EXPECTED_NON_EMPTY_ACCOUNT]: `Expected non empty account`,
@@ -123,15 +139,19 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__INVALID_PDA]: `Invalid PDA derivation`,
     [STAKE_POOL_ERROR__INVALID_PENDING_AUTHORITY]: `Invalid pending authority`,
     [STAKE_POOL_ERROR__INVALID_PROGRAM_OWNER]: `Invalid program owner`,
+    [STAKE_POOL_ERROR__INVALID_TIMESTAMP]: `Invalid timestamp`,
     [STAKE_POOL_ERROR__INVALID_TOKEN_PROGRAM]: `Invalid token program`,
     [STAKE_POOL_ERROR__INVALID_VAULT_OWNER]: `Invalid vault owner (vault must be owned by pool PDA)`,
     [STAKE_POOL_ERROR__LOCKUP_NOT_EXPIRED]: `Lockup period not expired`,
     [STAKE_POOL_ERROR__MINT_HAS_FREEZE_AUTHORITY]: `Mint has freeze authority (can lock user funds)`,
     [STAKE_POOL_ERROR__NO_PENDING_AUTHORITY]: `No pending authority transfer`,
+    [STAKE_POOL_ERROR__NO_PENDING_REWARD_RATE_CHANGE]: `No pending reward rate change`,
     [STAKE_POOL_ERROR__NUMERICAL_OVERFLOW]: `Numerical overflow`,
+    [STAKE_POOL_ERROR__PENDING_REWARD_RATE_CHANGE_EXISTS]: `Pending reward rate change already exists`,
     [STAKE_POOL_ERROR__POOL_ENDED]: `Pool has ended (no new stakes allowed)`,
     [STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED]: `Pool parameters changed (frontrunning protection)`,
     [STAKE_POOL_ERROR__POOL_PAUSED]: `Pool is paused`,
+    [STAKE_POOL_ERROR__REWARD_RATE_CHANGE_DELAY_NOT_ELAPSED]: `Reward rate change delay not elapsed`,
     [STAKE_POOL_ERROR__SERIALIZATION_ERROR]: `Error serializing an account`,
     [STAKE_POOL_ERROR__UNAUTHORIZED]: `Unauthorized`,
     [STAKE_POOL_ERROR__UNEXPECTED_BALANCE_CHANGE]: `Unexpected token balance change during transfer`,

@@ -92,6 +92,21 @@ pub enum StakePoolError {
     /// 28 - Mint has freeze authority (can lock user funds)
     #[error("Mint has freeze authority (can lock user funds)")]
     MintHasFreezeAuthority,
+    /// 29 - Reward rate change delay not elapsed
+    #[error("Reward rate change delay not elapsed")]
+    RewardRateChangeDelayNotElapsed,
+    /// 30 - No pending reward rate change
+    #[error("No pending reward rate change")]
+    NoPendingRewardRateChange,
+    /// 31 - Pending reward rate change already exists
+    #[error("Pending reward rate change already exists")]
+    PendingRewardRateChangeExists,
+    /// 32 - Invalid timestamp
+    #[error("Invalid timestamp")]
+    InvalidTimestamp,
+    /// 33 - Data corruption detected (state invariant violated)
+    #[error("Data corruption detected (state invariant violated)")]
+    DataCorruption,
 }
 
 impl From<StakePoolError> for ProgramError {

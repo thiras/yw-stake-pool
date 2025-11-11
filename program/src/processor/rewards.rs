@@ -11,7 +11,7 @@ use crate::instruction::accounts::*;
 use crate::state::{Key, StakeAccount, StakePool};
 use crate::utils::transfer_tokens_with_fee;
 
-use super::helpers::{get_token_account_balance, verify_token_account};
+use super::helpers::{get_token_account_balance, validate_current_timestamp, verify_token_account};
 
 pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     // Parse accounts using ShankContext-generated struct
@@ -68,6 +68,7 @@ pub fn claim_rewards<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
 
     // Get current time
     let clock = Clock::from_account_info(ctx.accounts.clock)?;
+    validate_current_timestamp(clock.unix_timestamp)?;
 
     // Calculate total rewards based on stake duration and reward rate
     // Rewards are only given if lockup period is complete

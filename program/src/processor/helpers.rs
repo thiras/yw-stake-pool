@@ -6,6 +6,50 @@ use spl_token_2022::{
 
 use crate::error::StakePoolError;
 
+/// Minimum valid Unix timestamp (Jan 1, 2021)
+/// Timestamps before this indicate clock misconfiguration for this modern blockchain
+pub const MIN_VALID_TIMESTAMP: i64 = 1609459200;
+
+/// Validates that a timestamp is reasonable for current time from Clock::get()
+///
+/// # Errors
+/// Returns InvalidTimestamp if the timestamp is before MIN_VALID_TIMESTAMP
+pub fn validate_current_timestamp(timestamp: i64) -> Result<(), ProgramError> {
+    if timestamp < MIN_VALID_TIMESTAMP {
+        msg!("Invalid system time (before 2021-01-01): {}", timestamp);
+        return Err(StakePoolError::InvalidTimestamp.into());
+    }
+    Ok(())
+}
+
+/// Validates that a stored timestamp is reasonable and not in the future
+///
+/// This checks for both data corruption (stored timestamp is too old) and
+/// clock manipulation (stored timestamp is in the future compared to current time)
+///
+/// # Errors
+/// Returns InvalidTimestamp if:
+/// - The stored timestamp is before MIN_VALID_TIMESTAMP (data corruption)
+/// - The stored timestamp is greater than current time (clock manipulation)
+pub fn validate_stored_timestamp(stored: i64, current: i64) -> Result<(), ProgramError> {
+    if stored < MIN_VALID_TIMESTAMP {
+        msg!(
+            "Data corruption detected: stored timestamp is before 2021-01-01: {}",
+            stored
+        );
+        return Err(StakePoolError::InvalidTimestamp.into());
+    }
+    if stored > current {
+        msg!(
+            "Invalid timestamp: stored {} is in the future (current: {}). Possible clock manipulation.",
+            stored,
+            current
+        );
+        return Err(StakePoolError::InvalidTimestamp.into());
+    }
+    Ok(())
+}
+
 /// Validates that a Token-2022 mint does not have dangerous extensions enabled.
 ///
 /// # Security [M-02]

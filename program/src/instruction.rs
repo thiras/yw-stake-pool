@@ -116,4 +116,11 @@ pub enum StakePoolInstruction {
     #[account(1, signer, name="owner", desc = "The stake account owner")]
     #[account(2, writable, name="receiver", desc = "Account to receive the rent lamports")]
     CloseStakeAccount,
+
+    /// Finalize a pending reward rate change after the delay period
+    /// This completes the two-step process for changing reward rates.
+    /// After authority proposes a rate change via UpdatePool, anyone can
+    /// call this after 7 days to apply the change.
+    #[account(0, writable, name="pool", desc = "The stake pool")]
+    FinalizeRewardRateChange,
 }

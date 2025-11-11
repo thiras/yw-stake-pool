@@ -99,9 +99,45 @@ pub struct StakePool {
     /// Optional pool end date (Unix timestamp). If set, no new stakes allowed after this time.
     /// None means the pool runs indefinitely.
     pub pool_end_date: Option<i64>,
+    /// Pending reward rate change (None if no change pending)
+    /// Set by update_pool, applied by finalize_reward_rate_change after delay
+    ///
+    /// BREAKING CHANGE [L-01 Security Fix]:
+    /// These two fields (pending_reward_rate + reward_rate_change_timestamp) were added
+    /// to implement time-locked reward rate changes with a 7-day delay, preventing
+    /// centralized surprise changes to reward rates.
+    ///
+    /// COMPATIBILITY WARNING:
+    /// This change BREAKS compatibility with existing deployed pools. The old structure
+    /// had _reserved: [u8; 32] after pool_end_date, but the new structure adds two new
+    /// Option fields before reducing reserved space to 16 bytes.
+    ///
+    /// When deserializing existing pool accounts:
+    /// - Old structure: pool_end_date + [u8; 32] reserved
+    /// - New structure: pool_end_date + Option<u64> + Option<i64> + [u8; 16] reserved
+    ///
+    /// The first 1-2 bytes of the old reserved space will be misinterpreted as Option
+    /// discriminators for the new fields, causing data corruption.
+    ///
+    /// MIGRATION REQUIRED:
+    /// If you have existing pools deployed, you MUST:
+    /// 1. Drain all stakes and rewards from existing pools
+    /// 2. Close existing pool accounts
+    /// 3. Redeploy the new program version
+    /// 4. Recreate pools with new structure
+    ///
+    /// This is a fresh devnet deployment with no production pools, so the breaking
+    /// change is acceptable. DO NOT deploy this to a cluster with existing pools
+    /// without proper migration.
+    pub pending_reward_rate: Option<u64>,
+    /// Timestamp when pending reward rate change was proposed
+    /// Used to enforce REWARD_RATE_CHANGE_DELAY before finalizing
+    /// Must always be in sync with pending_reward_rate (both Some or both None)
+    pub reward_rate_change_timestamp: Option<i64>,
     /// Reserved space for future use. Not currently used.
     /// This field allows for future upgrades without breaking compatibility.
-    pub _reserved: [u8; 32],
+    /// REDUCED from 32 bytes to 16 bytes to accommodate new time-lock fields.
+    pub _reserved: [u8; 16],
 }
 
 /// Individual user stake account (one per deposit)
@@ -144,13 +180,15 @@ impl StakePool {
     // - bump (u8): 1 byte
     // - pending_authority (Option<Pubkey>): 1 byte when None, 33 bytes when Some
     // - pool_end_date (Option<i64>): 1 byte when None, 9 bytes when Some
-    // - _reserved: 32 bytes
+    // - pending_reward_rate (Option<u64>): 1 byte when None, 9 bytes when Some
+    // - reward_rate_change_timestamp (Option<i64>): 1 byte when None, 9 bytes when Some
+    // - _reserved: 16 bytes
     //
-    // We allocate for the maximum size (both Options as Some) to support future updates
-    // None: 1 + 32*5 + 8*5 + 1*3 + 1 + 1 + 32 = 246 bytes
-    // Some: 1 + 32*5 + 8*5 + 1*3 + 33 + 9 + 32 = 286 bytes
+    // We allocate for the maximum size (all Options as Some) to support future updates
+    // None: 1 + 160 + 40 + 8 + 3 + 1 + 1 + 1 + 1 + 16 = 232 bytes
+    // Some: 1 + 160 + 40 + 8 + 3 + 33 + 9 + 9 + 9 + 16 = 288 bytes
     pub const LEN: usize =
-        1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 32;
+        1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 9 + 9 + 16;
 
     pub fn seeds(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> Vec<Vec<u8>> {
         vec![
