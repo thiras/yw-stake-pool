@@ -448,7 +448,7 @@ impl ProgramAuthority {
     /// Add a new authorized creator
     pub fn add_creator(&mut self, creator: Pubkey) -> Result<(), ProgramError> {
         // Main authority is always authorized, no need to add explicitly
-        if &creator == &self.authority {
+        if creator == self.authority {
             msg!("Main authority is always authorized, cannot add explicitly");
             return Err(StakePoolError::InvalidParameters.into());
         }
