@@ -510,7 +510,7 @@ The examples demonstrate:
 
 - [Program Documentation](../README.md)
 - [Client Library Documentation](../clients/js/README.md)
-- [Security Audit](../SECURITY_AUDIT.md)
+- [Security Audit](../audit/SECURITY_AUDIT.md)
 - [Solana Documentation](https://docs.solana.com)
 
 ## License
