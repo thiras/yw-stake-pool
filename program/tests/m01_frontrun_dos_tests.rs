@@ -2,6 +2,8 @@
 // Security Test: M-01 Front-running DoS Prevention
 // ============================================================================
 
+#![allow(deprecated)]
+
 mod common;
 
 use litesvm::LiteSVM;

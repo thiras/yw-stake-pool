@@ -57,6 +57,7 @@ pub fn get_pool_pda(authority: &Pubkey, stake_mint: &Pubkey, pool_id: u64) -> (P
 }
 
 /// Derive the stake account PDA address
+#[allow(dead_code)]
 pub fn get_stake_account_pda(pool: &Pubkey, owner: &Pubkey, index: u64) -> (Pubkey, u8) {
     let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
     Pubkey::find_program_address(
@@ -71,18 +72,21 @@ pub fn get_stake_account_pda(pool: &Pubkey, owner: &Pubkey, index: u64) -> (Pubk
 }
 
 /// Derive the stake vault PDA address
+#[allow(dead_code)]
 pub fn get_stake_vault_pda(pool: &Pubkey) -> (Pubkey, u8) {
     let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
     Pubkey::find_program_address(&[b"stake_vault", pool.as_ref()], &program_id)
 }
 
 /// Derive the reward vault PDA address
+#[allow(dead_code)]
 pub fn get_reward_vault_pda(pool: &Pubkey) -> (Pubkey, u8) {
     let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
     Pubkey::find_program_address(&[b"reward_vault", pool.as_ref()], &program_id)
 }
 
 /// Derive the program authority PDA address
+#[allow(dead_code)]
 pub fn get_program_authority_pda() -> (Pubkey, u8) {
     let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
     Pubkey::find_program_address(&[b"program_authority"], &program_id)
@@ -90,6 +94,7 @@ pub fn get_program_authority_pda() -> (Pubkey, u8) {
 
 /// Initialize the program authority account (required for pool creation)
 /// Returns the program authority PDA address
+#[allow(dead_code)]
 pub fn initialize_program_authority(
     svm: &mut LiteSVM,
     payer: &solana_sdk::signature::Keypair,
@@ -137,6 +142,7 @@ pub fn initialize_program_authority(
 // ============================================================================
 
 /// Load and deserialize a StakePool account
+#[allow(dead_code)]
 pub fn load_stake_pool(svm: &LiteSVM, pool_address: &Pubkey) -> StakePool {
     let account = svm
         .get_account(pool_address)
@@ -160,6 +166,7 @@ pub fn load_stake_pool(svm: &LiteSVM, pool_address: &Pubkey) -> StakePool {
 }
 
 /// Load and deserialize a StakeAccount
+#[allow(dead_code)]
 pub fn load_stake_account(svm: &LiteSVM, stake_account_address: &Pubkey) -> StakeAccount {
     let account = svm
         .get_account(stake_account_address)
@@ -175,11 +182,13 @@ pub fn load_stake_account(svm: &LiteSVM, stake_account_address: &Pubkey) -> Stak
 // ============================================================================
 
 /// Assert that a PDA is valid (off-curve)
+#[allow(dead_code)]
 pub fn assert_valid_pda(pda: &Pubkey) {
     assert!(!pda.is_on_curve(), "PDA should be off-curve");
 }
 
 /// Assert that two PDAs are consistent
+#[allow(dead_code)]
 pub fn assert_pda_consistency(pda1: &Pubkey, pda2: &Pubkey, bump1: u8, bump2: u8) {
     assert_eq!(pda1, pda2, "PDAs should be consistent");
     assert_eq!(bump1, bump2, "Bumps should be consistent");

@@ -1,10 +1,8 @@
-use borsh::BorshSerialize;
 use litesvm::LiteSVM;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     signature::{Keypair, Signer},
-    system_program,
     transaction::Transaction,
 };
 
@@ -54,17 +52,15 @@ fn create_finalize_reward_rate_change_ix(pool: &Pubkey) -> Instruction {
 fn test_propose_reward_rate_change() {
     let mut svm = LiteSVM::new();
     let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
-    svm.add_program(program_id, &load_program());
+    let _ = svm.add_program(program_id, &load_program());
 
     let authority = Keypair::new();
     let stake_mint = Keypair::new();
-    let reward_mint = Keypair::new();
 
     // Airdrop SOL
     svm.airdrop(&authority.pubkey(), 10_000_000_000).unwrap();
 
     // Initialize pool with 10% reward rate
-    let initial_reward_rate = 100_000_000u64;
     let (pool_pda, _) = get_pool_pda(&authority.pubkey(), &stake_mint.pubkey(), 0);
 
     // ... (pool initialization code would go here)
@@ -74,7 +70,7 @@ fn test_propose_reward_rate_change() {
     let new_reward_rate = 50_000_000u64;
     let update_ix = create_update_pool_ix(&pool_pda, &authority.pubkey(), Some(new_reward_rate));
 
-    let tx = Transaction::new_signed_with_payer(
+    let _tx = Transaction::new_signed_with_payer(
         &[update_ix],
         Some(&authority.pubkey()),
         &[&authority],
@@ -90,7 +86,7 @@ fn test_propose_reward_rate_change() {
 fn test_finalize_too_early_fails() {
     let mut svm = LiteSVM::new();
     let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
-    svm.add_program(program_id, &load_program());
+    let _ = svm.add_program(program_id, &load_program());
 
     let authority = Keypair::new();
     svm.airdrop(&authority.pubkey(), 10_000_000_000).unwrap();

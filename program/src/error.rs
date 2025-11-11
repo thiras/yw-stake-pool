@@ -1,8 +1,9 @@
+#![allow(non_local_definitions)]
+
 use num_derive::FromPrimitive;
 use solana_program::program_error::ProgramError;
 use thiserror::Error;
 
-#[allow(non_local_definitions)]
 #[derive(Error, Clone, Debug, Eq, PartialEq, FromPrimitive)]
 pub enum StakePoolError {
     /// 0 - Error deserializing an account

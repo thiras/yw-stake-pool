@@ -11,6 +11,8 @@
 //
 // Run tests: cargo test-sbf --test security_m03_tests
 
+#![allow(deprecated)]
+
 mod common;
 
 use borsh::BorshSerialize;

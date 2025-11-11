@@ -8,6 +8,8 @@
 //
 // Run tests: cargo test --test spl_token_tests
 
+#![allow(deprecated)]
+
 mod common;
 
 use borsh::BorshSerialize;
