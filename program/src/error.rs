@@ -104,6 +104,9 @@ pub enum StakePoolError {
     /// 32 - Invalid timestamp (timestamp is in the future)
     #[error("Invalid timestamp (timestamp is in the future)")]
     InvalidTimestamp,
+    /// 33 - Data corruption detected (state invariant violated)
+    #[error("Data corruption detected (state invariant violated)")]
+    DataCorruption,
 }
 
 impl From<StakePoolError> for ProgramError {

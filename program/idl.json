@@ -961,6 +961,11 @@
       "code": 32,
       "name": "InvalidTimestamp",
       "msg": "Invalid timestamp (timestamp is in the future)"
+    },
+    {
+      "code": 33,
+      "name": "DataCorruption",
+      "msg": "Data corruption detected (state invariant violated)"
     }
   ],
   "metadata": {

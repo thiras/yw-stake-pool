@@ -286,7 +286,7 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
             pool_data.pending_reward_rate,
             pool_data.reward_rate_change_timestamp
         );
-        return Err(StakePoolError::InvalidAccountDiscriminator.into());
+        return Err(StakePoolError::DataCorruption.into());
     }
 
     // Check if there is a pending reward rate change
