@@ -896,6 +896,11 @@
       "code": 25,
       "name": "InvalidVaultOwner",
       "msg": "Invalid vault owner (vault must be owned by pool PDA)"
+    },
+    {
+      "code": 26,
+      "name": "UnsafeTokenExtension",
+      "msg": "Unsafe Token-2022 extension detected"
     }
   ],
   "metadata": {

@@ -66,6 +66,8 @@ export const STAKE_POOL_ERROR__POOL_ENDED = 0x17; // 23
 export const STAKE_POOL_ERROR__INVALID_PARAMETERS = 0x18; // 24
 /** InvalidVaultOwner: Invalid vault owner (vault must be owned by pool PDA) */
 export const STAKE_POOL_ERROR__INVALID_VAULT_OWNER = 0x19; // 25
+/** UnsafeTokenExtension: Unsafe Token-2022 extension detected */
+export const STAKE_POOL_ERROR__UNSAFE_TOKEN_EXTENSION = 0x1a; // 26
 
 export type StakePoolError =
   | typeof STAKE_POOL_ERROR__ACCOUNT_MISMATCH
@@ -93,7 +95,8 @@ export type StakePoolError =
   | typeof STAKE_POOL_ERROR__POOL_PARAMETERS_CHANGED
   | typeof STAKE_POOL_ERROR__POOL_PAUSED
   | typeof STAKE_POOL_ERROR__SERIALIZATION_ERROR
-  | typeof STAKE_POOL_ERROR__UNAUTHORIZED;
+  | typeof STAKE_POOL_ERROR__UNAUTHORIZED
+  | typeof STAKE_POOL_ERROR__UNSAFE_TOKEN_EXTENSION;
 
 let stakePoolErrorMessages: Record<StakePoolError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
@@ -124,6 +127,7 @@ if (process.env.NODE_ENV !== 'production') {
     [STAKE_POOL_ERROR__POOL_PAUSED]: `Pool is paused`,
     [STAKE_POOL_ERROR__SERIALIZATION_ERROR]: `Error serializing an account`,
     [STAKE_POOL_ERROR__UNAUTHORIZED]: `Unauthorized`,
+    [STAKE_POOL_ERROR__UNSAFE_TOKEN_EXTENSION]: `Unsafe Token-2022 extension detected`,
   };
 }
 
