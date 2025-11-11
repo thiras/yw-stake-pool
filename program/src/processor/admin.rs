@@ -278,6 +278,10 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
         .checked_sub(change_timestamp)
         .ok_or(StakePoolError::NumericalOverflow)?;
 
+    // Require at least REWARD_RATE_CHANGE_DELAY seconds to have passed
+    // Using < (not <=) means we need time_elapsed >= REWARD_RATE_CHANGE_DELAY
+    // Example: If delay is 604800 seconds (7 days), and change_timestamp = 1000000,
+    //          finalization is allowed when current_time >= 1604800 (exactly 7 days later)
     if time_elapsed < REWARD_RATE_CHANGE_DELAY {
         msg!(
             "Reward rate change delay not elapsed. Time remaining: {} seconds",
