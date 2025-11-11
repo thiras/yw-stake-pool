@@ -340,7 +340,9 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
     if time_elapsed < REWARD_RATE_CHANGE_DELAY {
         msg!(
             "Reward rate change delay not elapsed. Time remaining: {} seconds",
-            REWARD_RATE_CHANGE_DELAY - time_elapsed
+            REWARD_RATE_CHANGE_DELAY
+                .checked_sub(time_elapsed)
+                .unwrap_or(0)
         );
         return Err(StakePoolError::RewardRateChangeDelayNotElapsed.into());
     }
