@@ -66,6 +66,7 @@ export type InitializePoolInstruction<
   TAccountRent extends
     | string
     | AccountMeta<string> = 'SysvarRent111111111111111111111111111111111',
+  TAccountProgramAuthority extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -103,6 +104,9 @@ export type InitializePoolInstruction<
       TAccountRent extends string
         ? ReadonlyAccount<TAccountRent>
         : TAccountRent,
+      TAccountProgramAuthority extends string
+        ? ReadonlyAccount<TAccountProgramAuthority>
+        : TAccountProgramAuthority,
       ...TRemainingAccounts,
     ]
   >;
@@ -174,6 +178,7 @@ export type InitializePoolInput<
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountRent extends string = string,
+  TAccountProgramAuthority extends string = string,
 > = {
   /** The stake pool PDA */
   pool: Address<TAccountPool>;
@@ -195,6 +200,8 @@ export type InitializePoolInput<
   systemProgram?: Address<TAccountSystemProgram>;
   /** Rent sysvar */
   rent?: Address<TAccountRent>;
+  /** The program authority account (validates creator permission) */
+  programAuthority: Address<TAccountProgramAuthority>;
   poolId: InitializePoolInstructionDataArgs['poolId'];
   rewardRate: InitializePoolInstructionDataArgs['rewardRate'];
   minStakeAmount: InitializePoolInstructionDataArgs['minStakeAmount'];
@@ -214,6 +221,7 @@ export function getInitializePoolInstruction<
   TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
   TAccountRent extends string,
+  TAccountProgramAuthority extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
   input: InitializePoolInput<
@@ -226,7 +234,8 @@ export function getInitializePoolInstruction<
     TAccountPayer,
     TAccountTokenProgram,
     TAccountSystemProgram,
-    TAccountRent
+    TAccountRent,
+    TAccountProgramAuthority
   >,
   config?: { programAddress?: TProgramAddress }
 ): InitializePoolInstruction<
@@ -240,7 +249,8 @@ export function getInitializePoolInstruction<
   TAccountPayer,
   TAccountTokenProgram,
   TAccountSystemProgram,
-  TAccountRent
+  TAccountRent,
+  TAccountProgramAuthority
 > {
   // Program address.
   const programAddress = config?.programAddress ?? STAKE_POOL_PROGRAM_ADDRESS;
@@ -257,6 +267,10 @@ export function getInitializePoolInstruction<
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     rent: { value: input.rent ?? null, isWritable: false },
+    programAuthority: {
+      value: input.programAuthority ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -293,6 +307,7 @@ export function getInitializePoolInstruction<
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.rent),
+      getAccountMeta(accounts.programAuthority),
     ],
     data: getInitializePoolInstructionDataEncoder().encode(
       args as InitializePoolInstructionDataArgs
@@ -309,7 +324,8 @@ export function getInitializePoolInstruction<
     TAccountPayer,
     TAccountTokenProgram,
     TAccountSystemProgram,
-    TAccountRent
+    TAccountRent,
+    TAccountProgramAuthority
   >);
 }
 
@@ -339,6 +355,8 @@ export type ParsedInitializePoolInstruction<
     systemProgram: TAccountMetas[8];
     /** Rent sysvar */
     rent: TAccountMetas[9];
+    /** The program authority account (validates creator permission) */
+    programAuthority: TAccountMetas[10];
   };
   data: InitializePoolInstructionData;
 };
@@ -351,7 +369,7 @@ export function parseInitializePoolInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedInitializePoolInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 10) {
+  if (instruction.accounts.length < 11) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -374,6 +392,7 @@ export function parseInitializePoolInstruction<
       tokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
       rent: getNextAccount(),
+      programAuthority: getNextAccount(),
     },
     data: getInitializePoolInstructionDataDecoder().decode(instruction.data),
   };

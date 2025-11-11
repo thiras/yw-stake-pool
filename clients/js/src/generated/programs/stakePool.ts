@@ -19,6 +19,8 @@ import {
   type ParsedFinalizeRewardRateChangeInstruction,
   type ParsedFundRewardsInstruction,
   type ParsedInitializePoolInstruction,
+  type ParsedInitializeProgramAuthorityInstruction,
+  type ParsedManageAuthorizedCreatorsInstruction,
   type ParsedNominateNewAuthorityInstruction,
   type ParsedStakeInstruction,
   type ParsedUnstakeInstruction,
@@ -31,6 +33,7 @@ export const STAKE_POOL_PROGRAM_ADDRESS =
 export enum StakePoolAccount {
   StakePool,
   StakeAccount,
+  ProgramAuthority,
 }
 
 export enum StakePoolInstruction {
@@ -44,6 +47,8 @@ export enum StakePoolInstruction {
   AcceptAuthority,
   CloseStakeAccount,
   FinalizeRewardRateChange,
+  InitializeProgramAuthority,
+  ManageAuthorizedCreators,
 }
 
 export function identifyStakePoolInstruction(
@@ -79,6 +84,12 @@ export function identifyStakePoolInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return StakePoolInstruction.FinalizeRewardRateChange;
+  }
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+    return StakePoolInstruction.InitializeProgramAuthority;
+  }
+  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+    return StakePoolInstruction.ManageAuthorizedCreators;
   }
   throw new Error(
     'The provided instruction could not be identified as a stakePool instruction.'
@@ -117,4 +128,10 @@ export type ParsedStakePoolInstruction<
     } & ParsedCloseStakeAccountInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.FinalizeRewardRateChange;
-    } & ParsedFinalizeRewardRateChangeInstruction<TProgram>);
+    } & ParsedFinalizeRewardRateChangeInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.InitializeProgramAuthority;
+    } & ParsedInitializeProgramAuthorityInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.ManageAuthorizedCreators;
+    } & ParsedManageAuthorizedCreatorsInstruction<TProgram>);

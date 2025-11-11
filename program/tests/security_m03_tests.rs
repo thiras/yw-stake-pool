@@ -32,6 +32,41 @@ use your_wallet_stake_pool::instruction::StakePoolInstruction;
 use common::*;
 
 // ============================================================================
+// Helper: Initialize Program Authority (required for pool creation)
+// ============================================================================
+
+fn initialize_program_authority(svm: &mut LiteSVM, payer: &Keypair, authority: &Keypair) -> Pubkey {
+    let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
+    let (program_authority_pda, _) =
+        Pubkey::find_program_address(&[b"program_authority"], &program_id);
+
+    let init_authority_ix = Instruction {
+        program_id,
+        accounts: vec![
+            AccountMeta::new(program_authority_pda, false),
+            AccountMeta::new_readonly(authority.pubkey(), true),
+            AccountMeta::new(payer.pubkey(), true),
+            AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
+        ],
+        data: StakePoolInstruction::InitializeProgramAuthority
+            .try_to_vec()
+            .unwrap(),
+    };
+
+    let tx = Transaction::new_signed_with_payer(
+        &[init_authority_ix],
+        Some(&payer.pubkey()),
+        &[payer, authority],
+        svm.latest_blockhash(),
+    );
+
+    svm.send_transaction(tx)
+        .expect("Failed to initialize program authority");
+
+    program_authority_pda
+}
+
+// ============================================================================
 // Helper: Load SPL Token 2022 Program
 // ============================================================================
 
@@ -197,6 +232,9 @@ fn test_initialize_pool_rejects_stake_mint_with_freeze_authority() {
     svm.airdrop(&payer.pubkey(), 10_000_000_000).unwrap();
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
 
+    // Initialize program authority (required for pool creation)
+    let program_authority_pda = initialize_program_authority(&mut svm, &payer, &authority);
+
     // Create stake mint WITH freeze authority (malicious)
     let stake_mint = create_mint_with_freeze_authority(
         &mut svm,
@@ -241,6 +279,7 @@ fn test_initialize_pool_rejects_stake_mint_with_freeze_authority() {
             AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+            AccountMeta::new_readonly(program_authority_pda, false),
         ],
         data: StakePoolInstruction::InitializePool {
             pool_id: 0,
@@ -316,6 +355,9 @@ fn test_initialize_pool_rejects_reward_mint_with_freeze_authority() {
     svm.airdrop(&payer.pubkey(), 10_000_000_000).unwrap();
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
 
+    // Initialize program authority (required for pool creation)
+    let program_authority_pda = initialize_program_authority(&mut svm, &payer, &authority);
+
     // Create stake mint WITHOUT freeze authority (safe)
     let stake_mint =
         create_mint_with_freeze_authority(&mut svm, &payer, &authority.pubkey(), None, 6);
@@ -360,6 +402,7 @@ fn test_initialize_pool_rejects_reward_mint_with_freeze_authority() {
             AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+            AccountMeta::new_readonly(program_authority_pda, false),
         ],
         data: StakePoolInstruction::InitializePool {
             pool_id: 0,
@@ -427,6 +470,9 @@ fn test_initialize_pool_succeeds_without_freeze_authority() {
     svm.airdrop(&payer.pubkey(), 10_000_000_000).unwrap();
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
 
+    // Initialize program authority (required for pool creation)
+    let program_authority_pda = initialize_program_authority(&mut svm, &payer, &authority);
+
     // Create BOTH mints WITHOUT freeze authority (safe)
     let stake_mint =
         create_mint_with_freeze_authority(&mut svm, &payer, &authority.pubkey(), None, 6);
@@ -464,6 +510,7 @@ fn test_initialize_pool_succeeds_without_freeze_authority() {
             AccountMeta::new_readonly(spl_token_2022::id(), false),
             AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+            AccountMeta::new_readonly(program_authority_pda, false),
         ],
         data: StakePoolInstruction::InitializePool {
             pool_id: 0,

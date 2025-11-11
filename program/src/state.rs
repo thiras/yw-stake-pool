@@ -94,6 +94,7 @@ pub enum Key {
     Uninitialized,
     StakePool,
     StakeAccount,
+    ProgramAuthority,
 }
 
 /// The main stake pool configuration
@@ -354,5 +355,134 @@ impl StakeAccount {
 
     pub fn save(&self, account: &AccountInfo) -> ProgramResult {
         save_account_data(account, self, "StakeAccount")
+    }
+}
+
+/// Program authority configuration for managing pool creation permissions
+/// This account controls who can create new stake pools
+#[repr(C)]
+#[derive(Clone, BorshSerialize, BorshDeserialize, Debug, ShankAccount)]
+pub struct ProgramAuthority {
+    pub key: Key,
+    /// The main authority who can manage the authorized creators list
+    pub authority: Pubkey,
+    /// List of addresses authorized to create pools
+    /// Using a fixed-size array for predictable memory layout
+    pub authorized_creators: [Option<Pubkey>; 10],
+    /// Number of active authorized creators (for iteration)
+    pub creator_count: u8,
+    /// Bump seed for PDA derivation
+    pub bump: u8,
+}
+
+impl ProgramAuthority {
+    // Size calculation:
+    // - key (Key enum): 1 byte
+    // - authority (Pubkey): 32 bytes
+    // - authorized_creators (10 x Option<Pubkey>): 10 * 33 = 330 bytes (1 byte discriminator + 32 bytes pubkey)
+    // - creator_count (u8): 1 byte
+    // - bump (u8): 1 byte
+    // Total: 1 + 32 + 330 + 1 + 1 = 365 bytes
+    pub const LEN: usize = 1 + 32 + (10 * 33) + 1 + 1;
+    pub const MAX_CREATORS: usize = 10;
+
+    pub fn seeds() -> Vec<Vec<u8>> {
+        vec![b"program_authority".to_vec()]
+    }
+
+    pub fn find_pda() -> (Pubkey, u8) {
+        let seeds: Vec<&[u8]> = vec![b"program_authority"];
+        Pubkey::find_program_address(&seeds, &crate::ID)
+    }
+
+    pub fn load(account: &AccountInfo) -> Result<Self, ProgramError> {
+        let program_authority = validate_and_deserialize::<Self>(account, "ProgramAuthority")?;
+
+        // Verify discriminator matches expected type
+        if !matches!(program_authority.key, Key::ProgramAuthority) {
+            msg!("Invalid ProgramAuthority discriminator");
+            return Err(StakePoolError::InvalidAccountDiscriminator.into());
+        }
+
+        Ok(program_authority)
+    }
+
+    pub fn save(&self, account: &AccountInfo) -> ProgramResult {
+        save_account_data(account, self, "ProgramAuthority")
+    }
+
+    /// Check if a given pubkey is authorized to create pools
+    pub fn is_authorized(&self, pubkey: &Pubkey) -> bool {
+        // Main authority is always authorized
+        if pubkey == &self.authority {
+            return true;
+        }
+
+        // Check authorized creators list
+        for creator in &self.authorized_creators {
+            if let Some(authorized) = creator {
+                if authorized == pubkey {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Add a new authorized creator
+    pub fn add_creator(&mut self, creator: Pubkey) -> Result<(), ProgramError> {
+        // Check if already exists
+        for existing_creator in &self.authorized_creators {
+            if let Some(authorized) = existing_creator {
+                if authorized == &creator {
+                    msg!("Creator already authorized: {}", creator);
+                    return Err(StakePoolError::CreatorAlreadyAuthorized.into());
+                }
+            }
+        }
+
+        // Find empty slot
+        for slot in &mut self.authorized_creators {
+            if slot.is_none() {
+                *slot = Some(creator);
+                self.creator_count = self
+                    .creator_count
+                    .checked_add(1)
+                    .ok_or(StakePoolError::NumericalOverflow)?;
+                return Ok(());
+            }
+        }
+
+        // No empty slots
+        msg!("Maximum number of authorized creators reached");
+        Err(StakePoolError::MaxAuthorizedCreatorsReached.into())
+    }
+
+    /// Remove an authorized creator
+    pub fn remove_creator(&mut self, creator: &Pubkey) -> Result<(), ProgramError> {
+        // Cannot remove the main authority
+        if creator == &self.authority {
+            msg!("Cannot remove main authority from authorized creators");
+            return Err(StakePoolError::CannotRemoveMainAuthority.into());
+        }
+
+        // Find and remove
+        for slot in &mut self.authorized_creators {
+            if let Some(authorized) = slot {
+                if authorized == creator {
+                    *slot = None;
+                    self.creator_count = self
+                        .creator_count
+                        .checked_sub(1)
+                        .ok_or(StakePoolError::NumericalOverflow)?;
+                    return Ok(());
+                }
+            }
+        }
+
+        // Not found
+        msg!("Creator not found in authorized list: {}", creator);
+        Err(StakePoolError::CreatorNotFound.into())
     }
 }

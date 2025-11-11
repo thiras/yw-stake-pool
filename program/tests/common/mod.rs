@@ -82,6 +82,12 @@ pub fn get_reward_vault_pda(pool: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[b"reward_vault", pool.as_ref()], &program_id)
 }
 
+/// Derive the program authority PDA address
+pub fn get_program_authority_pda() -> (Pubkey, u8) {
+    let program_id = PROGRAM_ID.parse::<Pubkey>().unwrap();
+    Pubkey::find_program_address(&[b"program_authority"], &program_id)
+}
+
 // ============================================================================
 // Account Deserialization
 // ============================================================================

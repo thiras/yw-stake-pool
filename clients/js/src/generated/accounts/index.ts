@@ -6,5 +6,6 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from './programAuthority';
 export * from './stakeAccount';
 export * from './stakePool';

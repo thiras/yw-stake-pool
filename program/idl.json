@@ -84,6 +84,14 @@
           "docs": [
             "Rent sysvar"
           ]
+        },
+        {
+          "name": "programAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The program authority account (validates creator permission)"
+          ]
         }
       ],
       "args": [
@@ -628,6 +636,91 @@
         "type": "u8",
         "value": 9
       }
+    },
+    {
+      "name": "InitializeProgramAuthority",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA to create"
+          ]
+        },
+        {
+          "name": "initialAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The initial authority who will control authorized creators"
+          ]
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "The account paying for rent"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The system program"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 10
+      }
+    },
+    {
+      "name": "ManageAuthorizedCreators",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA"
+          ]
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The program authority signer"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "add",
+          "type": {
+            "vec": {
+              "defined": "solana_program"
+            }
+          }
+        },
+        {
+          "name": "remove",
+          "type": {
+            "vec": {
+              "defined": "solana_program"
+            }
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 11
+      }
     }
   ],
   "accounts": [
@@ -775,6 +868,43 @@
           }
         ]
       }
+    },
+    {
+      "name": "ProgramAuthority",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "defined": "Key"
+            }
+          },
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "authorizedCreators",
+            "type": {
+              "array": [
+                {
+                  "option": "publicKey"
+                },
+                10
+              ]
+            }
+          },
+          {
+            "name": "creatorCount",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
     }
   ],
   "types": [
@@ -791,6 +921,9 @@
           },
           {
             "name": "StakeAccount"
+          },
+          {
+            "name": "ProgramAuthority"
           }
         ]
       }
@@ -971,6 +1104,31 @@
       "code": 34,
       "name": "AccountSizeTooSmall",
       "msg": "Account size too small for serialized data"
+    },
+    {
+      "code": 35,
+      "name": "UnauthorizedPoolCreator",
+      "msg": "Unauthorized pool creator (only authorized admins can create pools)"
+    },
+    {
+      "code": 36,
+      "name": "CreatorAlreadyAuthorized",
+      "msg": "Creator already authorized"
+    },
+    {
+      "code": 37,
+      "name": "MaxAuthorizedCreatorsReached",
+      "msg": "Maximum number of authorized creators reached"
+    },
+    {
+      "code": 38,
+      "name": "CannotRemoveMainAuthority",
+      "msg": "Cannot remove main authority from authorized creators"
+    },
+    {
+      "code": 39,
+      "name": "CreatorNotFound",
+      "msg": "Creator not found in authorized list"
     }
   ],
   "metadata": {
