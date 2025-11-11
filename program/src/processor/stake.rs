@@ -12,7 +12,9 @@ use crate::instruction::accounts::*;
 use crate::state::{Key, StakeAccount, StakePool};
 use crate::utils::{create_account, transfer_tokens_with_fee};
 
-use super::helpers::{get_token_account_balance, validate_current_timestamp, verify_token_account};
+use super::helpers::{
+    get_token_account_balance, validate_current_timestamp, verify_stake_token_accounts,
+};
 
 pub fn stake<'a>(
     accounts: &'a [AccountInfo<'a>],
@@ -84,15 +86,17 @@ pub fn stake<'a>(
     assert_same_pubkeys("stake_mint", ctx.accounts.stake_mint, &pool_data.stake_mint)?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(
+    verify_stake_token_accounts(
         ctx.accounts.user_token_account,
+        ctx.accounts.stake_vault,
         &pool_data.stake_mint,
-        None,
-        None,
     )?;
-    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint, None, None)?;
 
     if pool_data.is_paused {
+        msg!(
+            "Pool {} is currently paused. Staking is disabled.",
+            ctx.accounts.pool.key
+        );
         return Err(StakePoolError::PoolPaused.into());
     }
 
@@ -113,6 +117,12 @@ pub fn stake<'a>(
     }
 
     if amount < pool_data.min_stake_amount {
+        msg!(
+            "Stake amount {} below minimum {}. Pool requires at least {} tokens.",
+            amount,
+            pool_data.min_stake_amount,
+            pool_data.min_stake_amount
+        );
         return Err(StakePoolError::AmountBelowMinimum.into());
     }
 
@@ -273,15 +283,18 @@ pub fn unstake<'a>(
     assert_same_pubkeys("stake_mint", ctx.accounts.stake_mint, &pool_data.stake_mint)?;
 
     // Verify token accounts belong to correct mints
-    verify_token_account(
+    verify_stake_token_accounts(
         ctx.accounts.user_token_account,
+        ctx.accounts.stake_vault,
         &pool_data.stake_mint,
-        None,
-        None,
     )?;
-    verify_token_account(ctx.accounts.stake_vault, &pool_data.stake_mint, None, None)?;
 
     if stake_account_data.amount_staked < amount {
+        msg!(
+            "Insufficient staked balance. Requested: {}, Available: {}",
+            amount,
+            stake_account_data.amount_staked
+        );
         return Err(StakePoolError::InsufficientStakedBalance.into());
     }
 
