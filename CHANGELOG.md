@@ -282,9 +282,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Two-Step Authority Transfer**: Secure authority transfer mechanism
-  - `NominateNewAuthority` instruction for current authority to nominate new authority
-  - `AcceptAuthority` instruction for new authority to accept transfer
-  - `pending_authority` field added to `StakePool` state
+  - `TransferProgramAuthority` instruction for current authority to nominate new authority
+  - `AcceptProgramAuthority` instruction for new authority to accept transfer
+  - `pending_authority` field added to `ProgramAuthority` state
   - Protects against key compromise and misconfiguration scenarios
   - Custom errors: `NoPendingAuthority`, `InvalidPendingAuthority`
 

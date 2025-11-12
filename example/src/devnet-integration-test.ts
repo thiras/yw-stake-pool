@@ -21,6 +21,8 @@ import {
   getUnstakeInstruction,
   getFundRewardsInstruction,
   getUpdatePoolInstruction,
+  getTransferProgramAuthorityInstruction,
+  getAcceptProgramAuthorityInstruction,
 } from '@yourwallet/stake-pool';
 import { some, none } from '@solana/kit';
 
@@ -414,27 +416,28 @@ async function main() {
       '   In production, generate a new keypair and fund it before transfer\n'
     );
 
-    // Uncomment below to test authority transfer with a new keypair
-    // const newAuthority = await createFundedKeypair(rpc, 'New Authority', false);
+    // Uncomment below to test program authority transfer with a new keypair
+    // Note: This transfers GLOBAL program authority (controls ALL pool creation)
+    // const newAuthority = await createFundedKeypair(rpc, 'New Program Authority', false);
     //
-    // console.log('Step 10a: Nominate new authority');
-    // const nominateIx = getNominateNewAuthorityInstruction({
-    //   pool: poolAddress,
+    // console.log('Step 10a: Transfer program authority (nominate new authority)');
+    // const transferIx = getTransferProgramAuthorityInstruction({
+    //   programAuthority: programAuthorityPda,
     //   currentAuthority: authority,
     //   newAuthority: newAuthority.address,
     // });
     //
-    // const nominateSig = await buildAndSendTransaction(rpc, [nominateIx], authority);
-    // logTransaction(nominateSig, 'Authority Nominated');
+    // const transferSig = await buildAndSendTransaction(rpc, [transferIx], authority);
+    // logTransaction(transferSig, 'Program Authority Transfer Nominated');
     //
-    // console.log('\nStep 10b: Accept authority (must be called by new authority)');
-    // const acceptIx = getAcceptAuthorityInstruction({
-    //   pool: poolAddress,
+    // console.log('\nStep 10b: Accept program authority (must be called by new authority)');
+    // const acceptIx = getAcceptProgramAuthorityInstruction({
+    //   programAuthority: programAuthorityPda,
     //   pendingAuthority: newAuthority,
     // });
     //
     // const acceptSig = await buildAndSendTransaction(rpc, [acceptIx], newAuthority);
-    // logTransaction(acceptSig, 'Authority Transfer Accepted');
+    // logTransaction(acceptSig, 'Program Authority Transfer Accepted');
 
     // ========================================================================
     // Summary
