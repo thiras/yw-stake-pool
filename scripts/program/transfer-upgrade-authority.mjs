@@ -13,7 +13,7 @@ import {
  * Uses Solana CLI to transfer the upgrade authority of a deployed program
  * to a new public key. This is a direct one-step transfer.
  *
- * Usage: pnpm programs:transfer-authority <NEW_AUTHORITY_PUBLIC_KEY> [OPTIONS]
+ * Usage: pnpm programs:transfer-upgrade-authority <NEW_AUTHORITY_PUBLIC_KEY> [OPTIONS]
  */
 
 // Get CLI arguments
@@ -29,7 +29,7 @@ Transfers the upgrade authority of a Solana program to a new address.
 Uses Solana CLI's direct authority transfer (one-step process).
 
 ${chalk.yellow('Usage:')}
-  pnpm programs:transfer-authority <NEW_AUTHORITY_PUBLIC_KEY> [OPTIONS]
+  pnpm programs:transfer-upgrade-authority <NEW_AUTHORITY_PUBLIC_KEY> [OPTIONS]
 
 ${chalk.yellow('Arguments:')}
   ${chalk.cyan('<NEW_AUTHORITY_PUBLIC_KEY>')}  The public key of the new upgrade authority
@@ -43,19 +43,19 @@ ${chalk.yellow('Options:')}
 
 ${chalk.yellow('Examples:')}
   ${chalk.gray('# Transfer to a new authority on devnet')}
-  pnpm programs:transfer-authority 6tuAX4SL4bXdiFaMKqaVBkGG1vZnUnhVippuVdEUGyJd
+  pnpm programs:transfer-upgrade-authority 6tuAX4SL4bXdiFaMKqaVBkGG1vZnUnhVippuVdEUGyJd
 
   ${chalk.gray('# Transfer specific program on mainnet')}
-  pnpm programs:transfer-authority 6tuAX4SL4bXdiFaMKqaVBkGG1vZnUnhVippuVdEUGyJd \\
+  pnpm programs:transfer-upgrade-authority 6tuAX4SL4bXdiFaMKqaVBkGG1vZnUnhVippuVdEUGyJd \\
     --program-id 8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx \\
     --cluster mainnet-beta
 
   ${chalk.gray('# Transfer using custom authority keypair')}
-  pnpm programs:transfer-authority 6tuAX4SL4bXdiFaMKqaVBkGG1vZnUnhVippuVdEUGyJd \\
+  pnpm programs:transfer-upgrade-authority 6tuAX4SL4bXdiFaMKqaVBkGG1vZnUnhVippuVdEUGyJd \\
     --keypair /path/to/current-authority.json
 
   ${chalk.gray('# Make program immutable (no upgrade authority)')}
-  pnpm programs:transfer-authority --none
+  pnpm programs:transfer-upgrade-authority --none
 
 ${chalk.yellow('Important Notes:')}
   ${chalk.red('⚠️  This is a ONE-STEP, IRREVERSIBLE process!')}

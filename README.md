@@ -320,13 +320,13 @@ Transfer or revoke program upgrade authority using Solana CLI:
 
 ```sh
 # Transfer upgrade authority to a new address
-pnpm programs:transfer-authority -- --new-authority <ADDRESS>
+pnpm programs:transfer-upgrade-authority -- --new-authority <ADDRESS>
 
 # Make program immutable (irreversible!)
-pnpm programs:transfer-authority -- --none
+pnpm programs:transfer-upgrade-authority -- --none
 
 # View help and options
-pnpm programs:transfer-authority -- --help
+pnpm programs:transfer-upgrade-authority -- --help
 ```
 
 This is a **one-step, immediate transfer** using Solana's native authority management. Use with caution!

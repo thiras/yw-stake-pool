@@ -14,7 +14,7 @@
     "programs:deploy": "zx ./scripts/program/deploy.mjs",
     "programs:deploy:devnet": "zx ./scripts/program/deploy.mjs --cluster devnet",
     "programs:init-authority": "zx ./scripts/program/initialize-authority.mjs",
-    "programs:transfer-authority": "zx ./scripts/program/transfer-authority.mjs",
+    "programs:transfer-upgrade-authority": "zx ./scripts/program/transfer-upgrade-authority.mjs",
     "programs:add-creator": "zx ./scripts/program/add-authorized-creator.mjs",
     "programs:remove-creator": "zx ./scripts/program/remove-authorized-creator.mjs",
     "programs:list-creators": "zx ./scripts/program/list-authorized-creators.mjs",

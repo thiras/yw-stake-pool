@@ -245,10 +245,10 @@ solana program show <PROGRAM_ID>
 
 ```bash
 # Transfer to new authority
-pnpm programs:transfer-authority <NEW_AUTHORITY_PUBKEY>
+pnpm programs:transfer-upgrade-authority <NEW_AUTHORITY_PUBKEY>
 
 # Make program immutable (IRREVERSIBLE!)
-pnpm programs:transfer-authority --none
+pnpm programs:transfer-upgrade-authority --none
 ```
 
 **Warning:** Transferring authority is irreversible. Double-check the address!
@@ -564,7 +564,7 @@ pnpm programs:deploy
 pnpm programs:init-authority
 
 # Transfer upgrade authority
-pnpm programs:transfer-authority <NEW_AUTHORITY>
+pnpm programs:transfer-upgrade-authority <NEW_AUTHORITY>
 
 # Run tests
 pnpm programs:test
