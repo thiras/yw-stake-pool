@@ -5737,7 +5737,7 @@ dependencies = [
 
 [[package]]
 name = "your-wallet-stake-pool"
-version = "1.6.1"
+version = "1.7.0"
 dependencies = [
  "borsh 0.10.4",
  "litesvm",

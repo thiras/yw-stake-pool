@@ -1,6 +1,6 @@
 [package]
 name = "your-wallet-stake-pool"
-version = "1.6.1"
+version = "1.7.0"
 edition = "2021"
 readme = "./README.md"
 license-file = "../LICENSE"

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0]
+
 ### Added
 - **Program Authority Transfer Scripts**: New CLI scripts for managing program authority transfers
   - `transfer-program-authority.mjs`: Nominate new program authority (step 1 of two-step transfer)
