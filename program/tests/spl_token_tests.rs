@@ -371,6 +371,31 @@ fn test_initialize_pool_with_real_tokens() {
     // Initialize program authority (required for pool creation)
     let program_authority_pda = initialize_program_authority(&mut svm, &payer, &authority);
 
+    // Add payer to authorized creators list
+    use borsh::BorshSerialize;
+    let add_creator_ix = Instruction {
+        program_id,
+        accounts: vec![
+            AccountMeta::new(program_authority_pda, false),
+            AccountMeta::new_readonly(authority.pubkey(), true),
+        ],
+        data: StakePoolInstruction::ManageAuthorizedCreators {
+            add: vec![payer.pubkey()],
+            remove: vec![],
+        }
+        .try_to_vec()
+        .unwrap(),
+    };
+
+    let tx = Transaction::new_signed_with_payer(
+        &[add_creator_ix],
+        Some(&payer.pubkey()),
+        &[&payer, &authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+        .expect("Failed to add authorized creator");
+
     // Create mints
     let stake_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
     let reward_mint = create_mint(&mut svm, &payer, &authority.pubkey(), 6);
@@ -393,7 +418,6 @@ fn test_initialize_pool_with_real_tokens() {
         program_id,
         accounts: vec![
             AccountMeta::new(pool_pda, false),
-            AccountMeta::new_readonly(authority.pubkey(), true),
             AccountMeta::new_readonly(stake_mint, false),
             AccountMeta::new_readonly(reward_mint, false),
             AccountMeta::new(stake_vault_account, false),
@@ -419,7 +443,7 @@ fn test_initialize_pool_with_real_tokens() {
     let tx = Transaction::new_signed_with_payer(
         &[init_pool_ix],
         Some(&payer.pubkey()),
-        &[&payer, &authority],
+        &[&payer],
         svm.latest_blockhash(),
     );
 
@@ -444,7 +468,6 @@ fn test_initialize_pool_with_real_tokens() {
         // Try to deserialize pool
         match load_stake_pool(&svm, &pool_pda) {
             pool => {
-                assert_eq!(pool.authority, authority.pubkey());
                 assert_eq!(pool.stake_mint, stake_mint);
                 assert_eq!(pool.reward_mint, reward_mint);
                 println!("✅ Pool verification passed");
@@ -468,7 +491,6 @@ fn test_stake_pool_serialized_size() {
     // Create a StakePool instance with None optionals
     let pool = StakePool {
         key: Key::StakePool,
-        authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
         pool_id: 0,
@@ -482,7 +504,6 @@ fn test_stake_pool_serialized_size() {
         is_paused: false,
         enforce_lockup: false,
         bump: 255,
-        pending_authority: None,
         pool_end_date: None,
         pending_reward_rate: None,
         reward_rate_change_timestamp: None,
@@ -507,7 +528,6 @@ fn test_stake_pool_serialized_size() {
     // Now test with Some values
     let pool_with_optionals = StakePool {
         key: Key::StakePool,
-        authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
         pool_id: 0,
@@ -521,7 +541,6 @@ fn test_stake_pool_serialized_size() {
         is_paused: false,
         enforce_lockup: true,
         bump: 255,
-        pending_authority: Some(Pubkey::new_unique()),
         pool_end_date: Some(12345678),
         pending_reward_rate: Some(5_000_000_000),
         reward_rate_change_timestamp: Some(1700000000),

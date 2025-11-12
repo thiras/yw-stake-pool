@@ -154,7 +154,6 @@ fn test_pool_initialization() {
 
     // Verify pool state
     let pool = load_stake_pool(&env.svm, &env.pool_pda);
-    assert_eq!(pool.authority, env.authority.pubkey());
     assert_eq!(pool.reward_rate, 100_000_000);
     assert_eq!(pool.min_stake_amount, 1_000_000);
     assert_eq!(pool.lockup_period, 86400);
@@ -202,61 +201,11 @@ fn test_update_pool_parameters() {
 }
 
 #[test]
-#[ignore = "Requires SPL Token 2022 program"]
+#[ignore = "Per-pool authority removed in favor of global ProgramAuthority"]
 fn test_authority_transfer() {
-    let mut env = TestEnvironment::new();
-    env.initialize_pool(100_000_000, 1_000_000, 0, false, None);
-
-    let new_authority = Keypair::new();
-    env.svm
-        .airdrop(&new_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-
-    // Nominate new authority
-    let nominate_ix = Instruction {
-        program_id: env.program_id,
-        accounts: vec![
-            AccountMeta::new(env.pool_pda, false),
-            AccountMeta::new_readonly(env.authority.pubkey(), true),
-            AccountMeta::new_readonly(new_authority.pubkey(), false),
-        ],
-        data: StakePoolInstruction::NominateNewAuthority
-            .try_to_vec()
-            .unwrap(),
-    };
-
-    let tx = Transaction::new_signed_with_payer(
-        &[nominate_ix],
-        Some(&env.payer.pubkey()),
-        &[&env.payer, &env.authority],
-        env.svm.latest_blockhash(),
-    );
-
-    env.svm.send_transaction(tx).unwrap();
-
-    // Accept authority
-    let accept_ix = Instruction {
-        program_id: env.program_id,
-        accounts: vec![
-            AccountMeta::new(env.pool_pda, false),
-            AccountMeta::new_readonly(new_authority.pubkey(), true),
-        ],
-        data: StakePoolInstruction::AcceptAuthority.try_to_vec().unwrap(),
-    };
-
-    let tx = Transaction::new_signed_with_payer(
-        &[accept_ix],
-        Some(&env.payer.pubkey()),
-        &[&env.payer, &new_authority],
-        env.svm.latest_blockhash(),
-    );
-
-    env.svm.send_transaction(tx).unwrap();
-
-    // Verify authority changed
-    let pool = load_stake_pool(&env.svm, &env.pool_pda);
-    assert_eq!(pool.authority, new_authority.pubkey());
-    assert_eq!(pool.pending_authority, None);
+    // This test is obsolete - authority is now global (ProgramAuthority), not per-pool
+    // See admin_pool_creation_tests.rs for ProgramAuthority transfer tests
+    unimplemented!("Per-pool authority transfer removed");
 }
 
 // ============================================================================
