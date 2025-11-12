@@ -7,26 +7,182 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Program Authority Transfer Scripts**: New CLI scripts for managing program authority transfers
+  - `transfer-program-authority.mjs`: Nominate new program authority (step 1 of two-step transfer)
+  - `accept-program-authority.mjs`: Accept authority transfer (step 2)
+  - `cancel-authority-transfer.mjs`: Cancel pending authority transfers
+  - New npm scripts: `programs:transfer-authority`, `programs:accept-authority`, `programs:cancel-authority`
+  - Two-step transfer process ensures safer authority management with explicit confirmation
+  - Comprehensive documentation added to README.md with comparison table
+
+- **Authorized Creator Management Scripts**: CLI tools for managing pool creators
+  - `add-authorized-creator.mjs`: Add addresses to authorized creators list
+  - `remove-authorized-creator.mjs`: Remove addresses from authorized creators list
+  - `list-authorized-creators.mjs`: List all authorized creators
+  - New npm scripts: `programs:add-creator`, `programs:remove-creator`, `programs:list-creators`
+  - Use generated client library for account decoding
+  - Graceful handling of WebSocket confirmation limitations
+
+- **Global Admin System Instructions**: New instructions for centralized authorization
+  - `GetAuthorizedCreators`: Query function to retrieve list of all authorized pool creators
+  - `CheckAuthorization`: Query function to verify if an address is authorized
+  - `CancelAuthorityTransfer`: Cancel pending program authority transfer before acceptance
+  - Enhanced event logging for all parameter updates (`PoolParameterUpdated` events)
+  - `RewardRateProposed` event emitted when reward rate change is proposed
+
+- **Security Enhancements**:
+  - Added security policy (SECURITY.md) and security.txt for vulnerability reporting
+  - Creator count validation to prevent data corruption in ProgramAuthority
+  - Size verification test for ProgramAuthority maximal case (398 bytes with pending_authority)
+
 ### Changed
+- **BREAKING: Global Admin System Refactoring**: Complete overhaul of authority model
+  - **Removed per-pool authority**: Authority and pending_authority fields removed from StakePool
+  - **StakePool size reduced**: 288 bytes → 223 bytes (65 bytes saved per pool)
+  - **Global authorization**: All pool management now requires global admin authorization via ProgramAuthority
+  - **InitializePool updated**: No longer requires authority parameter (uses global admin check)
+  - **UpdatePool updated**: Now checks ProgramAuthority.is_authorized() instead of per-pool authority
+  - **Instruction changes**: 
+    - Removed: `NominateNewAuthority` and `AcceptAuthority` (per-pool)
+    - Added: `TransferProgramAuthority` and `AcceptProgramAuthority` (global)
+  - **ProgramAuthority expanded**: Added pending_authority field (size: 365 → 398 bytes)
+  - **Benefits**: Simplified administration, centralized access control, smaller pool accounts
+  - **Migration required**: Redeploy program, recreate all pools, update client code
+
+- **Instruction Discriminators Updated**: After global admin system refactor
+  - `InitializeProgramAuthority`: 10 → 8
+  - `FinalizeRewardRateChange`: 9 → 7
+  - `ManageAuthorizedCreators`: 10 → 9
+  - `TransferProgramAuthority`: 11 → 10
+  - `AcceptProgramAuthority`: 12 → 11
+  - `CancelAuthorityTransfer`: 13 → 12 (then reordered to 15→12)
+  - `GetAuthorizedCreators`: Added at 13
+  - `CheckAuthorization`: Added at 14
+
 - **Instruction Order**: Reordered instructions to group authority transfer operations
-  - Moved `CancelAuthorityTransfer` (discriminator 15→13) next to `TransferProgramAuthority` and `AcceptProgramAuthority`
+  - Moved `CancelAuthorityTransfer` (discriminator 15→12) next to `TransferProgramAuthority` and `AcceptProgramAuthority`
   - Groups complete authority transfer lifecycle together (Transfer → Accept → Cancel)
   - Updated discriminators: `GetAuthorizedCreators` (12→13), `CheckAuthorization` (13→14)
   - Improves code organization and logical grouping
+
+- **Architecture Consolidation**: Merged admin-related modules
+  - Consolidated `program_authority.rs` functionality into `admin.rs`
+  - All authority management in single module (674 lines)
+  - Clear separation: program authority vs pool management
+  - Better code organization and maintainability
+
+- **Script Library Refactoring**: Improved script dependencies and maintainability
+  - Added `@solana/kit` to root devDependencies
+  - Created shared `program-authority.mjs` library (169 lines)
+  - Refactored to use direct ES6 imports instead of dynamic resolution
+  - Eliminated dependency on example directory structure
+  - Simplified `initialize-authority.mjs` script (30% complexity reduction)
+  - Better IDE support with static imports and faster import resolution
+
+- **Clarity Improvements**: Renamed scripts and instructions for better understanding
+  - Renamed `transfer-authority.mjs` → `transfer-upgrade-authority.mjs`
+  - Distinguishes between program upgrade authority (binary redeployment) and program authority (PDA controlling pool creation)
+  - Updated npm script: `programs:transfer-authority` → `programs:transfer-upgrade-authority`
+  - Updated all documentation and usage examples
 
 ### Fixed
 - **Transaction Confirmation**: Resolved WebSocket subscription errors in all program authority scripts
   - Replaced `sendAndConfirmTransactionFactory` with custom `sendAndWaitForTransaction` helper
   - Uses REST-only polling with `getSignatureStatuses()` (30-second timeout, 1-second intervals)
   - Eliminates "Cannot read properties of null (reading 'signatureNotifications')" errors
-  - Fixed in: `initialize-authority.mjs`, `add-authorized-creator.mjs`, `remove-authorized-creator.mjs`
+  - Fixed in: `initialize-authority.mjs`, `add-authorized-creator.mjs`, `remove-authorized-creator.mjs`, and all new scripts
   - Improved reliability and eliminated WebSocket dependency
 
+- **StakePool::LEN Calculation**: Improved readability and documentation
+  - Restructured constant using intermediate const values: FIXED_FIELDS + OPTIONS_MAX + RESERVED
+  - Groups fields logically for easier verification (180 + 36 + 7 = 223 bytes)
+  - Fixed incorrect documentation stating 237 bytes → corrected to 223 bytes
+  - Updated rent-exempt minimum: ~2.3M → ~2.2M lamports in multiple documentation files
+
+- **Authorization Logic**: Fixed error handling in UpdatePool
+  - Use correct `Unauthorized` error when admin check fails
+  - Consistent error handling across all admin operations
+
+- **Code Review Fixes**: Multiple improvements from code review
+  - Added ProgramAuthority size verification test for maximal case (398 bytes)
+  - Enhanced authorization documentation in initialize.rs
+  - Removed unused variables in example scripts
+  - Improved comment clarity throughout codebase
+
+### Removed
+- **CloseProgramAuthority Instruction**: Removed temporary migration instruction
+  - Was added temporarily for one-time ProgramAuthority account migration (365→398 bytes)
+  - Successfully completed migration on devnet, no longer needed
+  - Removed to reduce attack surface and eliminate unnecessary closure path
+  - Removed: instruction variant, handler, script (`close-authority.mjs`), npm command, client code
+  - Updated discriminators after removal: ManageAuthorizedCreators (10→9), TransferProgramAuthority (11→10), AcceptProgramAuthority (12→11), CancelAuthorityTransfer (13→12)
+  - **Rationale**: Migration-only instruction that served its purpose; keeping it would provide unnecessary way to close critical program infrastructure
+
 ### Documentation
+- **README.md Updates**:
+  - Updated pool operator features to mention ProgramAuthority
+  - Clarified global vs per-pool authority transfer scope
+  - Updated instruction count and account sizes
+  - Fixed code examples to remove authority parameter from initializePool
+  - Added findProgramAuthorityPda to examples
+  - Updated pool ID management section with authorization info
+  - Added comprehensive authority management documentation with comparison tables
+
+- **ARCHITECTURE.md Updates**:
+  - Updated authority transfer flow to show global ProgramAuthority transfer
+  - Added note that ProgramAuthority controls ALL pools (not per-pool)
+  - Updated account relationships diagram to show ProgramAuthority structure
+  - Removed per-pool authority fields from StakePool diagrams
+  - Added admin + programAuthority requirement for UpdatePool
+  - Documented authorized creators delegation (up to 10 addresses)
+  - Updated performance considerations with ProgramAuthority size
+  - Documented upgrade path for ProgramAuthority account
+
+- **DEPLOYMENT.md Updates**:
+  - Clarified authority keypair controls entire system
+  - Updated ProgramAuthority initialization description
+  - Added note about global admin role
+  - Documented CLI scripts for managing authorized creators
+  - Added TransferProgramAuthority/AcceptProgramAuthority examples
+  - Warned that program authority transfer affects entire system
+  - Consolidated script documentation from scattered locations
+
 - **Implementation Details**: Updated script architecture section
   - Documented new transaction confirmation approach
   - Listed all authority management scripts
   - Explained benefits of REST-only polling
+  - Documented shared library structure
+
+### Tests
+- **TypeScript Client Tests**: Updated for global admin model
+  - Removed authority and pendingAuthority fields from StakePool tests
+  - Updated instruction discriminators after adding new instructions
+  - Added pendingAuthority field to ProgramAuthority test cases
+  - All 53 TypeScript client tests passing
+
+- **Rust Integration Tests**: Updated for global admin model
+  - Removed authority from InitializePool accounts
+  - Added payer to authorized creators in pool creation tests
+  - Removed pool.authority assertions (now global, not per-pool)
+  - Marked per-pool authority transfer test as obsolete
+  - All 73 tests passing (4 ignored)
+
+- **Admin System Tests**: Comprehensive coverage
+  - All 20 admin system tests passing
+  - Added creator count validation tests
+  - Added ProgramAuthority size verification tests
+  - Added GetAuthorizedCreators and CheckAuthorization tests
+
+### Example Scripts
+- **Updated for Global Admin Model**:
+  - Removed authority parameter from all initializePool calls
+  - Updated updatePool calls to use admin + programAuthority
+  - Replaced per-pool authority transfer with global program authority transfer
+  - Use getTransferProgramAuthorityInstruction and getAcceptProgramAuthorityInstruction
+  - Updated comments to clarify global admin scope
+  - All example scripts compile and run successfully
+  - Added program authority initialization step to devnet integration test
 
 ## [1.6.1]
 
