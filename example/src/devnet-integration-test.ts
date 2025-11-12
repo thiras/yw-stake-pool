@@ -15,6 +15,7 @@
 import { address, generateKeyPairSigner } from '@solana/kit';
 import {
   getInitializePoolInstruction,
+  getInitializeProgramAuthorityInstruction,
   getStakeInstruction,
   getClaimRewardsInstruction,
   getUnstakeInstruction,
@@ -124,9 +125,60 @@ async function main() {
     console.log('   ═'.repeat(50));
 
     // ========================================================================
-    // Step 2: Initialize Stake Pool
+    // Step 2: Initialize Program Authority (One-Time Setup)
     // ========================================================================
-    logStep(2, 'Initialize Stake Pool');
+    logStep(2, 'Initialize Program Authority (One-Time Setup)');
+
+    // Get the program authority PDA (required for pool initialization)
+    const [programAuthority] = await findProgramAuthorityPda();
+    console.log(`📍 Program Authority PDA: ${programAuthority}`);
+
+    console.log('\n⚠️  Note: This is a one-time setup step');
+    console.log('   If the program authority already exists, this will fail');
+    console.log('   (which is expected for subsequent runs)\n');
+
+    try {
+      const initAuthIx = getInitializeProgramAuthorityInstruction({
+        programAuthority,
+        initialAuthority: authority,
+        payer: authority,
+        systemProgram: config.systemProgramId,
+      });
+
+      const initAuthSig = await buildAndSendTransaction(
+        rpc,
+        [initAuthIx],
+        authority
+      );
+      logTransaction(initAuthSig, 'Program Authority Initialized');
+      console.log('✅ Program authority initialized successfully');
+      console.log('   Note: Main authority is automatically authorized to create pools\n');
+    } catch (error: any) {
+      // If program authority already exists, that's okay - continue
+      // Error code 4 = AccountNotEmpty (account must be empty)
+      // Error code 0 = AlreadyInUse
+      const errorCode = error?.cause?.context?.code || error?.context?.code;
+      const errorMessage = error?.message || '';
+      
+      if (
+        errorCode === 4 || // AccountNotEmpty
+        errorCode === 0 || // AlreadyInUse
+        errorMessage.includes('already in use') ||
+        errorMessage.includes('must be empty')
+      ) {
+        console.log('✅ Program authority already initialized (skipping)\n');
+      } else {
+        // Unexpected error - rethrow
+        throw error;
+      }
+    }
+
+    await waitForRateLimit();
+
+    // ========================================================================
+    // Step 3: Initialize Stake Pool
+    // ========================================================================
+    logStep(3, 'Initialize Stake Pool');
 
     console.log('Pool Configuration:');
     console.log(
@@ -140,10 +192,6 @@ async function main() {
     );
 
     console.log(`\n📍 Pool Address (PDA): ${poolAddress}`);
-
-    // Get the program authority PDA (required for pool initialization)
-    const [programAuthority] = await findProgramAuthorityPda();
-    console.log(`📍 Program Authority PDA: ${programAuthority}`);
 
     // Create and send initialize pool transaction
     const initPoolIx = getInitializePoolInstruction({
@@ -176,9 +224,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 3: Fund Reward Vault
+    // Step 4: Fund Reward Vault
     // ========================================================================
-    logStep(3, 'Fund Reward Vault');
+    logStep(4, 'Fund Reward Vault');
 
     const fundAmount = config.exampleAmounts.fund;
     console.log(
@@ -201,9 +249,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 4: Stake Tokens
+    // Step 5: Stake Tokens
     // ========================================================================
-    logStep(4, 'Stake Tokens');
+    logStep(5, 'Stake Tokens');
 
     const stakeIndex = 0n;
     const [stakeAccountAddress] = await findStakeAccountPda(
@@ -253,9 +301,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 5: Wait for Lockup Period (simulated)
+    // Step 6: Wait for Lockup Period (simulated)
     // ========================================================================
-    logStep(5, 'Wait for Lockup Period');
+    logStep(6, 'Wait for Lockup Period');
 
     console.log(
       `⏳ Lockup period: ${formatDuration(config.defaultPoolConfig.lockupPeriod)}`
@@ -269,9 +317,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 6: Claim Rewards
+    // Step 7: Claim Rewards
     // ========================================================================
-    logStep(6, 'Claim Rewards');
+    logStep(7, 'Claim Rewards');
 
     console.log('💎 Claiming accrued rewards');
 
@@ -295,9 +343,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 7: Partial Unstake
+    // Step 8: Partial Unstake
     // ========================================================================
-    logStep(7, 'Partial Unstake');
+    logStep(8, 'Partial Unstake');
 
     const unstakeAmount = config.exampleAmounts.unstake;
     console.log(`🔓 Unstaking ${formatAmount(unstakeAmount)} tokens (partial)`);
@@ -324,9 +372,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 8: Update Pool Parameters
+    // Step 9: Update Pool Parameters
     // ========================================================================
-    logStep(8, 'Update Pool Parameters');
+    logStep(9, 'Update Pool Parameters');
 
     const newRewardRate = 150_000_000n; // 15%
     console.log(
@@ -354,9 +402,9 @@ async function main() {
     await waitForRateLimit();
 
     // ========================================================================
-    // Step 9: Transfer Pool Authority (Two-Step)
+    // Step 10: Transfer Pool Authority (Two-Step)
     // ========================================================================
-    logStep(9, 'Transfer Pool Authority (Two-Step Process)');
+    logStep(10, 'Transfer Pool Authority (Two-Step Process)');
 
     console.log(
       '⚠️  Note: Authority transfer requires a funded new authority account'
