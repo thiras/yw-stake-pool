@@ -194,63 +194,6 @@ export async function checkProgramAuthorityExists(programAuthorityPda, cluster =
 }
 
 /**
- * Close the ProgramAuthority account and recover its rent
- * 
- * @param {Object} options - Close options
- * @param {string} options.programId - Program ID
- * @param {string} options.programAuthorityPda - ProgramAuthority PDA address
- * @param {string} options.authorityKeypairPath - Path to authority keypair
- * @param {string} options.receiver - Receiver address for lamports
- * @param {string} options.cluster - Cluster name (devnet, testnet, mainnet-beta)
- * @returns {Promise<string>} Transaction signature
- */
-export async function closeProgramAuthority({
-  programId,
-  programAuthorityPda,
-  authorityKeypairPath,
-  receiver,
-  cluster = 'devnet',
-}) {
-  const clientPath = join(workspaceRoot, 'clients/js/dist/src/index.js');
-  const { getCloseProgramAuthorityInstruction } = await import(clientPath);
-  
-  const clusterUrl = getClusterUrl(cluster);
-  
-  // Load authority keypair
-  const authority = await loadKeypairSigner(authorityKeypairPath);
-  
-  // Create RPC connection
-  const rpc = createSolanaRpc(clusterUrl);
-  
-  // Create instruction
-  const instruction = getCloseProgramAuthorityInstruction({
-    programAuthority: address(programAuthorityPda),
-    authority: authority.address,
-    receiver: address(receiver),
-    receiverArg: address(receiver), // Parameter for the instruction data
-  });
-  
-  // Get recent blockhash
-  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
-  
-  // Create and sign transaction
-  const transactionMessage = pipe(
-    createTransactionMessage({ version: 0 }),
-    (tx) => setTransactionMessageFeePayerSigner(authority, tx),
-    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-    (tx) => ({
-      ...tx,
-      instructions: [instruction],
-    })
-  );
-  
-  const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
-  
-  // Send and wait for confirmation
-  return await sendAndWaitForTransaction(rpc, signedTransaction);
-}
-
-/**
  * Get explorer URL for a transaction
  * 
  * @param {string} signature - Transaction signature

@@ -17,7 +17,6 @@ import {
   type ParsedCancelAuthorityTransferInstruction,
   type ParsedCheckAuthorizationInstruction,
   type ParsedClaimRewardsInstruction,
-  type ParsedCloseProgramAuthorityInstruction,
   type ParsedCloseStakeAccountInstruction,
   type ParsedFinalizeRewardRateChangeInstruction,
   type ParsedFundRewardsInstruction,
@@ -50,7 +49,6 @@ export enum StakePoolInstruction {
   CloseStakeAccount,
   FinalizeRewardRateChange,
   InitializeProgramAuthority,
-  CloseProgramAuthority,
   ManageAuthorizedCreators,
   TransferProgramAuthority,
   AcceptProgramAuthority,
@@ -91,24 +89,21 @@ export function identifyStakePoolInstruction(
     return StakePoolInstruction.InitializeProgramAuthority;
   }
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
-    return StakePoolInstruction.CloseProgramAuthority;
-  }
-  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
     return StakePoolInstruction.ManageAuthorizedCreators;
   }
-  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
     return StakePoolInstruction.TransferProgramAuthority;
   }
-  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
     return StakePoolInstruction.AcceptProgramAuthority;
   }
-  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
     return StakePoolInstruction.CancelAuthorityTransfer;
   }
-  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
     return StakePoolInstruction.GetAuthorizedCreators;
   }
-  if (containsBytes(data, getU8Encoder().encode(15), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
     return StakePoolInstruction.CheckAuthorization;
   }
   throw new Error(
@@ -146,9 +141,6 @@ export type ParsedStakePoolInstruction<
   | ({
       instructionType: StakePoolInstruction.InitializeProgramAuthority;
     } & ParsedInitializeProgramAuthorityInstruction<TProgram>)
-  | ({
-      instructionType: StakePoolInstruction.CloseProgramAuthority;
-    } & ParsedCloseProgramAuthorityInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.ManageAuthorizedCreators;
     } & ParsedManageAuthorizedCreatorsInstruction<TProgram>)

@@ -310,28 +310,6 @@ pnpm programs:list-creators -- --json
 - Maximum 10 additional authorized creators per program
 - Creators can immediately create pools after being added
 
-#### Closing Program Authority (Dev/Test Only)
-
-For development and testing, you can close the ProgramAuthority account to recover rent:
-
-```sh
-# Close authority on devnet (returns lamports to authority)
-pnpm programs:close-authority
-
-# Close and send lamports to specific address
-pnpm programs:close-authority -- --receiver <RECEIVER_ADDRESS>
-
-# Close on specific cluster
-pnpm programs:close-authority -- --cluster devnet
-```
-
-**⚠️ WARNING:** This removes global program authority control! Only use for:
-- Devnet/testnet cleanup after account structure changes
-- Testing reinitialization workflows
-- Development environment resets
-
-After closing, you can reinitialize with `pnpm programs:init-authority`.
-
 ### Managing authority
 
 The project includes tools for managing program upgrade authority:

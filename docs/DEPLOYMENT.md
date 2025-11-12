@@ -257,25 +257,6 @@ pnpm programs:transfer-authority --none
 
 The program authority controls **all pool creation globally**.
 
-#### Close Program Authority (Dev/Test Only)
-
-For development and testing, you can close the ProgramAuthority account to recover rent and reinitialize:
-
-```bash
-# Close authority on devnet (returns lamports to authority)
-pnpm programs:close-authority
-
-# Close and send lamports to specific address
-pnpm programs:close-authority -- --receiver <RECEIVER_ADDRESS>
-```
-
-**⚠️ WARNING:** This removes global program authority control! Only use for:
-- Devnet/testnet cleanup after account structure changes
-- Testing reinitialization workflows
-- Development environment resets
-
-**Not recommended for mainnet** - this disrupts all existing pools.
-
 #### Add Authorized Pool Creators
 
 Delegate pool creation rights to other addresses (max 10 additional):
@@ -362,7 +343,6 @@ The authority management commands use a modular architecture:
 
 **Main Scripts:**
 - `initialize-authority.mjs` - Initialize ProgramAuthority account
-- `close-authority.mjs` - Close ProgramAuthority (dev/test cleanup)
 - `add-authorized-creator.mjs` - Add pool creators to authorized list
 - `remove-authorized-creator.mjs` - Remove pool creators from list
 - `list-authorized-creators.mjs` - Query authorized creators
@@ -371,7 +351,6 @@ The authority management commands use a modular architecture:
 - `calculateProgramAuthorityPda()` - PDA calculation
 - `loadKeypairSigner()` - Keypair loading
 - `initializeProgramAuthority()` - Create ProgramAuthority account
-- `closeProgramAuthority()` - Close ProgramAuthority account
 - `sendAndWaitForTransaction()` - Reliable transaction confirmation
 - `getClusterUrl()`, `getExplorerUrl()` - Utilities
 

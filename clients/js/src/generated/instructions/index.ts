@@ -10,7 +10,6 @@ export * from './acceptProgramAuthority';
 export * from './cancelAuthorityTransfer';
 export * from './checkAuthorization';
 export * from './claimRewards';
-export * from './closeProgramAuthority';
 export * from './closeStakeAccount';
 export * from './finalizeRewardRateChange';
 export * from './fundRewards';
