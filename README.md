@@ -57,7 +57,7 @@ See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) for detailed security analysis.
 
 ```
 Program Structure:
-├── State Management (398 bytes ProgramAuthority, 237 bytes pool, 98 bytes stake)
+├── State Management (398 bytes ProgramAuthority, 223 bytes pool, 98 bytes stake)
 ├── 15 Instructions (Pool ops, Staking, Claims, Admin, Authority)
 ├── Token-2022 Support (Transfer fees, extensions)
 └── Comprehensive Error Handling (17 custom error types)

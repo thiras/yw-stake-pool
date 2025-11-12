@@ -35,7 +35,7 @@ graph TB
   - Single authority address
   - List of up to 10 authorized creator addresses
   - Pending authority for two-step transfer
-- **StakePool**: Individual pool configuration (reward rate, lockup period, vaults) - 237 bytes
+- **StakePool**: Individual pool configuration (reward rate, lockup period, vaults) - 223 bytes
   - No per-pool authority (managed globally via ProgramAuthority)
 - **StakeAccount**: User's stake position (amount, timestamp, claimed rewards)
 - **Stake Vault**: Token account holding all staked tokens for a pool
@@ -386,11 +386,11 @@ The program uses custom error types for clear failure modes:
 
 ## Performance Considerations
 
-- **Account Size**: ProgramAuthority = 398 bytes, StakePool = 237 bytes, StakeAccount = 98 bytes
+- **Account Size**: ProgramAuthority = 398 bytes, StakePool = 223 bytes, StakeAccount = 98 bytes
 - **Compute Units**: Typical operations < 200k CU
 - **Rent-Exempt Minimum**: 
   - ProgramAuthority: ~3.2M lamports (created once per program deployment)
-  - StakePool: ~2.3M lamports
+  - StakePool: ~2.2M lamports
   - StakeAccount: ~1.2M lamports
 - **Concurrent Operations**: Lock-free design allows parallel stakes
 

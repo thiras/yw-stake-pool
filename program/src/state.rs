@@ -244,8 +244,12 @@ impl StakePool {
     // Options (all Some): 9 (pool_end_date) + 9 (pending_reward_rate) + 9 (reward_rate_change_timestamp) + 9 (last_rate_change) = 36 bytes
     // Reserved: 7 bytes
     // Total: 180 + 36 + 7 = 223 bytes
-    pub const LEN: usize =
-        1 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 9 + 9 + 9 + 9 + 7;
+    pub const LEN: usize = {
+        const FIXED_FIELDS: usize = 1 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1;
+        const OPTIONS_MAX: usize = 9 + 9 + 9 + 9; // All Option<T> fields when Some
+        const RESERVED: usize = 7;
+        FIXED_FIELDS + OPTIONS_MAX + RESERVED
+    };
 
     pub fn seeds(stake_mint: &Pubkey, pool_id: u64) -> Vec<Vec<u8>> {
         vec![
