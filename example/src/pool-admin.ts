@@ -204,7 +204,7 @@ async function main() {
     const newAdminAddress = address('11111111111111111111111111111119');
 
     console.log('\n7a. Current authority nominates new program authority');
-    const nominateIx = getTransferProgramAuthorityInstruction({
+    getTransferProgramAuthorityInstruction({
       programAuthority,
       currentAuthority: admin,
       newAuthority: newAdminAddress,

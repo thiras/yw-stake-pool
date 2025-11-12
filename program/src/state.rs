@@ -237,8 +237,13 @@ impl StakePool {
     // - _reserved: 7 bytes
     //
     // We allocate for the maximum size (all Options as Some) to support future updates
-    // None: 1 + 128 + 40 + 8 + 3 + 1 + 1 + 1 + 1 + 1 + 1 + 7 = 193 bytes
-    // Some: 1 + 128 + 40 + 8 + 3 + 9 + 9 + 9 + 9 + 7 = 223 bytes
+    // Calculation breakdown:
+    // Fixed: 1 (key) + 32 (stake_mint) + 32 (reward_mint) + 8 (pool_id) + 32 (stake_vault) + 32 (reward_vault)
+    //        + 8 (total_staked) + 8 (total_rewards_owed) + 8 (reward_rate) + 8 (min_stake_amount)
+    //        + 8 (lockup_period) + 1 (is_paused) + 1 (enforce_lockup) + 1 (bump) = 180 bytes
+    // Options (all Some): 9 (pool_end_date) + 9 (pending_reward_rate) + 9 (reward_rate_change_timestamp) + 9 (last_rate_change) = 36 bytes
+    // Reserved: 7 bytes
+    // Total: 180 + 36 + 7 = 223 bytes
     pub const LEN: usize =
         1 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 9 + 9 + 9 + 9 + 7;
 

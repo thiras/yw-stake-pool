@@ -109,8 +109,14 @@ pub fn initialize_pool<'a>(
     let ctx = InitializePoolAccounts::context(accounts)?;
 
     // [Q-01] Security Fix: Validate pool creator is authorized
-    // Only addresses in the ProgramAuthority's authorized_creators list can create pools.
+    // Only addresses in the ProgramAuthority's authorized_creators list (or the main authority) can create pools.
     // This prevents spam/scam pools and maintains quality control.
+    //
+    // IMPORTANT: The `payer` account (transaction fee payer) must be an authorized creator.
+    // This differs from the previous per-pool authority model where any signer could create pools.
+    // Authorization is checked via ProgramAuthority.is_authorized(), which verifies:
+    // 1. The payer is the main program authority, OR
+    // 2. The payer is in the authorized_creators list (max 10 additional addresses)
     let program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
 
     if !program_authority.is_authorized(ctx.accounts.payer.key) {

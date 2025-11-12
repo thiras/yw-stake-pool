@@ -122,6 +122,8 @@ test('ProgramAuthority has correct size', (t) => {
   const encodedEmpty = codec.encode(emptyAuthority);
   // Size: 1 (key) + 32 (authority) + 10 (10 * 1 byte for Option::None) + 1 (count) + 1 (pending=None) + 1 (bump) = 46 bytes
   // Note: Borsh encodes Option::None as 1 byte (0x00), Option::Some as 1 byte (0x01) + value
+  // IMPORTANT: On-chain, the ProgramAuthority account is always allocated with the maximum size (398 bytes, as per ProgramAuthority::LEN),
+  // regardless of how many creators are actually populated. This test only verifies the serialized size for the empty case.
   t.is(encodedEmpty.length, 46);
 
   // Test full creators list (all Some)
@@ -137,9 +139,21 @@ test('ProgramAuthority has correct size', (t) => {
   };
 
   const encodedFull = codec.encode(fullAuthority);
-  // Size: 1 (key) + 32 (authority) + 330 (10 * 33 bytes for Option::Some + Pubkey) + 1 (count) + 1 (pending=None) + 1 (bump) = 366 bytes
+  // Size with pending=None: 1 (key) + 32 (authority) + 330 (10 * 33 for Option::Some + Pubkey) + 1 (count) + 1 (pending=None) + 1 (bump) = 366 bytes
   // Note: Each Option::Some(Pubkey) is 1 byte discriminator + 32 bytes pubkey = 33 bytes
   t.is(encodedFull.length, 366);
+
+  // Test maximal case: pending_authority = Some(Pubkey)
+  // This is what ProgramAuthority::LEN (398 bytes) represents on-chain
+  const maxAuthority = {
+    ...fullAuthority,
+    pendingAuthority: address('22222222222222222222222222222222222222222222'),
+  };
+
+  const encodedMax = codec.encode(maxAuthority);
+  // Size with pending=Some: 1 + 32 + 330 + 1 + 33 (Some + Pubkey) + 1 = 398 bytes
+  // This matches ProgramAuthority::LEN constant used for on-chain rent calculations
+  t.is(encodedMax.length, 398);
 });
 
 // ============================================================================
