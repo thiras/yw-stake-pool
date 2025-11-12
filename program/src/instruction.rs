@@ -121,6 +121,14 @@ pub enum StakePoolInstruction {
     #[account(3, name="system_program", desc = "The system program")]
     InitializeProgramAuthority,
 
+    /// Close the program authority account and recover its lamports to a receiver
+    /// Only the current authority can call this. This is primarily intended for
+    /// test/devnet cleanup when reinitializing the authority after an upgrade.
+    #[account(0, writable, name="program_authority", desc = "The program authority PDA to close")]
+    #[account(1, signer, name="authority", desc = "The current authority signer")]
+    #[account(2, writable, name="receiver", desc = "Account to receive the lamports")]
+    CloseProgramAuthority { receiver: Pubkey },
+
     /// Manage authorized pool creators (add or remove)
     /// Only the program authority can call this
     #[account(0, writable, name="program_authority", desc = "The program authority PDA")]

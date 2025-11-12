@@ -10,8 +10,6 @@ import {
   combineCodec,
   getAddressDecoder,
   getAddressEncoder,
-  getArrayDecoder,
-  getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
   getU8Decoder,
@@ -20,9 +18,9 @@ import {
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
-  type Codec,
-  type Decoder,
-  type Encoder,
+  type FixedSizeCodec,
+  type FixedSizeDecoder,
+  type FixedSizeEncoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
@@ -34,16 +32,17 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR = 10;
+export const CLOSE_PROGRAM_AUTHORITY_DISCRIMINATOR = 9;
 
-export function getManageAuthorizedCreatorsDiscriminatorBytes() {
-  return getU8Encoder().encode(MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR);
+export function getCloseProgramAuthorityDiscriminatorBytes() {
+  return getU8Encoder().encode(CLOSE_PROGRAM_AUTHORITY_DISCRIMINATOR);
 }
 
-export type ManageAuthorizedCreatorsInstruction<
+export type CloseProgramAuthorityInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountProgramAuthority extends string | AccountMeta<string> = string,
   TAccountAuthority extends string | AccountMeta<string> = string,
+  TAccountReceiver extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -56,79 +55,81 @@ export type ManageAuthorizedCreatorsInstruction<
         ? ReadonlySignerAccount<TAccountAuthority> &
             AccountSignerMeta<TAccountAuthority>
         : TAccountAuthority,
+      TAccountReceiver extends string
+        ? WritableAccount<TAccountReceiver>
+        : TAccountReceiver,
       ...TRemainingAccounts,
     ]
   >;
 
-export type ManageAuthorizedCreatorsInstructionData = {
+export type CloseProgramAuthorityInstructionData = {
   discriminator: number;
-  add: Array<Address>;
-  remove: Array<Address>;
+  receiver: Address;
 };
 
-export type ManageAuthorizedCreatorsInstructionDataArgs = {
-  add: Array<Address>;
-  remove: Array<Address>;
-};
+export type CloseProgramAuthorityInstructionDataArgs = { receiver: Address };
 
-export function getManageAuthorizedCreatorsInstructionDataEncoder(): Encoder<ManageAuthorizedCreatorsInstructionDataArgs> {
+export function getCloseProgramAuthorityInstructionDataEncoder(): FixedSizeEncoder<CloseProgramAuthorityInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', getU8Encoder()],
-      ['add', getArrayEncoder(getAddressEncoder())],
-      ['remove', getArrayEncoder(getAddressEncoder())],
+      ['receiver', getAddressEncoder()],
     ]),
     (value) => ({
       ...value,
-      discriminator: MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR,
+      discriminator: CLOSE_PROGRAM_AUTHORITY_DISCRIMINATOR,
     })
   );
 }
 
-export function getManageAuthorizedCreatorsInstructionDataDecoder(): Decoder<ManageAuthorizedCreatorsInstructionData> {
+export function getCloseProgramAuthorityInstructionDataDecoder(): FixedSizeDecoder<CloseProgramAuthorityInstructionData> {
   return getStructDecoder([
     ['discriminator', getU8Decoder()],
-    ['add', getArrayDecoder(getAddressDecoder())],
-    ['remove', getArrayDecoder(getAddressDecoder())],
+    ['receiver', getAddressDecoder()],
   ]);
 }
 
-export function getManageAuthorizedCreatorsInstructionDataCodec(): Codec<
-  ManageAuthorizedCreatorsInstructionDataArgs,
-  ManageAuthorizedCreatorsInstructionData
+export function getCloseProgramAuthorityInstructionDataCodec(): FixedSizeCodec<
+  CloseProgramAuthorityInstructionDataArgs,
+  CloseProgramAuthorityInstructionData
 > {
   return combineCodec(
-    getManageAuthorizedCreatorsInstructionDataEncoder(),
-    getManageAuthorizedCreatorsInstructionDataDecoder()
+    getCloseProgramAuthorityInstructionDataEncoder(),
+    getCloseProgramAuthorityInstructionDataDecoder()
   );
 }
 
-export type ManageAuthorizedCreatorsInput<
+export type CloseProgramAuthorityInput<
   TAccountProgramAuthority extends string = string,
   TAccountAuthority extends string = string,
+  TAccountReceiver extends string = string,
 > = {
-  /** The program authority PDA */
+  /** The program authority PDA to close */
   programAuthority: Address<TAccountProgramAuthority>;
-  /** The program authority signer */
+  /** The current authority signer */
   authority: TransactionSigner<TAccountAuthority>;
-  add: ManageAuthorizedCreatorsInstructionDataArgs['add'];
-  remove: ManageAuthorizedCreatorsInstructionDataArgs['remove'];
+  /** Account to receive the lamports */
+  receiver: Address<TAccountReceiver>;
+  receiverArg: CloseProgramAuthorityInstructionDataArgs['receiver'];
 };
 
-export function getManageAuthorizedCreatorsInstruction<
+export function getCloseProgramAuthorityInstruction<
   TAccountProgramAuthority extends string,
   TAccountAuthority extends string,
+  TAccountReceiver extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
-  input: ManageAuthorizedCreatorsInput<
+  input: CloseProgramAuthorityInput<
     TAccountProgramAuthority,
-    TAccountAuthority
+    TAccountAuthority,
+    TAccountReceiver
   >,
   config?: { programAddress?: TProgramAddress }
-): ManageAuthorizedCreatorsInstruction<
+): CloseProgramAuthorityInstruction<
   TProgramAddress,
   TAccountProgramAuthority,
-  TAccountAuthority
+  TAccountAuthority,
+  TAccountReceiver
 > {
   // Program address.
   const programAddress = config?.programAddress ?? STAKE_POOL_PROGRAM_ADDRESS;
@@ -140,6 +141,7 @@ export function getManageAuthorizedCreatorsInstruction<
       isWritable: true,
     },
     authority: { value: input.authority ?? null, isWritable: false },
+    receiver: { value: input.receiver ?? null, isWritable: true },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -147,48 +149,52 @@ export function getManageAuthorizedCreatorsInstruction<
   >;
 
   // Original args.
-  const args = { ...input };
+  const args = { ...input, receiver: input.receiverArg };
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
     accounts: [
       getAccountMeta(accounts.programAuthority),
       getAccountMeta(accounts.authority),
+      getAccountMeta(accounts.receiver),
     ],
-    data: getManageAuthorizedCreatorsInstructionDataEncoder().encode(
-      args as ManageAuthorizedCreatorsInstructionDataArgs
+    data: getCloseProgramAuthorityInstructionDataEncoder().encode(
+      args as CloseProgramAuthorityInstructionDataArgs
     ),
     programAddress,
-  } as ManageAuthorizedCreatorsInstruction<
+  } as CloseProgramAuthorityInstruction<
     TProgramAddress,
     TAccountProgramAuthority,
-    TAccountAuthority
+    TAccountAuthority,
+    TAccountReceiver
   >);
 }
 
-export type ParsedManageAuthorizedCreatorsInstruction<
+export type ParsedCloseProgramAuthorityInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    /** The program authority PDA */
+    /** The program authority PDA to close */
     programAuthority: TAccountMetas[0];
-    /** The program authority signer */
+    /** The current authority signer */
     authority: TAccountMetas[1];
+    /** Account to receive the lamports */
+    receiver: TAccountMetas[2];
   };
-  data: ManageAuthorizedCreatorsInstructionData;
+  data: CloseProgramAuthorityInstructionData;
 };
 
-export function parseManageAuthorizedCreatorsInstruction<
+export function parseCloseProgramAuthorityInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
-): ParsedManageAuthorizedCreatorsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 2) {
+): ParsedCloseProgramAuthorityInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 3) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -203,8 +209,9 @@ export function parseManageAuthorizedCreatorsInstruction<
     accounts: {
       programAuthority: getNextAccount(),
       authority: getNextAccount(),
+      receiver: getNextAccount(),
     },
-    data: getManageAuthorizedCreatorsInstructionDataDecoder().decode(
+    data: getCloseProgramAuthorityInstructionDataDecoder().decode(
       instruction.data
     ),
   };

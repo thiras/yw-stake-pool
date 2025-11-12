@@ -12,6 +12,7 @@ import {
   getClusterUrl,
   checkProgramAuthorityExists,
   getExplorerUrl,
+  sendAndWaitForTransaction,
 } from '../lib/program-authority.mjs';
 
 // Import @solana/kit directly from root node_modules
@@ -23,7 +24,6 @@ import {
   setTransactionMessageFeePayerSigner,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
-  sendAndConfirmTransactionFactory,
 } from '@solana/kit';
 
 /**
@@ -264,50 +264,21 @@ try {
 
   const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
 
-  // Send and confirm transaction using polling (no WebSocket required)
-  const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-    rpc,
-    rpcSubscriptions: null,
-  });
+  // Send and wait for confirmation
+  const signature = await sendAndWaitForTransaction(rpc, signedTransaction);
 
-  let signature;
-  let confirmationFailed = false;
-  try {
-    signature = await sendAndConfirmTransaction(signedTransaction, {
-      commitment: 'confirmed',
-    });
-  } catch (error) {
-    // If confirmation fails but transaction was sent, try to extract signature from error
-    if (error.message && error.message.includes('signatureNotifications')) {
-      confirmationFailed = true;
-      echo(chalk.yellow('\n⚠️  Transaction sent but confirmation failed'));
-      echo(chalk.gray('This is a known issue with WebSocket subscriptions.'));
-      echo(chalk.gray('Checking transaction status...\n'));
-      
-      // Transaction was likely sent, wait a moment and check the account
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    } else {
-      throw error;
-    }
-  }
+  // Success output
+  echo(chalk.green('\n✅ Authorized creator removed successfully!\n'));
+  echo(chalk.green('Transaction Details:'));
+  echo(chalk.gray(`  Signature: ${signature}`));
+  echo(chalk.gray(`  Creator Removed: ${creatorPubkey}`));
+  echo(chalk.gray(`  ProgramAuthority PDA: ${programAuthorityPda}`));
+  
+  const explorerUrl = getExplorerUrl(signature, cluster);
+  echo(chalk.cyan(`\n  View on explorer: ${explorerUrl}\n`));
 
-  if (confirmationFailed) {
-    echo(chalk.green('✓ Operation appears to have completed'));
-    echo(chalk.cyan('\nPlease verify with: pnpm programs:list-creators\n'));
-  } else {
-    // 9. Success output
-    echo(chalk.green('\n✅ Authorized creator removed successfully!\n'));
-    echo(chalk.green('Transaction Details:'));
-    echo(chalk.gray(`  Signature: ${signature}`));
-    echo(chalk.gray(`  Creator Removed: ${creatorPubkey}`));
-    echo(chalk.gray(`  ProgramAuthority PDA: ${programAuthorityPda}`));
-    
-    const explorerUrl = getExplorerUrl(signature, cluster);
-    echo(chalk.cyan(`\n  View on explorer: ${explorerUrl}\n`));
-
-    echo(chalk.green('✓ Creator removed from authorized list'));
-    echo(chalk.gray('  This address can no longer create new stake pools\n'));
-  }
+  echo(chalk.green('✓ Creator removed from authorized list'));
+  echo(chalk.gray('  This address can no longer create new stake pools\n'));
 
 } catch (error) {
   // Handle errors

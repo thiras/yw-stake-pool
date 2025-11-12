@@ -620,6 +620,45 @@
       }
     },
     {
+      "name": "CloseProgramAuthority",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA to close"
+          ]
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The current authority signer"
+          ]
+        },
+        {
+          "name": "receiver",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Account to receive the lamports"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "receiver",
+          "type": "publicKey"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 9
+      }
+    },
+    {
       "name": "ManageAuthorizedCreators",
       "accounts": [
         {
@@ -655,7 +694,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 9
+        "value": 10
       }
     },
     {
@@ -689,7 +728,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 10
+        "value": 11
       }
     },
     {
@@ -715,7 +754,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 11
+        "value": 12
       }
     },
     {
@@ -733,7 +772,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 12
+        "value": 13
       }
     },
     {
@@ -756,7 +795,7 @@
       ],
       "discriminant": {
         "type": "u8",
-        "value": 13
+        "value": 14
       }
     },
     {
@@ -782,7 +821,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 14
+        "value": 15
       }
     }
   ],

@@ -29,7 +29,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const CHECK_AUTHORIZATION_DISCRIMINATOR = 13;
+export const CHECK_AUTHORIZATION_DISCRIMINATOR = 14;
 
 export function getCheckAuthorizationDiscriminatorBytes() {
   return getU8Encoder().encode(CHECK_AUTHORIZATION_DISCRIMINATOR);

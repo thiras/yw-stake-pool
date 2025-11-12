@@ -25,7 +25,6 @@ import {
   setTransactionMessageFeePayerSigner,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
-  sendAndConfirmTransactionFactory,
 } from '@solana/kit';
 
 /**
@@ -65,6 +64,56 @@ export async function calculateProgramAuthorityPda(programId) {
 export async function loadKeypairSigner(keypairPath) {
   const keypairData = JSON.parse(readFileSync(keypairPath, 'utf-8'));
   return await createKeyPairSignerFromBytes(new Uint8Array(keypairData));
+}
+
+/**
+ * Helper to send and wait for transaction confirmation
+ * @param {Object} rpc - RPC connection
+ * @param {Object} signedTransaction - Signed transaction
+ * @returns {Promise<string>} Transaction signature
+ */
+export async function sendAndWaitForTransaction(rpc, signedTransaction) {
+  // Import getBase64EncodedWireTransaction from @solana/kit
+  const { getBase64EncodedWireTransaction } = await import('@solana/kit');
+  
+  // Encode transaction
+  const base64Transaction = getBase64EncodedWireTransaction(signedTransaction);
+  
+  // Send transaction
+  const signature = await rpc
+    .sendTransaction(base64Transaction, {
+      encoding: 'base64',
+      preflightCommitment: 'confirmed',
+    })
+    .send();
+  
+  // Poll for confirmation
+  let confirmed = false;
+  for (let i = 0; i < 30; i++) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const status = await rpc.getSignatureStatuses([signature]).send();
+      if (status.value[0]?.confirmationStatus === 'confirmed' || 
+          status.value[0]?.confirmationStatus === 'finalized') {
+        confirmed = true;
+        break;
+      }
+      if (status.value[0]?.err) {
+        throw new Error(`Transaction failed: ${JSON.stringify(status.value[0].err)}`);
+      }
+    } catch (e) {
+      if (e.message.includes('Transaction failed')) {
+        throw e;
+      }
+      // Continue polling on other errors
+    }
+  }
+  
+  if (!confirmed) {
+    throw new Error('Transaction confirmation timeout');
+  }
+  
+  return signature;
 }
 
 /**
@@ -118,17 +167,8 @@ export async function initializeProgramAuthority({
   
   const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
   
-  // Send transaction
-  const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-    rpc,
-    rpcSubscriptions: null,
-  });
-  
-  const signature = await sendAndConfirmTransaction(signedTransaction, {
-    commitment: 'confirmed',
-  });
-  
-  return signature;
+  // Send and wait for confirmation
+  return await sendAndWaitForTransaction(rpc, signedTransaction);
 }
 
 /**
@@ -151,6 +191,63 @@ export async function checkProgramAuthorityExists(programAuthorityPda, cluster =
   } catch (error) {
     return false;
   }
+}
+
+/**
+ * Close the ProgramAuthority account and recover its rent
+ * 
+ * @param {Object} options - Close options
+ * @param {string} options.programId - Program ID
+ * @param {string} options.programAuthorityPda - ProgramAuthority PDA address
+ * @param {string} options.authorityKeypairPath - Path to authority keypair
+ * @param {string} options.receiver - Receiver address for lamports
+ * @param {string} options.cluster - Cluster name (devnet, testnet, mainnet-beta)
+ * @returns {Promise<string>} Transaction signature
+ */
+export async function closeProgramAuthority({
+  programId,
+  programAuthorityPda,
+  authorityKeypairPath,
+  receiver,
+  cluster = 'devnet',
+}) {
+  const clientPath = join(workspaceRoot, 'clients/js/dist/src/index.js');
+  const { getCloseProgramAuthorityInstruction } = await import(clientPath);
+  
+  const clusterUrl = getClusterUrl(cluster);
+  
+  // Load authority keypair
+  const authority = await loadKeypairSigner(authorityKeypairPath);
+  
+  // Create RPC connection
+  const rpc = createSolanaRpc(clusterUrl);
+  
+  // Create instruction
+  const instruction = getCloseProgramAuthorityInstruction({
+    programAuthority: address(programAuthorityPda),
+    authority: authority.address,
+    receiver: address(receiver),
+    receiverArg: address(receiver), // Parameter for the instruction data
+  });
+  
+  // Get recent blockhash
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+  
+  // Create and sign transaction
+  const transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    (tx) => setTransactionMessageFeePayerSigner(authority, tx),
+    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+    (tx) => ({
+      ...tx,
+      instructions: [instruction],
+    })
+  );
+  
+  const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
+  
+  // Send and wait for confirmation
+  return await sendAndWaitForTransaction(rpc, signedTransaction);
 }
 
 /**
