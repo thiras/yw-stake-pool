@@ -34,7 +34,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR = 11;
+export const MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR = 9;
 
 export function getManageAuthorizedCreatorsDiscriminatorBytes() {
   return getU8Encoder().encode(MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR);

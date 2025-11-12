@@ -6,15 +6,18 @@
  * @see https://github.com/codama-idl/codama
  */
 
-export * from './acceptAuthority';
+export * from './acceptProgramAuthority';
+export * from './cancelAuthorityTransfer';
+export * from './checkAuthorization';
 export * from './claimRewards';
 export * from './closeStakeAccount';
 export * from './finalizeRewardRateChange';
 export * from './fundRewards';
+export * from './getAuthorizedCreators';
 export * from './initializePool';
 export * from './initializeProgramAuthority';
 export * from './manageAuthorizedCreators';
-export * from './nominateNewAuthority';
 export * from './stake';
+export * from './transferProgramAuthority';
 export * from './unstake';
 export * from './updatePool';

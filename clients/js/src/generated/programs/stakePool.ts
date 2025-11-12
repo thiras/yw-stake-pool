@@ -13,16 +13,19 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
-  type ParsedAcceptAuthorityInstruction,
+  type ParsedAcceptProgramAuthorityInstruction,
+  type ParsedCancelAuthorityTransferInstruction,
+  type ParsedCheckAuthorizationInstruction,
   type ParsedClaimRewardsInstruction,
   type ParsedCloseStakeAccountInstruction,
   type ParsedFinalizeRewardRateChangeInstruction,
   type ParsedFundRewardsInstruction,
+  type ParsedGetAuthorizedCreatorsInstruction,
   type ParsedInitializePoolInstruction,
   type ParsedInitializeProgramAuthorityInstruction,
   type ParsedManageAuthorizedCreatorsInstruction,
-  type ParsedNominateNewAuthorityInstruction,
   type ParsedStakeInstruction,
+  type ParsedTransferProgramAuthorityInstruction,
   type ParsedUnstakeInstruction,
   type ParsedUpdatePoolInstruction,
 } from '../instructions';
@@ -43,12 +46,15 @@ export enum StakePoolInstruction {
   ClaimRewards,
   UpdatePool,
   FundRewards,
-  NominateNewAuthority,
-  AcceptAuthority,
   CloseStakeAccount,
   FinalizeRewardRateChange,
   InitializeProgramAuthority,
   ManageAuthorizedCreators,
+  TransferProgramAuthority,
+  AcceptProgramAuthority,
+  GetAuthorizedCreators,
+  CheckAuthorization,
+  CancelAuthorityTransfer,
 }
 
 export function identifyStakePoolInstruction(
@@ -74,22 +80,31 @@ export function identifyStakePoolInstruction(
     return StakePoolInstruction.FundRewards;
   }
   if (containsBytes(data, getU8Encoder().encode(6), 0)) {
-    return StakePoolInstruction.NominateNewAuthority;
-  }
-  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
-    return StakePoolInstruction.AcceptAuthority;
-  }
-  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
     return StakePoolInstruction.CloseStakeAccount;
   }
-  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
     return StakePoolInstruction.FinalizeRewardRateChange;
   }
-  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
     return StakePoolInstruction.InitializeProgramAuthority;
   }
-  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return StakePoolInstruction.ManageAuthorizedCreators;
+  }
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+    return StakePoolInstruction.TransferProgramAuthority;
+  }
+  if (containsBytes(data, getU8Encoder().encode(11), 0)) {
+    return StakePoolInstruction.AcceptProgramAuthority;
+  }
+  if (containsBytes(data, getU8Encoder().encode(12), 0)) {
+    return StakePoolInstruction.GetAuthorizedCreators;
+  }
+  if (containsBytes(data, getU8Encoder().encode(13), 0)) {
+    return StakePoolInstruction.CheckAuthorization;
+  }
+  if (containsBytes(data, getU8Encoder().encode(14), 0)) {
+    return StakePoolInstruction.CancelAuthorityTransfer;
   }
   throw new Error(
     'The provided instruction could not be identified as a stakePool instruction.'
@@ -118,12 +133,6 @@ export type ParsedStakePoolInstruction<
       instructionType: StakePoolInstruction.FundRewards;
     } & ParsedFundRewardsInstruction<TProgram>)
   | ({
-      instructionType: StakePoolInstruction.NominateNewAuthority;
-    } & ParsedNominateNewAuthorityInstruction<TProgram>)
-  | ({
-      instructionType: StakePoolInstruction.AcceptAuthority;
-    } & ParsedAcceptAuthorityInstruction<TProgram>)
-  | ({
       instructionType: StakePoolInstruction.CloseStakeAccount;
     } & ParsedCloseStakeAccountInstruction<TProgram>)
   | ({
@@ -134,4 +143,19 @@ export type ParsedStakePoolInstruction<
     } & ParsedInitializeProgramAuthorityInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.ManageAuthorizedCreators;
-    } & ParsedManageAuthorizedCreatorsInstruction<TProgram>);
+    } & ParsedManageAuthorizedCreatorsInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.TransferProgramAuthority;
+    } & ParsedTransferProgramAuthorityInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.AcceptProgramAuthority;
+    } & ParsedAcceptProgramAuthorityInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.GetAuthorizedCreators;
+    } & ParsedGetAuthorizedCreatorsInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.CheckAuthorization;
+    } & ParsedCheckAuthorizationInstruction<TProgram>)
+  | ({
+      instructionType: StakePoolInstruction.CancelAuthorityTransfer;
+    } & ParsedCancelAuthorityTransferInstruction<TProgram>);

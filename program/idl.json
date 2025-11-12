@@ -14,14 +14,6 @@
           ]
         },
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true,
-          "docs": [
-            "The pool authority"
-          ]
-        },
-        {
           "name": "stakeMint",
           "isMut": false,
           "isSigner": false,
@@ -58,7 +50,7 @@
           "isMut": true,
           "isSigner": true,
           "docs": [
-            "The account paying for rent"
+            "The account paying for rent (must be authorized admin)"
           ]
         },
         {
@@ -409,11 +401,19 @@
           ]
         },
         {
-          "name": "authority",
+          "name": "admin",
           "isMut": false,
           "isSigner": true,
           "docs": [
-            "The pool authority"
+            "The global admin (authorized in ProgramAuthority)"
+          ]
+        },
+        {
+          "name": "programAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The program authority account (validates admin permission)"
           ]
         }
       ],
@@ -526,66 +526,6 @@
       }
     },
     {
-      "name": "NominateNewAuthority",
-      "accounts": [
-        {
-          "name": "pool",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "The stake pool"
-          ]
-        },
-        {
-          "name": "currentAuthority",
-          "isMut": false,
-          "isSigner": true,
-          "docs": [
-            "The current pool authority"
-          ]
-        },
-        {
-          "name": "newAuthority",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The new authority to nominate"
-          ]
-        }
-      ],
-      "args": [],
-      "discriminant": {
-        "type": "u8",
-        "value": 6
-      }
-    },
-    {
-      "name": "AcceptAuthority",
-      "accounts": [
-        {
-          "name": "pool",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "The stake pool"
-          ]
-        },
-        {
-          "name": "pendingAuthority",
-          "isMut": false,
-          "isSigner": true,
-          "docs": [
-            "The pending authority accepting the transfer"
-          ]
-        }
-      ],
-      "args": [],
-      "discriminant": {
-        "type": "u8",
-        "value": 7
-      }
-    },
-    {
       "name": "CloseStakeAccount",
       "accounts": [
         {
@@ -616,7 +556,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 8
+        "value": 6
       }
     },
     {
@@ -634,7 +574,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 9
+        "value": 7
       }
     },
     {
@@ -676,7 +616,7 @@
       "args": [],
       "discriminant": {
         "type": "u8",
-        "value": 10
+        "value": 8
       }
     },
     {
@@ -715,7 +655,134 @@
       ],
       "discriminant": {
         "type": "u8",
+        "value": 9
+      }
+    },
+    {
+      "name": "TransferProgramAuthority",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA"
+          ]
+        },
+        {
+          "name": "currentAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The current program authority"
+          ]
+        },
+        {
+          "name": "newAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The new authority to nominate"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 10
+      }
+    },
+    {
+      "name": "AcceptProgramAuthority",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA"
+          ]
+        },
+        {
+          "name": "pendingAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The pending authority accepting the transfer"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
         "value": 11
+      }
+    },
+    {
+      "name": "GetAuthorizedCreators",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 12
+      }
+    },
+    {
+      "name": "CheckAuthorization",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "address",
+          "type": "publicKey"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 13
+      }
+    },
+    {
+      "name": "CancelAuthorityTransfer",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA"
+          ]
+        },
+        {
+          "name": "currentAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "The current program authority"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 14
       }
     }
   ],
@@ -730,10 +797,6 @@
             "type": {
               "defined": "Key"
             }
-          },
-          {
-            "name": "authority",
-            "type": "publicKey"
           },
           {
             "name": "stakeMint",
@@ -786,12 +849,6 @@
           {
             "name": "bump",
             "type": "u8"
-          },
-          {
-            "name": "pendingAuthority",
-            "type": {
-              "option": "publicKey"
-            }
           },
           {
             "name": "poolEndDate",
@@ -900,6 +957,12 @@
           {
             "name": "creatorCount",
             "type": "u8"
+          },
+          {
+            "name": "pendingAuthority",
+            "type": {
+              "option": "publicKey"
+            }
           },
           {
             "name": "bump",

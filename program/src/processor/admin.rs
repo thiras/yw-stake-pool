@@ -281,7 +281,7 @@ pub fn update_pool<'a>(
             "Unauthorized: {} is not a global admin",
             ctx.accounts.admin.key
         );
-        return Err(StakePoolError::UnauthorizedPoolCreator.into());
+        return Err(StakePoolError::Unauthorized.into());
     }
 
     // Get current time once for efficiency (Clock is a sysvar that shouldn't change during transaction)
@@ -308,6 +308,13 @@ pub fn update_pool<'a>(
                     "Pending reward rate change cancelled. Keeping current rate: {}",
                     pool_data.reward_rate
                 );
+
+                // Emit event for off-chain indexing
+                sol_log_data(&[
+                    b"RewardRateProposalCancelled",
+                    ctx.accounts.pool.key.as_ref(),
+                    ctx.accounts.admin.key.as_ref(),
+                ]);
             } else {
                 msg!(
                     "Reward rate unchanged: {}. No pending change to cancel.",
@@ -366,10 +373,29 @@ pub fn update_pool<'a>(
                 rate,
                 finalization_time
             );
+
+            // Emit event for off-chain indexing
+            sol_log_data(&[
+                b"RewardRateProposed",
+                ctx.accounts.pool.key.as_ref(),
+                ctx.accounts.admin.key.as_ref(),
+                &pool_data.reward_rate.to_le_bytes(),
+                &rate.to_le_bytes(),
+            ]);
         }
     }
     if let Some(min_amount) = min_stake_amount {
         pool_data.min_stake_amount = min_amount;
+        msg!("Min stake amount updated to: {}", min_amount);
+
+        // Emit event
+        sol_log_data(&[
+            b"PoolParameterUpdated",
+            ctx.accounts.pool.key.as_ref(),
+            ctx.accounts.admin.key.as_ref(),
+            b"min_stake_amount",
+            &min_amount.to_le_bytes(),
+        ]);
     }
     if let Some(lockup) = lockup_period {
         if lockup < 0 {
@@ -377,6 +403,16 @@ pub fn update_pool<'a>(
             return Err(StakePoolError::InvalidParameters.into());
         }
         pool_data.lockup_period = lockup;
+        msg!("Lockup period updated to: {}", lockup);
+
+        // Emit event
+        sol_log_data(&[
+            b"PoolParameterUpdated",
+            ctx.accounts.pool.key.as_ref(),
+            ctx.accounts.admin.key.as_ref(),
+            b"lockup_period",
+            &lockup.to_le_bytes(),
+        ]);
     }
     if let Some(paused) = is_paused {
         let status_change = if paused { "PAUSED" } else { "UNPAUSED" };
@@ -397,6 +433,16 @@ pub fn update_pool<'a>(
     }
     if let Some(enforce) = enforce_lockup {
         pool_data.enforce_lockup = enforce;
+        msg!("Enforce lockup updated to: {}", enforce);
+
+        // Emit event
+        sol_log_data(&[
+            b"PoolParameterUpdated",
+            ctx.accounts.pool.key.as_ref(),
+            ctx.accounts.admin.key.as_ref(),
+            b"enforce_lockup",
+            &[if enforce { 1u8 } else { 0u8 }],
+        ]);
     }
     if let Some(end_date) = pool_end_date {
         // Prevent extending pool after end date has passed
@@ -417,6 +463,25 @@ pub fn update_pool<'a>(
             }
         }
         pool_data.pool_end_date = end_date;
+        msg!("Pool end date updated to: {:?}", end_date);
+
+        // Emit event
+        if let Some(timestamp) = end_date {
+            sol_log_data(&[
+                b"PoolParameterUpdated",
+                ctx.accounts.pool.key.as_ref(),
+                ctx.accounts.admin.key.as_ref(),
+                b"pool_end_date",
+                &timestamp.to_le_bytes(),
+            ]);
+        } else {
+            sol_log_data(&[
+                b"PoolParameterUpdated",
+                ctx.accounts.pool.key.as_ref(),
+                ctx.accounts.admin.key.as_ref(),
+                b"pool_end_date_removed",
+            ]);
+        }
     }
 
     pool_data.save(ctx.accounts.pool)
@@ -668,6 +733,139 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
         ctx.accounts.pool.key.as_ref(),
         &old_rate.to_le_bytes(),
         &pool_data.reward_rate.to_le_bytes(),
+    ]);
+
+    Ok(())
+}
+
+/// Get all authorized creators (view function for off-chain queries)
+///
+/// This is a read-only operation that returns the ProgramAuthority account data.
+/// Intended to be called via simulateTransaction for off-chain queries.
+///
+/// # Returns
+/// Always returns Ok(()) - the account data can be deserialized client-side
+pub fn get_authorized_creators<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    let ctx = GetAuthorizedCreatorsAccounts::context(accounts)?;
+
+    // Verify program authority account
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    assert_program_owner(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &crate::ID,
+    )?;
+
+    // Load to verify account is valid
+    let _program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
+    // Return success - caller can deserialize the account data
+    msg!("ProgramAuthority account verified");
+    Ok(())
+}
+
+/// Check if an address is authorized (view function for off-chain queries)
+///
+/// Returns Ok(()) if the address is authorized to create pools.
+/// Returns Unauthorized error if not authorized.
+/// Intended to be called via simulateTransaction for off-chain queries.
+///
+/// # Arguments
+/// * `accounts` - Required accounts
+/// * `address` - The address to check
+pub fn check_authorization<'a>(accounts: &'a [AccountInfo<'a>], address: Pubkey) -> ProgramResult {
+    let ctx = CheckAuthorizationAccounts::context(accounts)?;
+
+    // Verify program authority account
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    assert_program_owner(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &crate::ID,
+    )?;
+
+    // Load program authority
+    let program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
+    // Check if address is authorized
+    if !program_authority.is_authorized(&address) {
+        msg!("Address {} is not authorized", address);
+        return Err(StakePoolError::Unauthorized.into());
+    }
+
+    msg!("Address {} is authorized", address);
+    Ok(())
+}
+
+/// Cancel a pending authority transfer
+///
+/// Allows the current authority to cancel a pending transfer before it's accepted.
+/// This provides flexibility if the authority changes their mind or nominates
+/// the wrong address.
+///
+/// # Security
+/// - Only current authority can cancel
+/// - Returns error if no pending transfer exists
+pub fn cancel_authority_transfer<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    let ctx = CancelAuthorityTransferAccounts::context(accounts)?;
+
+    // Verify program authority account
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    assert_program_owner(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &crate::ID,
+    )?;
+
+    // Load program authority
+    let mut program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
+    // Guards
+    assert_signer("current_authority", ctx.accounts.current_authority)?;
+    assert_writable("program_authority", ctx.accounts.program_authority)?;
+
+    // Verify signer is current authority
+    if ctx.accounts.current_authority.key != &program_authority.authority {
+        msg!(
+            "Unauthorized: {} is not the current authority",
+            ctx.accounts.current_authority.key
+        );
+        return Err(StakePoolError::Unauthorized.into());
+    }
+
+    // Verify there is a pending authority to cancel
+    let pending = program_authority
+        .pending_authority
+        .ok_or(StakePoolError::NoPendingAuthority)?;
+
+    // Clear pending authority
+    program_authority.pending_authority = None;
+
+    msg!(
+        "Authority transfer cancelled. Pending authority {} removed.",
+        pending
+    );
+
+    // Save state
+    program_authority.save(ctx.accounts.program_authority)?;
+
+    // Emit event
+    sol_log_data(&[
+        b"ProgramAuthorityTransferCancelled",
+        ctx.accounts.current_authority.key.as_ref(),
+        pending.as_ref(),
     ]);
 
     Ok(())

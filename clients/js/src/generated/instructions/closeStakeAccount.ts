@@ -30,7 +30,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const CLOSE_STAKE_ACCOUNT_DISCRIMINATOR = 8;
+export const CLOSE_STAKE_ACCOUNT_DISCRIMINATOR = 6;
 
 export function getCloseStakeAccountDiscriminatorBytes() {
   return getU8Encoder().encode(CLOSE_STAKE_ACCOUNT_DISCRIMINATOR);

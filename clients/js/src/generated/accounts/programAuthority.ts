@@ -43,6 +43,7 @@ export type ProgramAuthority = {
   authority: Address;
   authorizedCreators: Array<Option<Address>>;
   creatorCount: number;
+  pendingAuthority: Option<Address>;
   bump: number;
 };
 
@@ -51,6 +52,7 @@ export type ProgramAuthorityArgs = {
   authority: Address;
   authorizedCreators: Array<OptionOrNullable<Address>>;
   creatorCount: number;
+  pendingAuthority: OptionOrNullable<Address>;
   bump: number;
 };
 
@@ -63,6 +65,7 @@ export function getProgramAuthorityEncoder(): Encoder<ProgramAuthorityArgs> {
       getArrayEncoder(getOptionEncoder(getAddressEncoder()), { size: 10 }),
     ],
     ['creatorCount', getU8Encoder()],
+    ['pendingAuthority', getOptionEncoder(getAddressEncoder())],
     ['bump', getU8Encoder()],
   ]);
 }
@@ -76,6 +79,7 @@ export function getProgramAuthorityDecoder(): Decoder<ProgramAuthority> {
       getArrayDecoder(getOptionDecoder(getAddressDecoder()), { size: 10 }),
     ],
     ['creatorCount', getU8Decoder()],
+    ['pendingAuthority', getOptionDecoder(getAddressDecoder())],
     ['bump', getU8Decoder()],
   ]);
 }

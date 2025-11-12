@@ -479,6 +479,9 @@ impl ProgramAuthority {
             return Err(StakePoolError::InvalidAccountDiscriminator.into());
         }
 
+        // Validate creator count matches actual array contents
+        program_authority.validate_creator_count()?;
+
         Ok(program_authority)
     }
 
@@ -503,6 +506,27 @@ impl ProgramAuthority {
         }
 
         false
+    }
+
+    /// Validate that creator_count matches the actual number of Some values in authorized_creators
+    /// This prevents data corruption where the count becomes out of sync with the array
+    pub fn validate_creator_count(&self) -> Result<(), ProgramError> {
+        let actual_count = self
+            .authorized_creators
+            .iter()
+            .filter(|c| c.is_some())
+            .count() as u8;
+
+        if actual_count != self.creator_count {
+            msg!(
+                "Creator count mismatch: stored={}, actual={}",
+                self.creator_count,
+                actual_count
+            );
+            return Err(StakePoolError::DataCorruption.into());
+        }
+
+        Ok(())
     }
 
     /// Compact the authorized_creators array by moving all Some values to the front

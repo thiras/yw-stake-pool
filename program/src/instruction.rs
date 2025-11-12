@@ -145,4 +145,23 @@ pub enum StakePoolInstruction {
     #[account(0, writable, name="program_authority", desc = "The program authority PDA")]
     #[account(1, signer, name="pending_authority", desc = "The pending authority accepting the transfer")]
     AcceptProgramAuthority,
+
+    /// Get all authorized creators (for off-chain queries via simulateTransaction)
+    /// Returns the ProgramAuthority account data which can be deserialized client-side
+    #[account(0, name="program_authority", desc = "The program authority PDA")]
+    GetAuthorizedCreators,
+
+    /// Check if an address is authorized to create pools
+    /// Returns success if authorized, error if not (for off-chain queries via simulateTransaction)
+    #[account(0, name="program_authority", desc = "The program authority PDA")]
+    CheckAuthorization {
+        /// The address to check
+        address: Pubkey,
+    },
+
+    /// Cancel a pending authority transfer
+    /// Only the current authority can call this
+    #[account(0, writable, name="program_authority", desc = "The program authority PDA")]
+    #[account(1, signer, name="current_authority", desc = "The current program authority")]
+    CancelAuthorityTransfer,
 }

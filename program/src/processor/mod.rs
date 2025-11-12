@@ -15,7 +15,8 @@ mod stake;
 
 // Re-export handler functions
 pub use admin::{
-    accept_program_authority, finalize_reward_rate_change, initialize_program_authority,
+    accept_program_authority, cancel_authority_transfer, check_authorization,
+    finalize_reward_rate_change, get_authorized_creators, initialize_program_authority,
     manage_authorized_creators, transfer_program_authority, update_pool,
 };
 pub use close::close_stake_account;
@@ -133,6 +134,18 @@ pub fn process_instruction<'a>(
         StakePoolInstruction::AcceptProgramAuthority => {
             msg!("Instruction: AcceptProgramAuthority");
             accept_program_authority(accounts)
+        }
+        StakePoolInstruction::GetAuthorizedCreators => {
+            msg!("Instruction: GetAuthorizedCreators");
+            get_authorized_creators(accounts)
+        }
+        StakePoolInstruction::CheckAuthorization { address } => {
+            msg!("Instruction: CheckAuthorization");
+            check_authorization(accounts, address)
+        }
+        StakePoolInstruction::CancelAuthorityTransfer => {
+            msg!("Instruction: CancelAuthorityTransfer");
+            cancel_authority_transfer(accounts)
         }
     }
 }

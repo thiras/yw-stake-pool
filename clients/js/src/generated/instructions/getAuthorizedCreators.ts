@@ -21,81 +21,84 @@ import {
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+  type ReadonlyAccount,
   type ReadonlyUint8Array,
-  type WritableAccount,
 } from '@solana/kit';
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const FINALIZE_REWARD_RATE_CHANGE_DISCRIMINATOR = 7;
+export const GET_AUTHORIZED_CREATORS_DISCRIMINATOR = 12;
 
-export function getFinalizeRewardRateChangeDiscriminatorBytes() {
-  return getU8Encoder().encode(FINALIZE_REWARD_RATE_CHANGE_DISCRIMINATOR);
+export function getGetAuthorizedCreatorsDiscriminatorBytes() {
+  return getU8Encoder().encode(GET_AUTHORIZED_CREATORS_DISCRIMINATOR);
 }
 
-export type FinalizeRewardRateChangeInstruction<
+export type GetAuthorizedCreatorsInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
-  TAccountPool extends string | AccountMeta<string> = string,
+  TAccountProgramAuthority extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
-      TAccountPool extends string
-        ? WritableAccount<TAccountPool>
-        : TAccountPool,
+      TAccountProgramAuthority extends string
+        ? ReadonlyAccount<TAccountProgramAuthority>
+        : TAccountProgramAuthority,
       ...TRemainingAccounts,
     ]
   >;
 
-export type FinalizeRewardRateChangeInstructionData = { discriminator: number };
+export type GetAuthorizedCreatorsInstructionData = { discriminator: number };
 
-export type FinalizeRewardRateChangeInstructionDataArgs = {};
+export type GetAuthorizedCreatorsInstructionDataArgs = {};
 
-export function getFinalizeRewardRateChangeInstructionDataEncoder(): FixedSizeEncoder<FinalizeRewardRateChangeInstructionDataArgs> {
+export function getGetAuthorizedCreatorsInstructionDataEncoder(): FixedSizeEncoder<GetAuthorizedCreatorsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', getU8Encoder()]]),
     (value) => ({
       ...value,
-      discriminator: FINALIZE_REWARD_RATE_CHANGE_DISCRIMINATOR,
+      discriminator: GET_AUTHORIZED_CREATORS_DISCRIMINATOR,
     })
   );
 }
 
-export function getFinalizeRewardRateChangeInstructionDataDecoder(): FixedSizeDecoder<FinalizeRewardRateChangeInstructionData> {
+export function getGetAuthorizedCreatorsInstructionDataDecoder(): FixedSizeDecoder<GetAuthorizedCreatorsInstructionData> {
   return getStructDecoder([['discriminator', getU8Decoder()]]);
 }
 
-export function getFinalizeRewardRateChangeInstructionDataCodec(): FixedSizeCodec<
-  FinalizeRewardRateChangeInstructionDataArgs,
-  FinalizeRewardRateChangeInstructionData
+export function getGetAuthorizedCreatorsInstructionDataCodec(): FixedSizeCodec<
+  GetAuthorizedCreatorsInstructionDataArgs,
+  GetAuthorizedCreatorsInstructionData
 > {
   return combineCodec(
-    getFinalizeRewardRateChangeInstructionDataEncoder(),
-    getFinalizeRewardRateChangeInstructionDataDecoder()
+    getGetAuthorizedCreatorsInstructionDataEncoder(),
+    getGetAuthorizedCreatorsInstructionDataDecoder()
   );
 }
 
-export type FinalizeRewardRateChangeInput<
-  TAccountPool extends string = string,
+export type GetAuthorizedCreatorsInput<
+  TAccountProgramAuthority extends string = string,
 > = {
-  /** The stake pool */
-  pool: Address<TAccountPool>;
+  /** The program authority PDA */
+  programAuthority: Address<TAccountProgramAuthority>;
 };
 
-export function getFinalizeRewardRateChangeInstruction<
-  TAccountPool extends string,
+export function getGetAuthorizedCreatorsInstruction<
+  TAccountProgramAuthority extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
-  input: FinalizeRewardRateChangeInput<TAccountPool>,
+  input: GetAuthorizedCreatorsInput<TAccountProgramAuthority>,
   config?: { programAddress?: TProgramAddress }
-): FinalizeRewardRateChangeInstruction<TProgramAddress, TAccountPool> {
+): GetAuthorizedCreatorsInstruction<TProgramAddress, TAccountProgramAuthority> {
   // Program address.
   const programAddress = config?.programAddress ?? STAKE_POOL_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
-    pool: { value: input.pool ?? null, isWritable: true },
+    programAuthority: {
+      value: input.programAuthority ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -104,32 +107,35 @@ export function getFinalizeRewardRateChangeInstruction<
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
-    accounts: [getAccountMeta(accounts.pool)],
-    data: getFinalizeRewardRateChangeInstructionDataEncoder().encode({}),
+    accounts: [getAccountMeta(accounts.programAuthority)],
+    data: getGetAuthorizedCreatorsInstructionDataEncoder().encode({}),
     programAddress,
-  } as FinalizeRewardRateChangeInstruction<TProgramAddress, TAccountPool>);
+  } as GetAuthorizedCreatorsInstruction<
+    TProgramAddress,
+    TAccountProgramAuthority
+  >);
 }
 
-export type ParsedFinalizeRewardRateChangeInstruction<
+export type ParsedGetAuthorizedCreatorsInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    /** The stake pool */
-    pool: TAccountMetas[0];
+    /** The program authority PDA */
+    programAuthority: TAccountMetas[0];
   };
-  data: FinalizeRewardRateChangeInstructionData;
+  data: GetAuthorizedCreatorsInstructionData;
 };
 
-export function parseFinalizeRewardRateChangeInstruction<
+export function parseGetAuthorizedCreatorsInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
-): ParsedFinalizeRewardRateChangeInstruction<TProgram, TAccountMetas> {
+): ParsedGetAuthorizedCreatorsInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 1) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -142,8 +148,8 @@ export function parseFinalizeRewardRateChangeInstruction<
   };
   return {
     programAddress: instruction.programAddress,
-    accounts: { pool: getNextAccount() },
-    data: getFinalizeRewardRateChangeInstructionDataDecoder().decode(
+    accounts: { programAuthority: getNextAccount() },
+    data: getGetAuthorizedCreatorsInstructionDataDecoder().decode(
       instruction.data
     ),
   };
