@@ -312,26 +312,67 @@ pnpm programs:list-creators -- --json
 
 ### Managing authority
 
-The project includes tools for managing program upgrade authority:
+The project includes tools for managing both program upgrade authority and program operational authority:
 
-#### Program Upgrade Authority
+#### Program Authority Transfer (Two-Step Process)
+
+The program authority controls who can create pools and manage system-wide settings. Transfer this authority using a secure two-step process:
+
+```sh
+# Step 1: Current authority nominates new authority
+pnpm programs:transfer-authority <NEW_AUTHORITY_PUBKEY>
+
+# Step 2: New authority accepts the transfer
+pnpm programs:accept-authority
+
+# Optional: Cancel pending transfer (before acceptance)
+pnpm programs:cancel-authority-transfer
+
+# View help and options
+pnpm programs:transfer-authority -- --help
+```
+
+**Benefits of Two-Step Transfer:**
+- **Safe**: Current authority retains control until new authority accepts
+- **Reversible**: Can be cancelled before acceptance
+- **Verified**: Both parties must explicitly agree to the transfer
+
+**Example Workflow:**
+```sh
+# Current authority (alice) nominates bob
+pnpm programs:transfer-authority BobPubKey123... --cluster devnet
+
+# Bob accepts the transfer
+pnpm programs:accept-authority --cluster devnet --keypair /path/to/bob.json
+
+# Now bob is the program authority
+```
+
+#### Program Upgrade Authority (One-Step Transfer)
 
 Transfer or revoke program upgrade authority using Solana CLI:
 
 ```sh
 # Transfer upgrade authority to a new address
-pnpm programs:transfer-upgrade-authority -- --new-authority <ADDRESS>
+pnpm programs:transfer-upgrade-authority <NEW_AUTHORITY_PUBKEY>
 
 # Make program immutable (irreversible!)
-pnpm programs:transfer-upgrade-authority -- --none
+pnpm programs:transfer-upgrade-authority --none
 
 # View help and options
-pnpm programs:transfer-upgrade-authority -- --help
+pnpm programs:transfer-upgrade-authority --help
 ```
 
-This is a **one-step, immediate transfer** using Solana's native authority management. Use with caution!
+This is a **one-step, immediate transfer** using Solana's native authority management. Use with extreme caution!
 
-**Note:** Pool operational authority (for managing pool parameters, funding rewards, etc.) can be transferred using the program's built-in two-step authority transfer instructions (`NominateNewAuthority` and `AcceptAuthority`). See the [Client Library documentation](./clients/js/README.md) for details on using these instructions.
+**Key Differences:**
+
+| Feature | Program Authority | Upgrade Authority |
+|---------|------------------|-------------------|
+| **Controls** | Pool creation, authorized creators | Program code upgrades |
+| **Transfer** | Two-step (nominate + accept) | One-step (immediate) |
+| **Safety** | Safer, reversible before acceptance | Immediate, irreversible |
+| **Use Case** | Day-to-day operations | Code deployment |
 
 ## Generating IDLs
 
