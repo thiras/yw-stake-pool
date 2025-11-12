@@ -159,3 +159,57 @@ for (const folder of getProgramFolders()) {
 }
 
 echo(chalk.green('\n✓ All programs deployed successfully!'));
+
+// Provide helpful next steps
+echo(chalk.blue('\n' + '═'.repeat(60)));
+echo(chalk.blue('  Next Steps'));
+echo(chalk.blue('═'.repeat(60) + '\n'));
+
+echo(chalk.yellow('📋 Important: Initialize Program Authority'));
+echo(chalk.gray('   Before creating any stake pools, you must initialize the'));
+echo(chalk.gray('   ProgramAuthority account (one-time setup):\n'));
+echo(chalk.cyan('   pnpm programs:init-authority'));
+if (cluster !== 'devnet') {
+  echo(chalk.cyan(`   pnpm programs:init-authority --cluster ${cluster}`));
+}
+echo('');
+
+echo(chalk.yellow('📋 Verify Deployment:'));
+echo(chalk.gray('   Check the program on Solana Explorer or use:\n'));
+for (const folder of getProgramFolders()) {
+  const cargo = getCargo(folder);
+  const packageName = cargo.package.name;
+  const programName = packageName.replace(/-/g, '_');
+  
+  let programId = existingProgramId;
+  if (!programId) {
+    const programKeypairPath = path.join(folder, 'keypair.json');
+    const targetKeypairPath = path.join(
+      workingDirectory,
+      'target',
+      'deploy',
+      `${programName}-keypair.json`
+    );
+    
+    let programKeypair = null;
+    if (await fs.pathExists(programKeypairPath)) {
+      programKeypair = programKeypairPath;
+    } else if (await fs.pathExists(targetKeypairPath)) {
+      programKeypair = targetKeypairPath;
+    }
+    
+    if (programKeypair) {
+      try {
+        const result = await $`solana-keygen pubkey ${programKeypair}`;
+        programId = result.stdout.trim();
+      } catch (error) {
+        // Ignore
+      }
+    }
+  }
+  
+  if (programId) {
+    echo(chalk.cyan(`   solana program show ${programId} --url ${cluster}`));
+  }
+}
+echo(chalk.blue('\n' + '═'.repeat(60) + '\n'));

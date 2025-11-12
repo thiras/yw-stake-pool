@@ -254,6 +254,31 @@ pnpm programs:deploy -- --keypair /path/to/authority.json
 
 The deploy script automatically detects the program ID from your repository keypairs.
 
+#### Initialize Program Authority (One-Time Setup)
+
+After deploying the program for the first time, you must initialize the ProgramAuthority account. This account controls who can create new stake pools:
+
+```sh
+# Initialize on devnet (default)
+pnpm programs:init-authority
+
+# Initialize on specific cluster
+pnpm programs:init-authority -- --cluster mainnet-beta
+
+# Initialize with custom authority keypair
+pnpm programs:init-authority -- --keypair /path/to/authority.json
+```
+
+**Important Notes:**
+- This is a **one-time setup** that creates the ProgramAuthority PDA account
+- Must be run after the program is deployed
+- The authority keypair you use will be able to:
+  - Create stake pools
+  - Add/remove other authorized pool creators
+- Running this again will fail if already initialized (which is expected)
+
+To add more authorized pool creators later, use the TypeScript client's `manage_authorized_creators` instruction (see example code in `example/src/pool-admin.ts`).
+
 ### Managing authority
 
 The project includes tools for managing program upgrade authority:
