@@ -33,10 +33,10 @@ YW Stake Pool is a production-ready Solana program that provides:
 
 ### For Pool Operators
 - **Initialize** pools with custom parameters (reward rate, lockup, minimum stake)
-- **Create Multiple Pools** - Same authority can manage multiple pools for the same token using unique pool IDs
+- **Authorize Creators** - Delegate pool creation rights to specific addresses via ProgramAuthority
 - **Update** pool settings (pause/unpause, change rates)
 - **Fund** reward vaults to ensure liquidity
-- **Transfer** authority with two-step verification
+- **Transfer** program authority with two-step verification (controls entire system)
 - **Set** optional pool end dates
 
 ## Security
@@ -48,8 +48,8 @@ This program implements multiple security best practices:
 3. **Account Validation** - Comprehensive ownership and state validation
 4. **Transfer Fee Support** - Properly handles Token-2022 transfer fees
 5. **Numerical Overflow Protection** - All arithmetic uses checked operations
-6. **Two-step Authority Transfer** - Prevents accidental authority loss
-7. **Admin-Only Pool Creation** - Only authorized addresses can create pools (prevents spam/scam pools)
+6. **Two-step Authority Transfer** - Prevents accidental authority loss (global program authority)
+7. **Admin-Only Pool Creation** - Global ProgramAuthority controls who can create pools (prevents spam/scam pools)
 
 See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) for detailed security analysis.
 
@@ -57,10 +57,10 @@ See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) for detailed security analysis.
 
 ```
 Program Structure:
-├── State Management (237 bytes pool account, 98 bytes stake account)
-├── 9 Instructions (Initialize, Stake, Unstake, Claim, Update, Fund, Authority)
+├── State Management (398 bytes ProgramAuthority, 237 bytes pool, 98 bytes stake)
+├── 15 Instructions (Pool ops, Staking, Claims, Admin, Authority)
 ├── Token-2022 Support (Transfer fees, extensions)
-└── Comprehensive Error Handling (15 custom error types)
+└── Comprehensive Error Handling (17 custom error types)
 ```
 
 **Program ID**: `8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx`
@@ -127,12 +127,15 @@ import {
   getInitializePoolInstruction,
   getStakeInstruction,
   getClaimRewardsInstruction,
+  findProgramAuthorityPda,
 } from '@yourwallet/stake-pool';
 
-// Initialize a pool
+// Get the global program authority PDA (required for pool operations)
+const [programAuthority] = await findProgramAuthorityPda();
+
+// Initialize a pool (requires authorization via ProgramAuthority)
 const initIx = getInitializePoolInstruction({
   pool: poolAddress,
-  authority: authority,
   stakeMint,
   rewardMint,
   stakeVault,
@@ -141,10 +144,12 @@ const initIx = getInitializePoolInstruction({
   tokenProgram: TOKEN_PROGRAM_ID,
   systemProgram: SYSTEM_PROGRAM_ID,
   rent: SYSVAR_RENT_PUBKEY,
+  programAuthority,              // Global authority that validates creator
   poolId: 0n,                    // Unique ID (0 for first pool, 1 for second, etc.)
   rewardRate: 100_000_000n,      // 10% APY
   minStakeAmount: 1_000_000n,    // 1 token (6 decimals)
   lockupPeriod: 86400n,          // 1 day
+  enforceLockup: false,
   poolEndDate: null,
 });
 
@@ -188,10 +193,11 @@ The program validates that the pool address matches the provided `pool_id`. If y
 - ✅ Always use `findPoolPda()` helper → Correct address is guaranteed
 
 **Pool ID Management:**
-Since pool IDs are scoped per token (not per authority), coordinate `pool_id` allocation:
+Pool IDs are scoped per token (not per authority or creator). When creating pools:
 - **Query existing pools**: Check which pool IDs are already in use for a token
 - **Increment from highest**: Use `max(pool_id) + 1` when creating new pools
 - **Document your pools**: Maintain off-chain records of pool purposes and configurations
+- **Authorization**: Only addresses in ProgramAuthority's authorized_creators list (or the main authority) can create pools
 
 **Example**:
 ```typescript

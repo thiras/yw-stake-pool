@@ -30,9 +30,10 @@ This guide walks you through deploying the YW Stake Pool program to Solana clust
    - Mainnet: ~5-10 SOL (for program deployment and authority initialization)
 
 2. **Authority Keypair**: Will control:
-   - Program upgrades (upgrade authority)
-   - Pool creation permissions (program authority)
-   - Can be the same as deployer or separate
+   - Program upgrades (upgrade authority) - separate from program authority
+   - Pool creation permissions (program authority) - global admin for entire system
+   - Authorized creator management (can delegate pool creation to other addresses)
+   - Can be the same as deployer or separate for security
 
 ### Install Dependencies
 
@@ -152,9 +153,10 @@ pnpm programs:init-authority -- --keypair ~/.config/solana/authority.json
 ```
 
 **What This Does:**
-- Creates the `ProgramAuthority` PDA account
-- Sets your keypair as the main authority
-- Authorizes the main authority to create pools
+- Creates the global `ProgramAuthority` PDA account (one per program deployment)
+- Sets your keypair as the main authority (controls entire system)
+- Initializes the authorized_creators list (empty initially)
+- Main authority can immediately create pools or delegate to others
 
 **Expected Output:**
 ```
@@ -169,9 +171,10 @@ Transaction Details:
 ```
 
 **Important Notes:**
-- ⚠️ This command can only succeed once per program
+- ⚠️ This command can only succeed once per program deployment
 - Running it again will show "already initialized" (expected)
-- The authority controls pool creation permissions
+- The authority controls ALL pool creation and can delegate to others (max 10 additional addresses)
+- This is a GLOBAL admin role, not per-pool
 
 ---
 
@@ -252,21 +255,31 @@ pnpm programs:transfer-authority --none
 
 ### Program Authority (Pool Creation)
 
-The program authority controls who can create pools.
+The program authority controls **all pool creation globally**.
 
 #### Add Authorized Pool Creators
 
-Use the TypeScript client to add more authorized creators:
+Delegate pool creation rights to other addresses (max 10 additional):
+
+```bash
+# Using the CLI script
+pnpm programs:add-creator <CREATOR_ADDRESS>
+
+# Add multiple creators
+pnpm programs:add-creator <CREATOR_1> <CREATOR_2>
+```
+
+Or use the TypeScript client directly:
 
 ```typescript
-import { getManageAuthorizedCreatorsInstruction } from '@your-wallet/stake-pool';
+import { getManageAuthorizedCreatorsInstruction } from '@yourwallet/stake-pool';
 
-// Add creators
+// Add creators (batched operation)
 const instruction = getManageAuthorizedCreatorsInstruction({
   programAuthority: programAuthorityPda,
   authority: mainAuthority,
-  add: [creator1, creator2],
-  remove: [],
+  creatorsToAdd: [creator1, creator2],
+  creatorsToRemove: [],
 });
 
 // Send transaction...
@@ -276,16 +289,49 @@ See `example/src/pool-admin.ts` for full examples.
 
 #### Remove Authorized Creators
 
+```bash
+# Using the CLI script
+pnpm programs:remove-creator <CREATOR_ADDRESS>
+```
+
+Or use TypeScript:
+
 ```typescript
 const instruction = getManageAuthorizedCreatorsInstruction({
   programAuthority: programAuthorityPda,
   authority: mainAuthority,
-  add: [],
-  remove: [creatorToRemove],
+  creatorsToAdd: [],
+  creatorsToRemove: [creatorToRemove],
 });
 ```
 
-**Note:** Cannot remove the main authority from the list.
+#### Transfer Program Authority
+
+To transfer GLOBAL control (all pools, entire system):
+
+```typescript
+import { 
+  getTransferProgramAuthorityInstruction,
+  getAcceptProgramAuthorityInstruction 
+} from '@yourwallet/stake-pool';
+
+// Step 1: Current authority nominates new authority
+const transferIx = getTransferProgramAuthorityInstruction({
+  programAuthority: programAuthorityPda,
+  currentAuthority: currentAuth,
+  newAuthority: newAuthAddress,
+});
+
+// Step 2: New authority accepts (must be signed by new authority)
+const acceptIx = getAcceptProgramAuthorityInstruction({
+  programAuthority: programAuthorityPda,
+  pendingAuthority: newAuth,
+});
+```
+
+**Warning:** This transfers control of the ENTIRE SYSTEM, not individual pools!
+
+**Note:** Main authority cannot be removed from authorized creators list.
 
 ---
 
