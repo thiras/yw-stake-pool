@@ -257,6 +257,25 @@ pnpm programs:transfer-authority --none
 
 The program authority controls **all pool creation globally**.
 
+#### Close Program Authority (Dev/Test Only)
+
+For development and testing, you can close the ProgramAuthority account to recover rent and reinitialize:
+
+```bash
+# Close authority on devnet (returns lamports to authority)
+pnpm programs:close-authority
+
+# Close and send lamports to specific address
+pnpm programs:close-authority -- --receiver <RECEIVER_ADDRESS>
+```
+
+**⚠️ WARNING:** This removes global program authority control! Only use for:
+- Devnet/testnet cleanup after account structure changes
+- Testing reinitialization workflows
+- Development environment resets
+
+**Not recommended for mainnet** - this disrupts all existing pools.
+
 #### Add Authorized Pool Creators
 
 Delegate pool creation rights to other addresses (max 10 additional):
@@ -337,28 +356,38 @@ const acceptIx = getAcceptProgramAuthorityInstruction({
 
 ## Implementation Details
 
-### Initialize Authority Script
+### Program Authority Management Scripts
 
-The `programs:init-authority` command uses a modular design for maintainability:
+The authority management commands use a modular architecture:
 
-**Architecture:**
-- **Main Script**: `scripts/program/initialize-authority.mjs` (245 lines)
-  - CLI interface with help, options, and user confirmation
-  - Auto-detects program ID from repository structure
-  - Validates authority keypairs
-  - Streamlined execution flow
+**Main Scripts:**
+- `initialize-authority.mjs` - Initialize ProgramAuthority account
+- `close-authority.mjs` - Close ProgramAuthority (dev/test cleanup)
+- `add-authorized-creator.mjs` - Add pool creators to authorized list
+- `remove-authorized-creator.mjs` - Remove pool creators from list
+- `list-authorized-creators.mjs` - Query authorized creators
 
-- **Shared Library**: `scripts/lib/program-authority.mjs` (169 lines)
-  - `calculateProgramAuthorityPda()` - PDA calculation
-  - `loadKeypairSigner()` - Keypair loading
-  - `initializeProgramAuthority()` - Transaction execution
-  - `getClusterUrl()`, `getExplorerUrl()` - Utilities
+**Shared Library (`scripts/lib/program-authority.mjs`):**
+- `calculateProgramAuthorityPda()` - PDA calculation
+- `loadKeypairSigner()` - Keypair loading
+- `initializeProgramAuthority()` - Create ProgramAuthority account
+- `closeProgramAuthority()` - Close ProgramAuthority account
+- `sendAndWaitForTransaction()` - Reliable transaction confirmation
+- `getClusterUrl()`, `getExplorerUrl()` - Utilities
+
+**Transaction Confirmation:**
+All scripts use a custom `sendAndWaitForTransaction()` helper that:
+- Uses REST-only communication (no WebSocket dependencies)
+- Polls transaction status with `getSignatureStatuses()`
+- 30-second timeout with 1-second intervals
+- Avoids WebSocket subscription errors
 
 **Benefits:**
-- Code reusability across deployment scripts
+- Code reusability across all management scripts
 - Clean separation of concerns
+- Reliable transaction confirmation without WebSocket issues
 - Easy to test and maintain
-- Direct ES6 imports (no dynamic resolution)
+- Consistent error handling
 
 **Dependencies:**
 - `@solana/kit` (from root node_modules)
