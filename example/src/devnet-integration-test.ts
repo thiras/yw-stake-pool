@@ -196,7 +196,6 @@ async function main() {
     // Create and send initialize pool transaction
     const initPoolIx = getInitializePoolInstruction({
       pool: poolAddress,
-      authority: authority,
       stakeMint,
       rewardMint,
       stakeVault,
@@ -383,7 +382,8 @@ async function main() {
 
     const updatePoolIx = getUpdatePoolInstruction({
       pool: poolAddress,
-      authority: authority,
+      admin: authority,
+      programAuthority,
       rewardRate: some(newRewardRate),
       minStakeAmount: none(), // Don't change
       lockupPeriod: none(), // Don't change
