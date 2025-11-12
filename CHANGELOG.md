@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **CloseProgramAuthority Instruction**: New instruction for closing ProgramAuthority account
+  - Enables recovery of rent lamports during development/testing
+  - Implements fallback deserialization for migration scenarios
+  - Validates PDA derivation and program ownership
+  - Includes safety checks (no pending authority transfer, authority verification)
+  - Primarily intended for devnet/testnet cleanup after account structure changes
+  - Added `close-authority.mjs` script with CLI interface and confirmation prompts
+  - Added `programs:close-authority` npm script
+
+### Changed
+- **Instruction Order**: Reordered instructions to group authority transfer operations
+  - Moved `CancelAuthorityTransfer` (discriminator 15→13) next to `TransferProgramAuthority` and `AcceptProgramAuthority`
+  - Groups complete authority transfer lifecycle together (Transfer → Accept → Cancel)
+  - Updated discriminators: `GetAuthorizedCreators` (12→13), `CheckAuthorization` (13→14)
+  - Improves code organization and logical grouping
+
+### Fixed
+- **Transaction Confirmation**: Resolved WebSocket subscription errors in all program authority scripts
+  - Replaced `sendAndConfirmTransactionFactory` with custom `sendAndWaitForTransaction` helper
+  - Uses REST-only polling with `getSignatureStatuses()` (30-second timeout, 1-second intervals)
+  - Eliminates "Cannot read properties of null (reading 'signatureNotifications')" errors
+  - Fixed in: `initialize-authority.mjs`, `close-authority.mjs`, `add-authorized-creator.mjs`, `remove-authorized-creator.mjs`
+  - Improved reliability and eliminated WebSocket dependency
+
+### Documentation
+- **Deployment Guide**: Added CloseProgramAuthority documentation
+  - Usage examples for closing authority account
+  - Warnings about mainnet usage
+  - Integration with reinitialization workflows
+- **Implementation Details**: Updated script architecture section
+  - Documented new transaction confirmation approach
+  - Listed all authority management scripts
+  - Explained benefits of REST-only polling
+- **README**: Added close-authority command documentation with warnings
+
 ## [1.6.1]
 
 ### Added
