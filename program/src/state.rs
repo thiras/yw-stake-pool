@@ -103,8 +103,6 @@ pub enum Key {
 #[derive(Clone, BorshSerialize, BorshDeserialize, Debug, ShankAccount)]
 pub struct StakePool {
     pub key: Key,
-    /// The authority that can modify pool settings
-    pub authority: Pubkey,
     /// The token mint being staked (supports Token-2022)
     pub stake_mint: Pubkey,
     /// The token mint for rewards (supports Token-2022)
@@ -113,24 +111,19 @@ pub struct StakePool {
     ///
     /// Pool PDAs are derived from: ["stake_pool", stake_mint, pool_id]
     ///
-    /// **IMPORTANT: Authority Transfer Implications**
+    /// **IMPORTANT: Global Admin Design**
     ///
-    /// Note that the pool PDA is NOT derived from the authority. This design choice
-    /// has the following implications:
+    /// Pool management is controlled by the global ProgramAuthority account, not per-pool.
+    /// This design simplifies administration:
     ///
-    /// 1. When authority is transferred via the two-step process (NominateNewAuthority
-    ///    + AcceptAuthority), the pool address remains unchanged.
-    ///
-    /// 2. The pool_id uniquely identifies a pool for a given stake_mint, regardless
-    ///    of who the current authority is.
-    ///
-    /// 3. Multiple pools can exist for the same stake_mint by using different pool_ids.
+    /// 1. All pools are managed by authorized admins in the ProgramAuthority account
+    /// 2. No per-pool authority transfer needed
+    /// 3. Multiple pools can exist for the same stake_mint by using different pool_ids
     ///
     /// Example:
     /// - Pool ID 0 for USDC: PDA(USDC, 0)
     /// - Pool ID 1 for USDC: PDA(USDC, 1)
-    /// - After authority transfer, both pools maintain their addresses
-    ///   and the new authority controls both pools
+    /// - Both pools managed by the same global admins
     pub pool_id: u64,
     /// The pool's stake token vault
     pub stake_vault: Pubkey,
@@ -152,8 +145,6 @@ pub struct StakePool {
     pub enforce_lockup: bool,
     /// Bump seed for PDA derivation
     pub bump: u8,
-    /// Pending authority for two-step authority transfer (None if no transfer pending)
-    pub pending_authority: Option<Pubkey>,
     /// Optional pool end date (Unix timestamp). If set, no new stakes allowed after this time.
     /// None means the pool runs indefinitely.
     pub pool_end_date: Option<i64>,
@@ -226,7 +217,6 @@ pub struct StakeAccount {
 impl StakePool {
     // Size calculation:
     // - key (Key enum): 1 byte
-    // - authority (Pubkey): 32 bytes
     // - stake_mint (Pubkey): 32 bytes
     // - reward_mint (Pubkey): 32 bytes
     // - pool_id (u64): 8 bytes
@@ -240,7 +230,6 @@ impl StakePool {
     // - is_paused (bool): 1 byte
     // - enforce_lockup (bool): 1 byte
     // - bump (u8): 1 byte
-    // - pending_authority (Option<Pubkey>): 1 byte when None, 33 bytes when Some
     // - pool_end_date (Option<i64>): 1 byte when None, 9 bytes when Some
     // - pending_reward_rate (Option<u64>): 1 byte when None, 9 bytes when Some
     // - reward_rate_change_timestamp (Option<i64>): 1 byte when None, 9 bytes when Some
@@ -248,10 +237,19 @@ impl StakePool {
     // - _reserved: 7 bytes
     //
     // We allocate for the maximum size (all Options as Some) to support future updates
-    // None: 1 + 160 + 40 + 8 + 3 + 1 + 1 + 1 + 1 + 1 + 1 + 7 = 225 bytes
-    // Some: 1 + 160 + 40 + 8 + 3 + 33 + 9 + 9 + 9 + 9 + 7 = 288 bytes
-    pub const LEN: usize =
-        1 + 32 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 33 + 9 + 9 + 9 + 9 + 7;
+    // Calculation breakdown:
+    // Fixed: 1 (key) + 32 (stake_mint) + 32 (reward_mint) + 8 (pool_id) + 32 (stake_vault) + 32 (reward_vault)
+    //        + 8 (total_staked) + 8 (total_rewards_owed) + 8 (reward_rate) + 8 (min_stake_amount)
+    //        + 8 (lockup_period) + 1 (is_paused) + 1 (enforce_lockup) + 1 (bump) = 180 bytes
+    // Options (all Some): 9 (pool_end_date) + 9 (pending_reward_rate) + 9 (reward_rate_change_timestamp) + 9 (last_rate_change) = 36 bytes
+    // Reserved: 7 bytes
+    // Total: 180 + 36 + 7 = 223 bytes
+    pub const LEN: usize = {
+        const FIXED_FIELDS: usize = 1 + 32 + 32 + 8 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1;
+        const OPTIONS_MAX: usize = 9 + 9 + 9 + 9; // All Option<T> fields when Some
+        const RESERVED: usize = 7;
+        FIXED_FIELDS + OPTIONS_MAX + RESERVED
+    };
 
     pub fn seeds(stake_mint: &Pubkey, pool_id: u64) -> Vec<Vec<u8>> {
         vec![
@@ -454,6 +452,8 @@ pub struct ProgramAuthority {
     pub authorized_creators: [Option<Pubkey>; 10],
     /// Number of active authorized creators (for iteration)
     pub creator_count: u8,
+    /// Pending authority for two-step authority transfer (None if no transfer pending)
+    pub pending_authority: Option<Pubkey>,
     /// Bump seed for PDA derivation
     pub bump: u8,
 }
@@ -464,9 +464,10 @@ impl ProgramAuthority {
     // - authority (Pubkey): 32 bytes
     // - authorized_creators (10 x Option<Pubkey>): 10 * 33 = 330 bytes (1 byte discriminator + 32 bytes pubkey)
     // - creator_count (u8): 1 byte
+    // - pending_authority (Option<Pubkey>): 1 byte when None, 33 bytes when Some
     // - bump (u8): 1 byte
-    // Total: 1 + 32 + 330 + 1 + 1 = 365 bytes
-    pub const LEN: usize = 1 + 32 + (10 * 33) + 1 + 1;
+    // Total: 1 + 32 + 330 + 1 + 33 + 1 = 398 bytes
+    pub const LEN: usize = 1 + 32 + (10 * 33) + 1 + 33 + 1;
     pub const MAX_CREATORS: usize = 10;
 
     pub fn seeds() -> Vec<Vec<u8>> {
@@ -486,6 +487,9 @@ impl ProgramAuthority {
             msg!("Invalid ProgramAuthority discriminator");
             return Err(StakePoolError::InvalidAccountDiscriminator.into());
         }
+
+        // Validate creator count matches actual array contents
+        program_authority.validate_creator_count()?;
 
         Ok(program_authority)
     }
@@ -511,6 +515,27 @@ impl ProgramAuthority {
         }
 
         false
+    }
+
+    /// Validate that creator_count matches the actual number of Some values in authorized_creators
+    /// This prevents data corruption where the count becomes out of sync with the array
+    pub fn validate_creator_count(&self) -> Result<(), ProgramError> {
+        let actual_count = self
+            .authorized_creators
+            .iter()
+            .filter(|c| c.is_some())
+            .count() as u8;
+
+        if actual_count != self.creator_count {
+            msg!(
+                "Creator count mismatch: stored={}, actual={}",
+                self.creator_count,
+                actual_count
+            );
+            return Err(StakePoolError::DataCorruption.into());
+        }
+
+        Ok(())
     }
 
     /// Compact the authorized_creators array by moving all Some values to the front

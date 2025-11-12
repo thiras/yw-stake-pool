@@ -1,9 +1,21 @@
+//! Admin and authority management for the stake pool program
+//!
+//! This module contains all administrative functions for managing:
+//! - Global program authority (initialization, transfer, creator management)
+//! - Individual pool settings (update_pool, reward rate changes)
+//!
+//! # Global Admin Model
+//! This program uses a global admin system where:
+//! - A single `ProgramAuthority` account controls who can create and manage pools
+//! - No per-pool authorities - all pools are managed by authorized global admins
+//! - Authority can be transferred via a two-step process (nominate + accept)
+
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
     log::sol_log_data,
     msg,
-    program_error::ProgramError,
+    pubkey::Pubkey,
     sysvar::{clock::Clock, Sysvar},
 };
 
@@ -12,7 +24,203 @@ use crate::constants::MAX_REWARD_RATE;
 use crate::error::StakePoolError;
 use crate::instruction::accounts::*;
 use crate::processor::helpers::{validate_current_timestamp, validate_stored_timestamp};
-use crate::state::{Key, StakePool};
+use crate::state::{Key, ProgramAuthority, StakePool};
+use crate::utils::create_account;
+
+//
+// ============================================================================
+// PROGRAM AUTHORITY MANAGEMENT
+// ============================================================================
+//
+
+/// Initialize the program authority account (one-time setup)
+///
+/// This creates a global ProgramAuthority account that controls who can create stake pools.
+/// Should only be called once during program deployment.
+///
+/// # Security
+/// - Only the initial authority can manage the authorized creators list
+/// - The ProgramAuthority PDA is deterministic (derived from "program_authority" seed)
+/// - Cannot be reinitialized once created
+///
+/// # Arguments
+/// * `accounts` - Required accounts for program authority initialization
+///
+/// # Errors
+/// Returns error if:
+/// - Program authority account already exists
+/// - Account creation fails
+/// - Signer validation fails
+pub fn initialize_program_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    let ctx = InitializeProgramAuthorityAccounts::context(accounts)?;
+
+    // Derive the expected program authority PDA
+    let program_authority_seeds = ProgramAuthority::seeds();
+    let program_authority_seeds_refs: Vec<&[u8]> = program_authority_seeds
+        .iter()
+        .map(|s| s.as_slice())
+        .collect();
+    let (program_authority_key, bump) =
+        Pubkey::find_program_address(&program_authority_seeds_refs, &crate::ID);
+
+    // Guards
+    assert_same_pubkeys(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &program_authority_key,
+    )?;
+    assert_signer("initial_authority", ctx.accounts.initial_authority)?;
+    assert_signer("payer", ctx.accounts.payer)?;
+    assert_empty("program_authority", ctx.accounts.program_authority)?;
+    assert_writable("program_authority", ctx.accounts.program_authority)?;
+    assert_writable("payer", ctx.accounts.payer)?;
+
+    // Create program authority account
+    let mut seeds_with_bump = program_authority_seeds.clone();
+    seeds_with_bump.push(vec![bump]);
+    let seeds_refs: Vec<&[u8]> = seeds_with_bump.iter().map(|s| s.as_slice()).collect();
+
+    create_account(
+        ctx.accounts.program_authority,
+        ctx.accounts.payer,
+        ctx.accounts.system_program,
+        ProgramAuthority::LEN,
+        &crate::ID,
+        Some(&[&seeds_refs]),
+    )?;
+
+    // Initialize program authority data
+    let program_authority_data = ProgramAuthority {
+        key: Key::ProgramAuthority,
+        authority: *ctx.accounts.initial_authority.key,
+        authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
+        creator_count: 0,
+        pending_authority: None,
+        bump,
+    };
+
+    program_authority_data.save(ctx.accounts.program_authority)?;
+
+    msg!(
+        "Program authority initialized with authority: {}",
+        ctx.accounts.initial_authority.key
+    );
+
+    // Log event for off-chain indexing
+    sol_log_data(&[
+        b"ProgramAuthorityInitialized",
+        ctx.accounts.initial_authority.key.as_ref(),
+    ]);
+
+    Ok(())
+}
+
+/// Manage authorized pool creators (add or remove)
+///
+/// Only the program authority can call this to add or remove addresses
+/// from the authorized creators list.
+///
+/// # Security
+/// - Only the main authority can manage the list
+/// - Cannot remove the main authority itself
+/// - Maximum of 10 authorized creators
+/// - Validates all operations before applying changes
+///
+/// # Arguments
+/// * `accounts` - Required accounts for managing creators
+/// * `add` - List of addresses to add to authorized creators
+/// * `remove` - List of addresses to remove from authorized creators
+///
+/// # Errors
+/// Returns error if:
+/// - Caller is not the program authority
+/// - Maximum creators limit reached
+/// - Creator already exists (when adding)
+/// - Creator not found (when removing)
+/// - Attempting to remove main authority
+pub fn manage_authorized_creators<'a>(
+    accounts: &'a [AccountInfo<'a>],
+    add: Vec<Pubkey>,
+    remove: Vec<Pubkey>,
+) -> ProgramResult {
+    let ctx = ManageAuthorizedCreatorsAccounts::context(accounts)?;
+
+    // DoS Protection: Limit vector sizes to prevent excessive computation
+    if add.len() > ProgramAuthority::MAX_CREATORS {
+        msg!(
+            "Too many creators to add: {}. Maximum: {}",
+            add.len(),
+            ProgramAuthority::MAX_CREATORS
+        );
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+    if remove.len() > ProgramAuthority::MAX_CREATORS {
+        msg!(
+            "Too many creators to remove: {}. Maximum: {}",
+            remove.len(),
+            ProgramAuthority::MAX_CREATORS
+        );
+        return Err(StakePoolError::InvalidParameters.into());
+    }
+
+    // Load and validate program authority
+    let mut program_authority_data = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
+    // Guards
+    assert_signer("authority", ctx.accounts.authority)?;
+    assert_writable("program_authority", ctx.accounts.program_authority)?;
+
+    // Verify the signer is the program authority
+    if ctx.accounts.authority.key != &program_authority_data.authority {
+        msg!(
+            "Unauthorized: {} is not the program authority",
+            ctx.accounts.authority.key
+        );
+        return Err(StakePoolError::Unauthorized.into());
+    }
+
+    // Remove creators first
+    for creator in &remove {
+        program_authority_data.remove_creator(creator)?;
+        msg!("Removed authorized creator: {}", creator);
+
+        // Log event for off-chain indexing
+        sol_log_data(&[
+            b"AuthorizedCreatorRemoved",
+            creator.as_ref(),
+            ctx.accounts.authority.key.as_ref(),
+        ]);
+    }
+
+    // Add new creators
+    for creator in &add {
+        program_authority_data.add_creator(*creator)?;
+        msg!("Added authorized creator: {}", creator);
+
+        // Log event for off-chain indexing
+        sol_log_data(&[
+            b"AuthorizedCreatorAdded",
+            creator.as_ref(),
+            ctx.accounts.authority.key.as_ref(),
+        ]);
+    }
+
+    // Save updated state
+    program_authority_data.save(ctx.accounts.program_authority)?;
+
+    msg!(
+        "Authorized creators updated. Current count: {}",
+        program_authority_data.creator_count
+    );
+
+    Ok(())
+}
+
+//
+// ============================================================================
+// POOL MANAGEMENT
+// ============================================================================
+//
 
 /// Time delay before a reward rate change can be finalized (7 days = 604800 seconds).
 ///
@@ -55,10 +263,26 @@ pub fn update_pool<'a>(
     // Load pool
     let mut pool_data = StakePool::load(ctx.accounts.pool)?;
 
+    // Load program authority to verify admin permissions
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    let program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
     // Guards
-    assert_signer("authority", ctx.accounts.authority)?;
+    assert_signer("admin", ctx.accounts.admin)?;
     assert_writable("pool", ctx.accounts.pool)?;
-    assert_same_pubkeys("authority", ctx.accounts.authority, &pool_data.authority)?;
+
+    // Verify the signer is authorized as a global admin
+    if !program_authority.is_authorized(ctx.accounts.admin.key) {
+        msg!(
+            "Unauthorized: {} is not a global admin",
+            ctx.accounts.admin.key
+        );
+        return Err(StakePoolError::Unauthorized.into());
+    }
 
     // Get current time once for efficiency (Clock is a sysvar that shouldn't change during transaction)
     let current_time = Clock::get()?.unix_timestamp;
@@ -84,6 +308,13 @@ pub fn update_pool<'a>(
                     "Pending reward rate change cancelled. Keeping current rate: {}",
                     pool_data.reward_rate
                 );
+
+                // Emit event for off-chain indexing
+                sol_log_data(&[
+                    b"RewardRateProposalCancelled",
+                    ctx.accounts.pool.key.as_ref(),
+                    ctx.accounts.admin.key.as_ref(),
+                ]);
             } else {
                 msg!(
                     "Reward rate unchanged: {}. No pending change to cancel.",
@@ -142,10 +373,29 @@ pub fn update_pool<'a>(
                 rate,
                 finalization_time
             );
+
+            // Emit event for off-chain indexing
+            sol_log_data(&[
+                b"RewardRateProposed",
+                ctx.accounts.pool.key.as_ref(),
+                ctx.accounts.admin.key.as_ref(),
+                &pool_data.reward_rate.to_le_bytes(),
+                &rate.to_le_bytes(),
+            ]);
         }
     }
     if let Some(min_amount) = min_stake_amount {
         pool_data.min_stake_amount = min_amount;
+        msg!("Min stake amount updated to: {}", min_amount);
+
+        // Emit event
+        sol_log_data(&[
+            b"PoolParameterUpdated",
+            ctx.accounts.pool.key.as_ref(),
+            ctx.accounts.admin.key.as_ref(),
+            b"min_stake_amount",
+            &min_amount.to_le_bytes(),
+        ]);
     }
     if let Some(lockup) = lockup_period {
         if lockup < 0 {
@@ -153,6 +403,16 @@ pub fn update_pool<'a>(
             return Err(StakePoolError::InvalidParameters.into());
         }
         pool_data.lockup_period = lockup;
+        msg!("Lockup period updated to: {}", lockup);
+
+        // Emit event
+        sol_log_data(&[
+            b"PoolParameterUpdated",
+            ctx.accounts.pool.key.as_ref(),
+            ctx.accounts.admin.key.as_ref(),
+            b"lockup_period",
+            &lockup.to_le_bytes(),
+        ]);
     }
     if let Some(paused) = is_paused {
         let status_change = if paused { "PAUSED" } else { "UNPAUSED" };
@@ -166,13 +426,23 @@ pub fn update_pool<'a>(
                 b"PoolUnpaused"
             },
             ctx.accounts.pool.key.as_ref(),
-            ctx.accounts.authority.key.as_ref(),
+            ctx.accounts.admin.key.as_ref(),
         ]);
 
         pool_data.is_paused = paused;
     }
     if let Some(enforce) = enforce_lockup {
         pool_data.enforce_lockup = enforce;
+        msg!("Enforce lockup updated to: {}", enforce);
+
+        // Emit event
+        sol_log_data(&[
+            b"PoolParameterUpdated",
+            ctx.accounts.pool.key.as_ref(),
+            ctx.accounts.admin.key.as_ref(),
+            b"enforce_lockup",
+            &[if enforce { 1u8 } else { 0u8 }],
+        ]);
     }
     if let Some(end_date) = pool_end_date {
         // Prevent extending pool after end date has passed
@@ -193,54 +463,78 @@ pub fn update_pool<'a>(
             }
         }
         pool_data.pool_end_date = end_date;
+        msg!("Pool end date updated to: {:?}", end_date);
+
+        // Emit event
+        if let Some(timestamp) = end_date {
+            sol_log_data(&[
+                b"PoolParameterUpdated",
+                ctx.accounts.pool.key.as_ref(),
+                ctx.accounts.admin.key.as_ref(),
+                b"pool_end_date",
+                &timestamp.to_le_bytes(),
+            ]);
+        } else {
+            sol_log_data(&[
+                b"PoolParameterUpdated",
+                ctx.accounts.pool.key.as_ref(),
+                ctx.accounts.admin.key.as_ref(),
+                b"pool_end_date_removed",
+            ]);
+        }
     }
 
     pool_data.save(ctx.accounts.pool)
 }
 
-pub fn nominate_new_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
-    // Parse accounts using ShankContext-generated struct
-    let ctx = NominateNewAuthorityAccounts::context(accounts)?;
+/// Transfer the global program authority to a new admin (two-step process: step 1)
+pub fn transfer_program_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    let ctx = TransferProgramAuthorityAccounts::context(accounts)?;
 
-    // Verify pool account discriminator before loading (Type Cosplay protection)
-    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+    // Verify program authority account
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    assert_program_owner(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &crate::ID,
+    )?;
 
-    // Verify program ownership
-    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
-
-    // Load pool
-    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+    // Load program authority
+    let mut program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
 
     // Guards
     assert_signer("current_authority", ctx.accounts.current_authority)?;
-    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("program_authority", ctx.accounts.program_authority)?;
     assert_same_pubkeys(
         "current_authority",
         ctx.accounts.current_authority,
-        &pool_data.authority,
+        &program_authority.authority,
     )?;
 
-    // Validate new authority is not the same as current authority
-    if ctx.accounts.new_authority.key == &pool_data.authority {
+    // Validate new authority is not the same as current
+    if ctx.accounts.new_authority.key == &program_authority.authority {
         msg!("New authority cannot be the same as current authority");
-        return Err(ProgramError::InvalidArgument);
+        return Err(StakePoolError::InvalidParameters.into());
     }
 
     // Set pending authority
-    pool_data.pending_authority = Some(*ctx.accounts.new_authority.key);
+    program_authority.pending_authority = Some(*ctx.accounts.new_authority.key);
 
     msg!(
-        "Nominated new authority: {}. Pending acceptance.",
+        "Nominated new program authority: {}. Pending acceptance.",
         ctx.accounts.new_authority.key
     );
 
-    // Save state first to ensure persistence before emitting event
-    pool_data.save(ctx.accounts.pool)?;
+    // Save state
+    program_authority.save(ctx.accounts.program_authority)?;
 
-    // Emit event for off-chain indexing after successful state save
+    // Emit event
     sol_log_data(&[
-        b"AuthorityNominated",
-        ctx.accounts.pool.key.as_ref(),
+        b"ProgramAuthorityNominated",
         ctx.accounts.current_authority.key.as_ref(),
         ctx.accounts.new_authority.key.as_ref(),
     ]);
@@ -248,25 +542,31 @@ pub fn nominate_new_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramRes
     Ok(())
 }
 
-pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
-    // Parse accounts using ShankContext-generated struct
-    let ctx = AcceptAuthorityAccounts::context(accounts)?;
+/// Accept the transfer of program authority (two-step process: step 2)
+pub fn accept_program_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    let ctx = AcceptProgramAuthorityAccounts::context(accounts)?;
 
-    // Verify pool account discriminator before loading (Type Cosplay protection)
-    assert_account_key("pool", ctx.accounts.pool, Key::StakePool)?;
+    // Verify program authority account
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    assert_program_owner(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &crate::ID,
+    )?;
 
-    // Verify program ownership
-    assert_program_owner("pool", ctx.accounts.pool, &crate::ID)?;
-
-    // Load pool
-    let mut pool_data = StakePool::load(ctx.accounts.pool)?;
+    // Load program authority
+    let mut program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
 
     // Guards
     assert_signer("pending_authority", ctx.accounts.pending_authority)?;
-    assert_writable("pool", ctx.accounts.pool)?;
+    assert_writable("program_authority", ctx.accounts.program_authority)?;
 
     // Verify there is a pending authority
-    let pending_authority = pool_data
+    let pending_authority = program_authority
         .pending_authority
         .ok_or(StakePoolError::NoPendingAuthority)?;
 
@@ -281,25 +581,24 @@ pub fn accept_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
     }
 
     // Complete the authority transfer
-    let old_authority = pool_data.authority;
-    pool_data.authority = pending_authority;
-    pool_data.pending_authority = None;
+    let old_authority = program_authority.authority;
+    program_authority.authority = pending_authority;
+    program_authority.pending_authority = None;
 
     msg!(
-        "Authority transfer complete. Old: {}, New: {}",
+        "Program authority transfer complete. Old: {}, New: {}",
         old_authority,
-        pool_data.authority
+        program_authority.authority
     );
 
-    // Save state first to ensure persistence before emitting event
-    pool_data.save(ctx.accounts.pool)?;
+    // Save state
+    program_authority.save(ctx.accounts.program_authority)?;
 
-    // Emit event for off-chain indexing after successful state save
+    // Emit event
     sol_log_data(&[
-        b"AuthorityTransferred",
-        ctx.accounts.pool.key.as_ref(),
+        b"ProgramAuthorityTransferred",
         old_authority.as_ref(),
-        pool_data.authority.as_ref(),
+        program_authority.authority.as_ref(),
     ]);
 
     Ok(())
@@ -434,6 +733,139 @@ pub fn finalize_reward_rate_change<'a>(accounts: &'a [AccountInfo<'a>]) -> Progr
         ctx.accounts.pool.key.as_ref(),
         &old_rate.to_le_bytes(),
         &pool_data.reward_rate.to_le_bytes(),
+    ]);
+
+    Ok(())
+}
+
+/// Get all authorized creators (view function for off-chain queries)
+///
+/// This is a read-only operation that returns the ProgramAuthority account data.
+/// Intended to be called via simulateTransaction for off-chain queries.
+///
+/// # Returns
+/// Always returns Ok(()) - the account data can be deserialized client-side
+pub fn get_authorized_creators<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    let ctx = GetAuthorizedCreatorsAccounts::context(accounts)?;
+
+    // Verify program authority account
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    assert_program_owner(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &crate::ID,
+    )?;
+
+    // Load to verify account is valid
+    let _program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
+    // Return success - caller can deserialize the account data
+    msg!("ProgramAuthority account verified");
+    Ok(())
+}
+
+/// Check if an address is authorized (view function for off-chain queries)
+///
+/// Returns Ok(()) if the address is authorized to create pools.
+/// Returns Unauthorized error if not authorized.
+/// Intended to be called via simulateTransaction for off-chain queries.
+///
+/// # Arguments
+/// * `accounts` - Required accounts
+/// * `address` - The address to check
+pub fn check_authorization<'a>(accounts: &'a [AccountInfo<'a>], address: Pubkey) -> ProgramResult {
+    let ctx = CheckAuthorizationAccounts::context(accounts)?;
+
+    // Verify program authority account
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    assert_program_owner(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &crate::ID,
+    )?;
+
+    // Load program authority
+    let program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
+    // Check if address is authorized
+    if !program_authority.is_authorized(&address) {
+        msg!("Address {} is not authorized", address);
+        return Err(StakePoolError::Unauthorized.into());
+    }
+
+    msg!("Address {} is authorized", address);
+    Ok(())
+}
+
+/// Cancel a pending authority transfer
+///
+/// Allows the current authority to cancel a pending transfer before it's accepted.
+/// This provides flexibility if the authority changes their mind or nominates
+/// the wrong address.
+///
+/// # Security
+/// - Only current authority can cancel
+/// - Returns error if no pending transfer exists
+pub fn cancel_authority_transfer<'a>(accounts: &'a [AccountInfo<'a>]) -> ProgramResult {
+    let ctx = CancelAuthorityTransferAccounts::context(accounts)?;
+
+    // Verify program authority account
+    assert_account_key(
+        "program_authority",
+        ctx.accounts.program_authority,
+        Key::ProgramAuthority,
+    )?;
+    assert_program_owner(
+        "program_authority",
+        ctx.accounts.program_authority,
+        &crate::ID,
+    )?;
+
+    // Load program authority
+    let mut program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
+
+    // Guards
+    assert_signer("current_authority", ctx.accounts.current_authority)?;
+    assert_writable("program_authority", ctx.accounts.program_authority)?;
+
+    // Verify signer is current authority
+    if ctx.accounts.current_authority.key != &program_authority.authority {
+        msg!(
+            "Unauthorized: {} is not the current authority",
+            ctx.accounts.current_authority.key
+        );
+        return Err(StakePoolError::Unauthorized.into());
+    }
+
+    // Verify there is a pending authority to cancel
+    let pending = program_authority
+        .pending_authority
+        .ok_or(StakePoolError::NoPendingAuthority)?;
+
+    // Clear pending authority
+    program_authority.pending_authority = None;
+
+    msg!(
+        "Authority transfer cancelled. Pending authority {} removed.",
+        pending
+    );
+
+    // Save state
+    program_authority.save(ctx.accounts.program_authority)?;
+
+    // Emit event
+    sol_log_data(&[
+        b"ProgramAuthorityTransferCancelled",
+        ctx.accounts.current_authority.key.as_ref(),
+        pending.as_ref(),
     ]);
 
     Ok(())

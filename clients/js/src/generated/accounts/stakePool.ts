@@ -49,7 +49,6 @@ import { getKeyDecoder, getKeyEncoder, type Key, type KeyArgs } from '../types';
 
 export type StakePool = {
   key: Key;
-  authority: Address;
   stakeMint: Address;
   rewardMint: Address;
   poolId: bigint;
@@ -63,7 +62,6 @@ export type StakePool = {
   isPaused: boolean;
   enforceLockup: boolean;
   bump: number;
-  pendingAuthority: Option<Address>;
   poolEndDate: Option<bigint>;
   pendingRewardRate: Option<bigint>;
   rewardRateChangeTimestamp: Option<bigint>;
@@ -73,7 +71,6 @@ export type StakePool = {
 
 export type StakePoolArgs = {
   key: KeyArgs;
-  authority: Address;
   stakeMint: Address;
   rewardMint: Address;
   poolId: number | bigint;
@@ -87,7 +84,6 @@ export type StakePoolArgs = {
   isPaused: boolean;
   enforceLockup: boolean;
   bump: number;
-  pendingAuthority: OptionOrNullable<Address>;
   poolEndDate: OptionOrNullable<number | bigint>;
   pendingRewardRate: OptionOrNullable<number | bigint>;
   rewardRateChangeTimestamp: OptionOrNullable<number | bigint>;
@@ -98,7 +94,6 @@ export type StakePoolArgs = {
 export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
   return getStructEncoder([
     ['key', getKeyEncoder()],
-    ['authority', getAddressEncoder()],
     ['stakeMint', getAddressEncoder()],
     ['rewardMint', getAddressEncoder()],
     ['poolId', getU64Encoder()],
@@ -112,7 +107,6 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
     ['isPaused', getBooleanEncoder()],
     ['enforceLockup', getBooleanEncoder()],
     ['bump', getU8Encoder()],
-    ['pendingAuthority', getOptionEncoder(getAddressEncoder())],
     ['poolEndDate', getOptionEncoder(getI64Encoder())],
     ['pendingRewardRate', getOptionEncoder(getU64Encoder())],
     ['rewardRateChangeTimestamp', getOptionEncoder(getI64Encoder())],
@@ -124,7 +118,6 @@ export function getStakePoolEncoder(): Encoder<StakePoolArgs> {
 export function getStakePoolDecoder(): Decoder<StakePool> {
   return getStructDecoder([
     ['key', getKeyDecoder()],
-    ['authority', getAddressDecoder()],
     ['stakeMint', getAddressDecoder()],
     ['rewardMint', getAddressDecoder()],
     ['poolId', getU64Decoder()],
@@ -138,7 +131,6 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['isPaused', getBooleanDecoder()],
     ['enforceLockup', getBooleanDecoder()],
     ['bump', getU8Decoder()],
-    ['pendingAuthority', getOptionDecoder(getAddressDecoder())],
     ['poolEndDate', getOptionDecoder(getI64Decoder())],
     ['pendingRewardRate', getOptionDecoder(getU64Decoder())],
     ['rewardRateChangeTimestamp', getOptionDecoder(getI64Decoder())],

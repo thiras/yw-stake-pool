@@ -109,14 +109,20 @@ pub fn initialize_pool<'a>(
     let ctx = InitializePoolAccounts::context(accounts)?;
 
     // [Q-01] Security Fix: Validate pool creator is authorized
-    // Only addresses in the ProgramAuthority's authorized_creators list can create pools.
+    // Only addresses in the ProgramAuthority's authorized_creators list (or the main authority) can create pools.
     // This prevents spam/scam pools and maintains quality control.
+    //
+    // IMPORTANT: The `payer` account (transaction fee payer) must be an authorized creator.
+    // This differs from the previous per-pool authority model where any signer could create pools.
+    // Authorization is checked via ProgramAuthority.is_authorized(), which verifies:
+    // 1. The payer is the main program authority, OR
+    // 2. The payer is in the authorized_creators list (max 10 additional addresses)
     let program_authority = ProgramAuthority::load(ctx.accounts.program_authority)?;
 
-    if !program_authority.is_authorized(ctx.accounts.authority.key) {
+    if !program_authority.is_authorized(ctx.accounts.payer.key) {
         msg!(
             "Unauthorized pool creator: {}. Only authorized admins can create pools.",
-            ctx.accounts.authority.key
+            ctx.accounts.payer.key
         );
         return Err(StakePoolError::UnauthorizedPoolCreator.into());
     }
@@ -131,7 +137,6 @@ pub fn initialize_pool<'a>(
     // Validate that the provided pool address matches the expected PDA
     // This prevents initialization with wrong pool_id
     assert_same_pubkeys("pool", ctx.accounts.pool, &pool_key)?;
-    assert_signer("authority", ctx.accounts.authority)?;
     assert_signer("payer", ctx.accounts.payer)?;
     assert_empty("pool", ctx.accounts.pool)?;
     assert_writable("pool", ctx.accounts.pool)?;
@@ -191,7 +196,6 @@ pub fn initialize_pool<'a>(
     // Initialize pool
     let pool_data = StakePool {
         key: Key::StakePool,
-        authority: *ctx.accounts.authority.key,
         stake_mint: *ctx.accounts.stake_mint.key,
         reward_mint: *ctx.accounts.reward_mint.key,
         pool_id,
@@ -205,7 +209,6 @@ pub fn initialize_pool<'a>(
         is_paused: false,
         enforce_lockup,
         bump,
-        pending_authority: None,
         pool_end_date,
         pending_reward_rate: None,
         reward_rate_change_timestamp: None,
@@ -228,7 +231,7 @@ pub fn initialize_pool<'a>(
     sol_log_data(&[
         b"InitializePool",
         ctx.accounts.pool.key.as_ref(),
-        ctx.accounts.authority.key.as_ref(),
+        ctx.accounts.payer.key.as_ref(),
         &pool_id.to_le_bytes(),
         &reward_rate.to_le_bytes(),
     ]);

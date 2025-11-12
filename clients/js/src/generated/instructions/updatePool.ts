@@ -32,6 +32,7 @@ import {
   type InstructionWithData,
   type Option,
   type OptionOrNullable,
+  type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
@@ -49,7 +50,8 @@ export function getUpdatePoolDiscriminatorBytes() {
 export type UpdatePoolInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountPool extends string | AccountMeta<string> = string,
-  TAccountAuthority extends string | AccountMeta<string> = string,
+  TAccountAdmin extends string | AccountMeta<string> = string,
+  TAccountProgramAuthority extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -58,10 +60,13 @@ export type UpdatePoolInstruction<
       TAccountPool extends string
         ? WritableAccount<TAccountPool>
         : TAccountPool,
-      TAccountAuthority extends string
-        ? ReadonlySignerAccount<TAccountAuthority> &
-            AccountSignerMeta<TAccountAuthority>
-        : TAccountAuthority,
+      TAccountAdmin extends string
+        ? ReadonlySignerAccount<TAccountAdmin> &
+            AccountSignerMeta<TAccountAdmin>
+        : TAccountAdmin,
+      TAccountProgramAuthority extends string
+        ? ReadonlyAccount<TAccountProgramAuthority>
+        : TAccountProgramAuthority,
       ...TRemainingAccounts,
     ]
   >;
@@ -124,12 +129,15 @@ export function getUpdatePoolInstructionDataCodec(): Codec<
 
 export type UpdatePoolInput<
   TAccountPool extends string = string,
-  TAccountAuthority extends string = string,
+  TAccountAdmin extends string = string,
+  TAccountProgramAuthority extends string = string,
 > = {
   /** The stake pool */
   pool: Address<TAccountPool>;
-  /** The pool authority */
-  authority: TransactionSigner<TAccountAuthority>;
+  /** The global admin (authorized in ProgramAuthority) */
+  admin: TransactionSigner<TAccountAdmin>;
+  /** The program authority account (validates admin permission) */
+  programAuthority: Address<TAccountProgramAuthority>;
   rewardRate: UpdatePoolInstructionDataArgs['rewardRate'];
   minStakeAmount: UpdatePoolInstructionDataArgs['minStakeAmount'];
   lockupPeriod: UpdatePoolInstructionDataArgs['lockupPeriod'];
@@ -140,19 +148,29 @@ export type UpdatePoolInput<
 
 export function getUpdatePoolInstruction<
   TAccountPool extends string,
-  TAccountAuthority extends string,
+  TAccountAdmin extends string,
+  TAccountProgramAuthority extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
-  input: UpdatePoolInput<TAccountPool, TAccountAuthority>,
+  input: UpdatePoolInput<TAccountPool, TAccountAdmin, TAccountProgramAuthority>,
   config?: { programAddress?: TProgramAddress }
-): UpdatePoolInstruction<TProgramAddress, TAccountPool, TAccountAuthority> {
+): UpdatePoolInstruction<
+  TProgramAddress,
+  TAccountPool,
+  TAccountAdmin,
+  TAccountProgramAuthority
+> {
   // Program address.
   const programAddress = config?.programAddress ?? STAKE_POOL_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
     pool: { value: input.pool ?? null, isWritable: true },
-    authority: { value: input.authority ?? null, isWritable: false },
+    admin: { value: input.admin ?? null, isWritable: false },
+    programAuthority: {
+      value: input.programAuthority ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -166,13 +184,19 @@ export function getUpdatePoolInstruction<
   return Object.freeze({
     accounts: [
       getAccountMeta(accounts.pool),
-      getAccountMeta(accounts.authority),
+      getAccountMeta(accounts.admin),
+      getAccountMeta(accounts.programAuthority),
     ],
     data: getUpdatePoolInstructionDataEncoder().encode(
       args as UpdatePoolInstructionDataArgs
     ),
     programAddress,
-  } as UpdatePoolInstruction<TProgramAddress, TAccountPool, TAccountAuthority>);
+  } as UpdatePoolInstruction<
+    TProgramAddress,
+    TAccountPool,
+    TAccountAdmin,
+    TAccountProgramAuthority
+  >);
 }
 
 export type ParsedUpdatePoolInstruction<
@@ -183,8 +207,10 @@ export type ParsedUpdatePoolInstruction<
   accounts: {
     /** The stake pool */
     pool: TAccountMetas[0];
-    /** The pool authority */
-    authority: TAccountMetas[1];
+    /** The global admin (authorized in ProgramAuthority) */
+    admin: TAccountMetas[1];
+    /** The program authority account (validates admin permission) */
+    programAuthority: TAccountMetas[2];
   };
   data: UpdatePoolInstructionData;
 };
@@ -197,7 +223,7 @@ export function parseUpdatePoolInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedUpdatePoolInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 2) {
+  if (instruction.accounts.length < 3) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -209,7 +235,11 @@ export function parseUpdatePoolInstruction<
   };
   return {
     programAddress: instruction.programAddress,
-    accounts: { pool: getNextAccount(), authority: getNextAccount() },
+    accounts: {
+      pool: getNextAccount(),
+      admin: getNextAccount(),
+      programAuthority: getNextAccount(),
+    },
     data: getUpdatePoolInstructionDataDecoder().decode(instruction.data),
   };
 }

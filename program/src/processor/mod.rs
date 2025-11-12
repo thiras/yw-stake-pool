@@ -10,17 +10,17 @@ mod admin;
 mod close;
 pub mod helpers;
 mod initialize;
-mod program_authority;
 mod rewards;
 mod stake;
 
 // Re-export handler functions
 pub use admin::{
-    accept_authority, finalize_reward_rate_change, nominate_new_authority, update_pool,
+    accept_program_authority, cancel_authority_transfer, check_authorization,
+    finalize_reward_rate_change, get_authorized_creators, initialize_program_authority,
+    manage_authorized_creators, transfer_program_authority, update_pool,
 };
 pub use close::close_stake_account;
 pub use initialize::initialize_pool;
-pub use program_authority::{initialize_program_authority, manage_authorized_creators};
 pub use rewards::{claim_rewards, fund_rewards};
 pub use stake::{stake, unstake};
 
@@ -111,14 +111,6 @@ pub fn process_instruction<'a>(
             msg!("Instruction: FundRewards");
             fund_rewards(accounts, amount)
         }
-        StakePoolInstruction::NominateNewAuthority => {
-            msg!("Instruction: NominateNewAuthority");
-            nominate_new_authority(accounts)
-        }
-        StakePoolInstruction::AcceptAuthority => {
-            msg!("Instruction: AcceptAuthority");
-            accept_authority(accounts)
-        }
         StakePoolInstruction::CloseStakeAccount => {
             msg!("Instruction: CloseStakeAccount");
             close_stake_account(accounts)
@@ -134,6 +126,26 @@ pub fn process_instruction<'a>(
         StakePoolInstruction::ManageAuthorizedCreators { add, remove } => {
             msg!("Instruction: ManageAuthorizedCreators");
             manage_authorized_creators(accounts, add, remove)
+        }
+        StakePoolInstruction::TransferProgramAuthority => {
+            msg!("Instruction: TransferProgramAuthority");
+            transfer_program_authority(accounts)
+        }
+        StakePoolInstruction::AcceptProgramAuthority => {
+            msg!("Instruction: AcceptProgramAuthority");
+            accept_program_authority(accounts)
+        }
+        StakePoolInstruction::GetAuthorizedCreators => {
+            msg!("Instruction: GetAuthorizedCreators");
+            get_authorized_creators(accounts)
+        }
+        StakePoolInstruction::CheckAuthorization { address } => {
+            msg!("Instruction: CheckAuthorization");
+            check_authorization(accounts, address)
+        }
+        StakePoolInstruction::CancelAuthorityTransfer => {
+            msg!("Instruction: CancelAuthorityTransfer");
+            cancel_authority_transfer(accounts)
         }
     }
 }

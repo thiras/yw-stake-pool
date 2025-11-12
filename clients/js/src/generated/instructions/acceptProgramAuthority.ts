@@ -30,24 +30,24 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const ACCEPT_AUTHORITY_DISCRIMINATOR = 7;
+export const ACCEPT_PROGRAM_AUTHORITY_DISCRIMINATOR = 11;
 
-export function getAcceptAuthorityDiscriminatorBytes() {
-  return getU8Encoder().encode(ACCEPT_AUTHORITY_DISCRIMINATOR);
+export function getAcceptProgramAuthorityDiscriminatorBytes() {
+  return getU8Encoder().encode(ACCEPT_PROGRAM_AUTHORITY_DISCRIMINATOR);
 }
 
-export type AcceptAuthorityInstruction<
+export type AcceptProgramAuthorityInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
-  TAccountPool extends string | AccountMeta<string> = string,
+  TAccountProgramAuthority extends string | AccountMeta<string> = string,
   TAccountPendingAuthority extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
-      TAccountPool extends string
-        ? WritableAccount<TAccountPool>
-        : TAccountPool,
+      TAccountProgramAuthority extends string
+        ? WritableAccount<TAccountProgramAuthority>
+        : TAccountProgramAuthority,
       TAccountPendingAuthority extends string
         ? ReadonlySignerAccount<TAccountPendingAuthority> &
             AccountSignerMeta<TAccountPendingAuthority>
@@ -56,51 +56,57 @@ export type AcceptAuthorityInstruction<
     ]
   >;
 
-export type AcceptAuthorityInstructionData = { discriminator: number };
+export type AcceptProgramAuthorityInstructionData = { discriminator: number };
 
-export type AcceptAuthorityInstructionDataArgs = {};
+export type AcceptProgramAuthorityInstructionDataArgs = {};
 
-export function getAcceptAuthorityInstructionDataEncoder(): FixedSizeEncoder<AcceptAuthorityInstructionDataArgs> {
+export function getAcceptProgramAuthorityInstructionDataEncoder(): FixedSizeEncoder<AcceptProgramAuthorityInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', getU8Encoder()]]),
-    (value) => ({ ...value, discriminator: ACCEPT_AUTHORITY_DISCRIMINATOR })
+    (value) => ({
+      ...value,
+      discriminator: ACCEPT_PROGRAM_AUTHORITY_DISCRIMINATOR,
+    })
   );
 }
 
-export function getAcceptAuthorityInstructionDataDecoder(): FixedSizeDecoder<AcceptAuthorityInstructionData> {
+export function getAcceptProgramAuthorityInstructionDataDecoder(): FixedSizeDecoder<AcceptProgramAuthorityInstructionData> {
   return getStructDecoder([['discriminator', getU8Decoder()]]);
 }
 
-export function getAcceptAuthorityInstructionDataCodec(): FixedSizeCodec<
-  AcceptAuthorityInstructionDataArgs,
-  AcceptAuthorityInstructionData
+export function getAcceptProgramAuthorityInstructionDataCodec(): FixedSizeCodec<
+  AcceptProgramAuthorityInstructionDataArgs,
+  AcceptProgramAuthorityInstructionData
 > {
   return combineCodec(
-    getAcceptAuthorityInstructionDataEncoder(),
-    getAcceptAuthorityInstructionDataDecoder()
+    getAcceptProgramAuthorityInstructionDataEncoder(),
+    getAcceptProgramAuthorityInstructionDataDecoder()
   );
 }
 
-export type AcceptAuthorityInput<
-  TAccountPool extends string = string,
+export type AcceptProgramAuthorityInput<
+  TAccountProgramAuthority extends string = string,
   TAccountPendingAuthority extends string = string,
 > = {
-  /** The stake pool */
-  pool: Address<TAccountPool>;
+  /** The program authority PDA */
+  programAuthority: Address<TAccountProgramAuthority>;
   /** The pending authority accepting the transfer */
   pendingAuthority: TransactionSigner<TAccountPendingAuthority>;
 };
 
-export function getAcceptAuthorityInstruction<
-  TAccountPool extends string,
+export function getAcceptProgramAuthorityInstruction<
+  TAccountProgramAuthority extends string,
   TAccountPendingAuthority extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
-  input: AcceptAuthorityInput<TAccountPool, TAccountPendingAuthority>,
+  input: AcceptProgramAuthorityInput<
+    TAccountProgramAuthority,
+    TAccountPendingAuthority
+  >,
   config?: { programAddress?: TProgramAddress }
-): AcceptAuthorityInstruction<
+): AcceptProgramAuthorityInstruction<
   TProgramAddress,
-  TAccountPool,
+  TAccountProgramAuthority,
   TAccountPendingAuthority
 > {
   // Program address.
@@ -108,7 +114,10 @@ export function getAcceptAuthorityInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    pool: { value: input.pool ?? null, isWritable: true },
+    programAuthority: {
+      value: input.programAuthority ?? null,
+      isWritable: true,
+    },
     pendingAuthority: {
       value: input.pendingAuthority ?? null,
       isWritable: false,
@@ -122,40 +131,40 @@ export function getAcceptAuthorityInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
     accounts: [
-      getAccountMeta(accounts.pool),
+      getAccountMeta(accounts.programAuthority),
       getAccountMeta(accounts.pendingAuthority),
     ],
-    data: getAcceptAuthorityInstructionDataEncoder().encode({}),
+    data: getAcceptProgramAuthorityInstructionDataEncoder().encode({}),
     programAddress,
-  } as AcceptAuthorityInstruction<
+  } as AcceptProgramAuthorityInstruction<
     TProgramAddress,
-    TAccountPool,
+    TAccountProgramAuthority,
     TAccountPendingAuthority
   >);
 }
 
-export type ParsedAcceptAuthorityInstruction<
+export type ParsedAcceptProgramAuthorityInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    /** The stake pool */
-    pool: TAccountMetas[0];
+    /** The program authority PDA */
+    programAuthority: TAccountMetas[0];
     /** The pending authority accepting the transfer */
     pendingAuthority: TAccountMetas[1];
   };
-  data: AcceptAuthorityInstructionData;
+  data: AcceptProgramAuthorityInstructionData;
 };
 
-export function parseAcceptAuthorityInstruction<
+export function parseAcceptProgramAuthorityInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
-): ParsedAcceptAuthorityInstruction<TProgram, TAccountMetas> {
+): ParsedAcceptProgramAuthorityInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 2) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -168,7 +177,12 @@ export function parseAcceptAuthorityInstruction<
   };
   return {
     programAddress: instruction.programAddress,
-    accounts: { pool: getNextAccount(), pendingAuthority: getNextAccount() },
-    data: getAcceptAuthorityInstructionDataDecoder().decode(instruction.data),
+    accounts: {
+      programAuthority: getNextAccount(),
+      pendingAuthority: getNextAccount(),
+    },
+    data: getAcceptProgramAuthorityInstructionDataDecoder().decode(
+      instruction.data
+    ),
   };
 }

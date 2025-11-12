@@ -33,7 +33,6 @@ import {
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
-  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
@@ -51,7 +50,6 @@ export function getInitializePoolDiscriminatorBytes() {
 export type InitializePoolInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountPool extends string | AccountMeta<string> = string,
-  TAccountAuthority extends string | AccountMeta<string> = string,
   TAccountStakeMint extends string | AccountMeta<string> = string,
   TAccountRewardMint extends string | AccountMeta<string> = string,
   TAccountStakeVault extends string | AccountMeta<string> = string,
@@ -75,10 +73,6 @@ export type InitializePoolInstruction<
       TAccountPool extends string
         ? WritableAccount<TAccountPool>
         : TAccountPool,
-      TAccountAuthority extends string
-        ? ReadonlySignerAccount<TAccountAuthority> &
-            AccountSignerMeta<TAccountAuthority>
-        : TAccountAuthority,
       TAccountStakeMint extends string
         ? ReadonlyAccount<TAccountStakeMint>
         : TAccountStakeMint,
@@ -169,7 +163,6 @@ export function getInitializePoolInstructionDataCodec(): Codec<
 
 export type InitializePoolInput<
   TAccountPool extends string = string,
-  TAccountAuthority extends string = string,
   TAccountStakeMint extends string = string,
   TAccountRewardMint extends string = string,
   TAccountStakeVault extends string = string,
@@ -182,8 +175,6 @@ export type InitializePoolInput<
 > = {
   /** The stake pool PDA */
   pool: Address<TAccountPool>;
-  /** The pool authority */
-  authority: TransactionSigner<TAccountAuthority>;
   /** The token mint being staked */
   stakeMint: Address<TAccountStakeMint>;
   /** The reward token mint */
@@ -192,7 +183,7 @@ export type InitializePoolInput<
   stakeVault: Address<TAccountStakeVault>;
   /** The pool's reward token vault */
   rewardVault: Address<TAccountRewardVault>;
-  /** The account paying for rent */
+  /** The account paying for rent (must be authorized admin) */
   payer: TransactionSigner<TAccountPayer>;
   /** The token program */
   tokenProgram?: Address<TAccountTokenProgram>;
@@ -212,7 +203,6 @@ export type InitializePoolInput<
 
 export function getInitializePoolInstruction<
   TAccountPool extends string,
-  TAccountAuthority extends string,
   TAccountStakeMint extends string,
   TAccountRewardMint extends string,
   TAccountStakeVault extends string,
@@ -226,7 +216,6 @@ export function getInitializePoolInstruction<
 >(
   input: InitializePoolInput<
     TAccountPool,
-    TAccountAuthority,
     TAccountStakeMint,
     TAccountRewardMint,
     TAccountStakeVault,
@@ -241,7 +230,6 @@ export function getInitializePoolInstruction<
 ): InitializePoolInstruction<
   TProgramAddress,
   TAccountPool,
-  TAccountAuthority,
   TAccountStakeMint,
   TAccountRewardMint,
   TAccountStakeVault,
@@ -258,7 +246,6 @@ export function getInitializePoolInstruction<
   // Original accounts.
   const originalAccounts = {
     pool: { value: input.pool ?? null, isWritable: true },
-    authority: { value: input.authority ?? null, isWritable: false },
     stakeMint: { value: input.stakeMint ?? null, isWritable: false },
     rewardMint: { value: input.rewardMint ?? null, isWritable: false },
     stakeVault: { value: input.stakeVault ?? null, isWritable: true },
@@ -298,7 +285,6 @@ export function getInitializePoolInstruction<
   return Object.freeze({
     accounts: [
       getAccountMeta(accounts.pool),
-      getAccountMeta(accounts.authority),
       getAccountMeta(accounts.stakeMint),
       getAccountMeta(accounts.rewardMint),
       getAccountMeta(accounts.stakeVault),
@@ -316,7 +302,6 @@ export function getInitializePoolInstruction<
   } as InitializePoolInstruction<
     TProgramAddress,
     TAccountPool,
-    TAccountAuthority,
     TAccountStakeMint,
     TAccountRewardMint,
     TAccountStakeVault,
@@ -337,26 +322,24 @@ export type ParsedInitializePoolInstruction<
   accounts: {
     /** The stake pool PDA */
     pool: TAccountMetas[0];
-    /** The pool authority */
-    authority: TAccountMetas[1];
     /** The token mint being staked */
-    stakeMint: TAccountMetas[2];
+    stakeMint: TAccountMetas[1];
     /** The reward token mint */
-    rewardMint: TAccountMetas[3];
+    rewardMint: TAccountMetas[2];
     /** The pool's stake token vault */
-    stakeVault: TAccountMetas[4];
+    stakeVault: TAccountMetas[3];
     /** The pool's reward token vault */
-    rewardVault: TAccountMetas[5];
-    /** The account paying for rent */
-    payer: TAccountMetas[6];
+    rewardVault: TAccountMetas[4];
+    /** The account paying for rent (must be authorized admin) */
+    payer: TAccountMetas[5];
     /** The token program */
-    tokenProgram: TAccountMetas[7];
+    tokenProgram: TAccountMetas[6];
     /** The system program */
-    systemProgram: TAccountMetas[8];
+    systemProgram: TAccountMetas[7];
     /** Rent sysvar */
-    rent: TAccountMetas[9];
+    rent: TAccountMetas[8];
     /** The program authority account (validates creator permission) */
-    programAuthority: TAccountMetas[10];
+    programAuthority: TAccountMetas[9];
   };
   data: InitializePoolInstructionData;
 };
@@ -369,7 +352,7 @@ export function parseInitializePoolInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedInitializePoolInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 11) {
+  if (instruction.accounts.length < 10) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -383,7 +366,6 @@ export function parseInitializePoolInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       pool: getNextAccount(),
-      authority: getNextAccount(),
       stakeMint: getNextAccount(),
       rewardMint: getNextAccount(),
       stakeVault: getNextAccount(),

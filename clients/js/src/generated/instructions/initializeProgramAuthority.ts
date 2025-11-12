@@ -32,7 +32,7 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const INITIALIZE_PROGRAM_AUTHORITY_DISCRIMINATOR = 10;
+export const INITIALIZE_PROGRAM_AUTHORITY_DISCRIMINATOR = 8;
 
 export function getInitializeProgramAuthorityDiscriminatorBytes() {
   return getU8Encoder().encode(INITIALIZE_PROGRAM_AUTHORITY_DISCRIMINATOR);

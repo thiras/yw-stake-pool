@@ -10,7 +10,7 @@ import {
   STAKE_POOL_ERROR__CANNOT_REMOVE_MAIN_AUTHORITY,
   STAKE_POOL_ERROR__CREATOR_NOT_FOUND,
 } from '../src';
-import { address } from '@solana/kit';
+import { address, type Address } from '@solana/kit';
 
 // ============================================================================
 // ProgramAuthority Account Tests
@@ -33,8 +33,9 @@ test('ProgramAuthority codec encodes and decodes correctly', (t) => {
       null,
       null,
       null,
-    ],
+    ] as Array<Address | null>,
     creatorCount: 2,
+    pendingAuthority: null,
     bump: 255,
   };
 
@@ -66,6 +67,7 @@ test('ProgramAuthority codec handles empty creators list', (t) => {
     authority: address('11111111111111111111111111111111'),
     authorizedCreators: Array(10).fill(null),
     creatorCount: 0,
+    pendingAuthority: null,
     bump: 255,
   };
 
@@ -91,6 +93,7 @@ test('ProgramAuthority codec handles max creators', (t) => {
     authority: address('11111111111111111111111111111111'),
     authorizedCreators: creators,
     creatorCount: 10,
+    pendingAuthority: null,
     bump: 255,
   };
 
@@ -112,13 +115,16 @@ test('ProgramAuthority has correct size', (t) => {
     authority: address('11111111111111111111111111111111'),
     authorizedCreators: Array(10).fill(null),
     creatorCount: 0,
+    pendingAuthority: null,
     bump: 255,
   };
 
   const encodedEmpty = codec.encode(emptyAuthority);
-  // Size: 1 (key) + 32 (authority) + 10 (10 * 1 byte for Option::None) + 1 (count) + 1 (bump) = 45 bytes
+  // Size: 1 (key) + 32 (authority) + 10 (10 * 1 byte for Option::None) + 1 (count) + 1 (pending=None) + 1 (bump) = 46 bytes
   // Note: Borsh encodes Option::None as 1 byte (0x00), Option::Some as 1 byte (0x01) + value
-  t.is(encodedEmpty.length, 45);
+  // IMPORTANT: On-chain, the ProgramAuthority account is always allocated with the maximum size (398 bytes, as per ProgramAuthority::LEN),
+  // regardless of how many creators are actually populated. This test only verifies the serialized size for the empty case.
+  t.is(encodedEmpty.length, 46);
 
   // Test full creators list (all Some)
   const fullAuthority = {
@@ -128,13 +134,26 @@ test('ProgramAuthority has correct size', (t) => {
       address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
     ),
     creatorCount: 10,
+    pendingAuthority: null,
     bump: 255,
   };
 
   const encodedFull = codec.encode(fullAuthority);
-  // Size: 1 (key) + 32 (authority) + 330 (10 * 33 bytes for Option::Some + Pubkey) + 1 (count) + 1 (bump) = 365 bytes
+  // Size with pending=None: 1 (key) + 32 (authority) + 330 (10 * 33 for Option::Some + Pubkey) + 1 (count) + 1 (pending=None) + 1 (bump) = 366 bytes
   // Note: Each Option::Some(Pubkey) is 1 byte discriminator + 32 bytes pubkey = 33 bytes
-  t.is(encodedFull.length, 365);
+  t.is(encodedFull.length, 366);
+
+  // Test maximal case: pending_authority = Some(Pubkey)
+  // This is what ProgramAuthority::LEN (398 bytes) represents on-chain
+  const maxAuthority = {
+    ...fullAuthority,
+    pendingAuthority: address('22222222222222222222222222222222222222222222'),
+  };
+
+  const encodedMax = codec.encode(maxAuthority);
+  // Size with pending=Some: 1 + 32 + 330 + 1 + 33 (Some + Pubkey) + 1 = 398 bytes
+  // This matches ProgramAuthority::LEN constant used for on-chain rent calculations
+  t.is(encodedMax.length, 398);
 });
 
 // ============================================================================
@@ -151,7 +170,7 @@ test('InitializeProgramAuthority instruction data codec', (t) => {
 
   // Should have discriminator
   t.is(encoded.length, 1); // Just the discriminator byte
-  t.is(decoded.discriminator, 10); // InitializeProgramAuthority has discriminator 10
+  t.is(decoded.discriminator, 8); // InitializeProgramAuthority discriminator (updated after refactor)
   t.is(Object.keys(decoded).length, 1); // Only the discriminator field
 });
 
@@ -277,6 +296,7 @@ test('ProgramAuthority round-trip with various states', (t) => {
         authority: address('11111111111111111111111111111111'),
         authorizedCreators: Array(10).fill(null),
         creatorCount: 0,
+        pendingAuthority: null,
         bump: 255,
       },
     },
@@ -290,6 +310,7 @@ test('ProgramAuthority round-trip with various states', (t) => {
           ...Array(9).fill(null),
         ],
         creatorCount: 1,
+        pendingAuthority: null,
         bump: 255,
       },
     },
@@ -305,6 +326,7 @@ test('ProgramAuthority round-trip with various states', (t) => {
           ...Array(7).fill(null),
         ],
         creatorCount: 2,
+        pendingAuthority: null,
         bump: 255,
       },
     },

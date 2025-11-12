@@ -6,7 +6,7 @@
  * - Update pool settings
  * - Pause/unpause
  * - Fund rewards
- * - Transfer authority
+ * - Transfer program authority (global admin rights)
  */
 
 import { address, some, none } from '@solana/kit';
@@ -14,7 +14,8 @@ import {
   getInitializePoolInstruction,
   getUpdatePoolInstruction,
   getFundRewardsInstruction,
-  getNominateNewAuthorityInstruction,
+  getTransferProgramAuthorityInstruction,
+  getAcceptProgramAuthorityInstruction,
 } from '@yourwallet/stake-pool';
 
 import { config, formatAmount, formatRewardRate, formatDuration } from './config.js';
@@ -57,7 +58,6 @@ async function main() {
 
     const initIx = getInitializePoolInstruction({
       pool: poolAddress,
-      authority: admin,
       stakeMint,
       rewardMint,
       stakeVault,
@@ -110,7 +110,8 @@ async function main() {
 
     const updateRateIx = getUpdatePoolInstruction({
       pool: poolAddress,
-      authority: admin,
+      admin,
+      programAuthority,
       rewardRate: some(newRate),
       minStakeAmount: none(),
       lockupPeriod: none(),
@@ -130,7 +131,8 @@ async function main() {
 
     const pauseIx = getUpdatePoolInstruction({
       pool: poolAddress,
-      authority: admin,
+      admin,
+      programAuthority,
       rewardRate: none(),
       minStakeAmount: none(),
       lockupPeriod: none(),
@@ -153,7 +155,8 @@ async function main() {
 
     const multiUpdateIx = getUpdatePoolInstruction({
       pool: poolAddress,
-      authority: admin,
+      admin,
+      programAuthority,
       rewardRate: none(),
       minStakeAmount: some(5_000_000n), // 5 tokens
       lockupPeriod: some(604800n), // 7 days
@@ -175,7 +178,8 @@ async function main() {
 
     const setEndDateIx = getUpdatePoolInstruction({
       pool: poolAddress,
-      authority: admin,
+      admin,
+      programAuthority,
       rewardRate: none(),
       minStakeAmount: none(),
       lockupPeriod: none(),
@@ -187,29 +191,36 @@ async function main() {
     console.log('✅ Set end date instruction created');
 
     // ========================================================================
-    // Example 7: Transfer Authority (Two-Step)
+    // Example 7: Transfer Program Authority (Two-Step)
     // ========================================================================
-    logStep(7, 'Transfer Authority (Two-Step Process)');
+    logStep(7, 'Transfer Program Authority (Two-Step Process)');
 
-    console.log('⚠️  Note: Authority transfer requires a funded new authority account');
+    console.log('⚠️  Note: This transfers GLOBAL admin rights (control over ALL pools)');
+    console.log('   Authority transfer requires a funded new authority account');
     console.log('   Skipping keypair generation to avoid devnet airdrop issues');
     console.log('   In production, generate a new keypair and fund it before transfer\n');
 
     // Using a placeholder address for demonstration
     const newAdminAddress = address('11111111111111111111111111111119');
 
-    console.log('\n7a. Current admin nominates new authority');
-    const nominateIx = getNominateNewAuthorityInstruction({
-      pool: poolAddress,
+    console.log('\n7a. Current authority nominates new program authority');
+    getTransferProgramAuthorityInstruction({
+      programAuthority,
       currentAuthority: admin,
       newAuthority: newAdminAddress,
     });
-    console.log('✅ Nominate instruction created');
+    console.log('✅ Transfer program authority instruction created');
     console.log(`   New authority: ${newAdminAddress}`);
+    console.log(`   📝 Sets pendingAuthority field in ProgramAuthority account`);
 
     console.log('\n7b. New authority accepts the nomination');
     console.log('   (In production, this would be signed by the new authority keypair)');
+    // const acceptIx = getAcceptProgramAuthorityInstruction({
+    //   programAuthority,
+    //   pendingAuthority: newAdminKeypair, // Must be signed by pending authority
+    // });
     console.log('   🔐 Two-step process prevents accidental authority loss');
+    console.log('   ⚡ After acceptance, new authority controls ALL pool creation');
 
     // ========================================================================
     // Summary
@@ -223,13 +234,14 @@ async function main() {
     console.log('   4. ✅ Pause/unpause pool');
     console.log('   5. ✅ Update multiple parameters');
     console.log('   6. ✅ Set pool end date');
-    console.log('   7. ✅ Transfer authority (two-step)\n');
+    console.log('   7. ✅ Transfer program authority (two-step)\n');
 
     console.log('💡 Tips for Pool Operators:');
     console.log('   - Always ensure reward vault has sufficient funds');
     console.log('   - Use pause feature for emergency situations');
     console.log('   - Update parameters carefully to maintain user trust');
-    console.log('   - Two-step authority transfer prevents mistakes');
+    console.log('   - Program authority transfer affects ALL pools');
+    console.log('   - Use ManageAuthorizedCreators to delegate pool creation');
     console.log('   - Monitor pool metrics regularly\n');
 
   } catch (error) {

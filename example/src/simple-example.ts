@@ -36,7 +36,6 @@ console.log('1️⃣  Initialize Pool Instruction');
 try {
   const initPoolIx = getInitializePoolInstruction({
     pool: poolAddress,
-    authority: authorityAddress as any,
     stakeMint,
     rewardMint,
     stakeVault: address('11111111111111111111111111111112'),

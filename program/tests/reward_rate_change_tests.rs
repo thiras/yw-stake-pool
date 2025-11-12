@@ -125,7 +125,6 @@ fn test_stake_pool_structure_has_new_fields() {
     // Create a mock StakePool to verify the structure
     let pool = StakePool {
         key: your_wallet_stake_pool::state::Key::StakePool,
-        authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
         pool_id: 0,
@@ -139,7 +138,6 @@ fn test_stake_pool_structure_has_new_fields() {
         is_paused: false,
         enforce_lockup: false,
         bump: 255,
-        pending_authority: None,
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000),
         reward_rate_change_timestamp: Some(1700000000),
@@ -162,8 +160,10 @@ fn test_instruction_has_finalize_variant() {
     let serialized = borsh::to_vec(&finalize_instr).unwrap();
     assert!(!serialized.is_empty());
 
-    // The discriminator should be 9 (it's the 10th variant, 0-indexed)
-    assert_eq!(serialized[0], 9);
+    // The discriminator should be 7 (it's the 8th variant, 0-indexed)
+    // Order: InitializePool(0), Stake(1), Unstake(2), ClaimRewards(3), UpdatePool(4),
+    //        FundRewards(5), CloseStakeAccount(6), FinalizeRewardRateChange(7), ...
+    assert_eq!(serialized[0], 7);
 }
 
 /// Test that proposing a new rate while one is pending fails
@@ -197,7 +197,6 @@ fn test_finalize_validates_rate_bounds() {
     // This simulates the scenario where validation logic changed after proposal
     let pool = StakePool {
         key: your_wallet_stake_pool::state::Key::StakePool,
-        authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
         pool_id: 0,
@@ -211,7 +210,6 @@ fn test_finalize_validates_rate_bounds() {
         is_paused: false,
         enforce_lockup: false,
         bump: 255,
-        pending_authority: None,
         pool_end_date: None,
         pending_reward_rate: Some(2_000_000_000_000), // Invalid: > 1_000_000_000_000
         reward_rate_change_timestamp: Some(1700000000),
@@ -232,7 +230,6 @@ fn test_propose_current_rate_cancels_pending() {
     // Create a StakePool with a pending rate change
     let pool = StakePool {
         key: your_wallet_stake_pool::state::Key::StakePool,
-        authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
         pool_id: 0,
@@ -246,7 +243,6 @@ fn test_propose_current_rate_cancels_pending() {
         is_paused: false,
         enforce_lockup: false,
         bump: 255,
-        pending_authority: None,
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000), // Pending different rate
         reward_rate_change_timestamp: Some(1700000000),
@@ -268,7 +264,6 @@ fn test_propose_current_rate_no_pending() {
     // Create a StakePool with no pending change
     let pool = StakePool {
         key: your_wallet_stake_pool::state::Key::StakePool,
-        authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
         pool_id: 0,
@@ -282,7 +277,6 @@ fn test_propose_current_rate_no_pending() {
         is_paused: false,
         enforce_lockup: false,
         bump: 255,
-        pending_authority: None,
         pool_end_date: None,
         pending_reward_rate: None, // No pending change
         reward_rate_change_timestamp: None,
@@ -343,7 +337,6 @@ fn test_future_timestamp_scenario() {
     // This could indicate clock manipulation
     let pool = StakePool {
         key: your_wallet_stake_pool::state::Key::StakePool,
-        authority: Pubkey::new_unique(),
         stake_mint: Pubkey::new_unique(),
         reward_mint: Pubkey::new_unique(),
         pool_id: 0,
@@ -357,7 +350,6 @@ fn test_future_timestamp_scenario() {
         is_paused: false,
         enforce_lockup: false,
         bump: 255,
-        pending_authority: None,
         pool_end_date: None,
         pending_reward_rate: Some(50_000_000),
         reward_rate_change_timestamp: Some(9999999999), // Far future timestamp

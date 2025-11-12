@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Instruction Order**: Reordered instructions to group authority transfer operations
+  - Moved `CancelAuthorityTransfer` (discriminator 15→13) next to `TransferProgramAuthority` and `AcceptProgramAuthority`
+  - Groups complete authority transfer lifecycle together (Transfer → Accept → Cancel)
+  - Updated discriminators: `GetAuthorizedCreators` (12→13), `CheckAuthorization` (13→14)
+  - Improves code organization and logical grouping
+
+### Fixed
+- **Transaction Confirmation**: Resolved WebSocket subscription errors in all program authority scripts
+  - Replaced `sendAndConfirmTransactionFactory` with custom `sendAndWaitForTransaction` helper
+  - Uses REST-only polling with `getSignatureStatuses()` (30-second timeout, 1-second intervals)
+  - Eliminates "Cannot read properties of null (reading 'signatureNotifications')" errors
+  - Fixed in: `initialize-authority.mjs`, `add-authorized-creator.mjs`, `remove-authorized-creator.mjs`
+  - Improved reliability and eliminated WebSocket dependency
+
+### Documentation
+- **Implementation Details**: Updated script architecture section
+  - Documented new transaction confirmation approach
+  - Listed all authority management scripts
+  - Explained benefits of REST-only polling
+
 ## [1.6.1]
 
 ### Added
@@ -259,9 +282,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Two-Step Authority Transfer**: Secure authority transfer mechanism
-  - `NominateNewAuthority` instruction for current authority to nominate new authority
-  - `AcceptAuthority` instruction for new authority to accept transfer
-  - `pending_authority` field added to `StakePool` state
+  - `TransferProgramAuthority` instruction for current authority to nominate new authority
+  - `AcceptProgramAuthority` instruction for new authority to accept transfer
+  - `pending_authority` field added to `ProgramAuthority` state
   - Protects against key compromise and misconfiguration scenarios
   - Custom errors: `NoPendingAuthority`, `InvalidPendingAuthority`
 

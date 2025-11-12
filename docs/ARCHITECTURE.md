@@ -31,8 +31,12 @@ graph TB
     style SA fill:#ffe1f5
 ```
 
-- **ProgramAuthority**: Global authority that controls who can create new pools
-- **StakePool**: Individual pool configuration (reward rate, lockup period, vaults)
+- **ProgramAuthority**: Global authority that controls who can create new pools (398 bytes)
+  - Single authority address
+  - List of up to 10 authorized creator addresses
+  - Pending authority for two-step transfer
+- **StakePool**: Individual pool configuration (reward rate, lockup period, vaults) - 223 bytes
+  - No per-pool authority (managed globally via ProgramAuthority)
 - **StakeAccount**: User's stake position (amount, timestamp, claimed rewards)
 - **Stake Vault**: Token account holding all staked tokens for a pool
 - **Reward Vault**: Token account holding reward tokens for distribution
@@ -49,6 +53,7 @@ sequenceDiagram
     
     Note over User,Vaults: Pool Initialization
     User->>Program: InitializePool
+    Program->>ProgramAuthority: Verify creator authorized
     Program->>StakePool: Create pool account
     Program->>Vaults: Validate vault ownership
     StakePool-->>User: Pool created
@@ -90,24 +95,29 @@ sequenceDiagram
 
 ### Authority Transfer Flow
 
-Two-step process prevents accidental authority loss:
+Two-step process prevents accidental authority loss. This transfers **global program authority** (control over entire system):
 
 ```mermaid
 sequenceDiagram
-    participant OldAuth as Old Authority
-    participant Pool as Pool State
+    participant OldAuth as Current Authority
+    participant PA as ProgramAuthority
     participant NewAuth as New Authority
     
-    Note over Pool: authority = OldAuth<br/>pending_authority = None
+    Note over PA: authority = OldAuth<br/>pending_authority = None
     
-    OldAuth->>Pool: NominateNewAuthority(NewAuth)
-    Note over Pool: authority = OldAuth<br/>pending_authority = NewAuth
+    OldAuth->>PA: TransferProgramAuthority(NewAuth)
+    Note over PA: authority = OldAuth<br/>pending_authority = NewAuth
     
-    NewAuth->>Pool: AcceptAuthority()
-    Note over Pool: authority = NewAuth<br/>pending_authority = None
+    NewAuth->>PA: AcceptProgramAuthority()
+    Note over PA: authority = NewAuth<br/>pending_authority = None
     
-    Note over Pool: Transfer Complete!
+    Note over PA: Transfer Complete!<br/>NewAuth now controls ALL pools
 ```
+
+**Important**: This is a **global operation** that transfers control of the entire program, not individual pools. The new authority will control:
+- Who can create new pools (via ManageAuthorizedCreators)
+- Global program settings
+- All future administrative operations
 
 ### Reward Rate Change Flow (Time-Locked)
 
@@ -275,7 +285,10 @@ graph LR
     SA_SEEDS -->|derives| SA[StakeAccount PDA]
     PA_SEEDS -->|derives| PA[ProgramAuthority PDA]
     
-    SP -->|authority: Pubkey| AUTH[Authority Signer]
+    PA -->|authority: Pubkey| MAIN_AUTH[Main Authority]
+    PA -->|authorized_creators: [Pubkey; 10]| CREATORS[Authorized Creators]
+    PA -->|controls creation| SP
+    
     SP -->|stake_vault: Pubkey| SV[Stake Vault Token Account]
     SP -->|reward_vault: Pubkey| RV[Reward Vault Token Account]
     
@@ -287,6 +300,11 @@ graph LR
     style PA fill:#e1f5ff
 ```
 
+**Key Changes from Per-Pool Authority:**
+- StakePool no longer has `authority` or `pending_authority` fields
+- All administrative control flows through global ProgramAuthority
+- UpdatePool instruction requires both `admin` signer AND `programAuthority` validation
+
 ## Security Model
 
 ### Type Safety
@@ -296,8 +314,10 @@ graph LR
 
 ### Authorization
 - Signer checks on all sensitive operations
-- Two-step authority transfer (nominate + accept)
-- Admin-controlled pool creation via ProgramAuthority
+- Two-step program authority transfer (TransferProgramAuthority + AcceptProgramAuthority)
+- Global admin model: ProgramAuthority controls pool creation and updates
+- Authorized creators list allows delegation (up to 10 addresses)
+- Admin verification required for UpdatePool operations
 
 ### Economic Security
 - Pre-flight reward solvency checks
@@ -346,6 +366,11 @@ Pools are identified by `(stake_mint, pool_id)` allowing:
 - Different lockup periods
 - Separate user segments (VIP vs standard)
 
+**Authorization**: Only addresses authorized by ProgramAuthority can create pools:
+- Main authority (always authorized)
+- Up to 10 additional addresses in authorized_creators list
+- Managed via ManageAuthorizedCreators instruction
+
 ### Token-2022 Support
 - Transfer fee handling via balance checking
 - Extension validation (blocks dangerous extensions)
@@ -361,9 +386,12 @@ The program uses custom error types for clear failure modes:
 
 ## Performance Considerations
 
-- **Account Size**: StakePool = 237 bytes, StakeAccount = 98 bytes
+- **Account Size**: ProgramAuthority = 398 bytes, StakePool = 223 bytes, StakeAccount = 98 bytes
 - **Compute Units**: Typical operations < 200k CU
-- **Rent-Exempt Minimum**: ~2.3M lamports for StakePool
+- **Rent-Exempt Minimum**: 
+  - ProgramAuthority: ~3.2M lamports (created once per program deployment)
+  - StakePool: ~2.2M lamports
+  - StakeAccount: ~1.2M lamports
 - **Concurrent Operations**: Lock-free design allows parallel stakes
 
 ## Upgrade Path
@@ -372,11 +400,18 @@ The program uses reserved fields for future upgrades:
 ```rust
 pub struct StakePool {
     // ... existing fields
-    pub _reserved: [u8; 7],  // For future use
+    pub reserved: [u8; 7],  // For future use
+}
+
+pub struct ProgramAuthority {
+    // ... existing fields  
+    pub reserved: [u8; 32],  // For future use
 }
 ```
 
 **Breaking Changes**: Require full migration (drain → close → redeploy)
+
+**Global Admin Model**: The ProgramAuthority account persists across program upgrades, maintaining administrative control and authorized creator lists.
 
 ## Monitoring & Observability
 

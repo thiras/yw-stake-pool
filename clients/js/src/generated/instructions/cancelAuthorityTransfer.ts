@@ -8,10 +8,6 @@
 
 import {
   combineCodec,
-  getAddressDecoder,
-  getAddressEncoder,
-  getArrayDecoder,
-  getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
   getU8Decoder,
@@ -20,9 +16,9 @@ import {
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
-  type Codec,
-  type Decoder,
-  type Encoder,
+  type FixedSizeCodec,
+  type FixedSizeDecoder,
+  type FixedSizeEncoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
@@ -34,16 +30,16 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR = 9;
+export const CANCEL_AUTHORITY_TRANSFER_DISCRIMINATOR = 12;
 
-export function getManageAuthorizedCreatorsDiscriminatorBytes() {
-  return getU8Encoder().encode(MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR);
+export function getCancelAuthorityTransferDiscriminatorBytes() {
+  return getU8Encoder().encode(CANCEL_AUTHORITY_TRANSFER_DISCRIMINATOR);
 }
 
-export type ManageAuthorizedCreatorsInstruction<
+export type CancelAuthorityTransferInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountProgramAuthority extends string | AccountMeta<string> = string,
-  TAccountAuthority extends string | AccountMeta<string> = string,
+  TAccountCurrentAuthority extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -52,83 +48,66 @@ export type ManageAuthorizedCreatorsInstruction<
       TAccountProgramAuthority extends string
         ? WritableAccount<TAccountProgramAuthority>
         : TAccountProgramAuthority,
-      TAccountAuthority extends string
-        ? ReadonlySignerAccount<TAccountAuthority> &
-            AccountSignerMeta<TAccountAuthority>
-        : TAccountAuthority,
+      TAccountCurrentAuthority extends string
+        ? ReadonlySignerAccount<TAccountCurrentAuthority> &
+            AccountSignerMeta<TAccountCurrentAuthority>
+        : TAccountCurrentAuthority,
       ...TRemainingAccounts,
     ]
   >;
 
-export type ManageAuthorizedCreatorsInstructionData = {
-  discriminator: number;
-  add: Array<Address>;
-  remove: Array<Address>;
-};
+export type CancelAuthorityTransferInstructionData = { discriminator: number };
 
-export type ManageAuthorizedCreatorsInstructionDataArgs = {
-  add: Array<Address>;
-  remove: Array<Address>;
-};
+export type CancelAuthorityTransferInstructionDataArgs = {};
 
-export function getManageAuthorizedCreatorsInstructionDataEncoder(): Encoder<ManageAuthorizedCreatorsInstructionDataArgs> {
+export function getCancelAuthorityTransferInstructionDataEncoder(): FixedSizeEncoder<CancelAuthorityTransferInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([
-      ['discriminator', getU8Encoder()],
-      ['add', getArrayEncoder(getAddressEncoder())],
-      ['remove', getArrayEncoder(getAddressEncoder())],
-    ]),
+    getStructEncoder([['discriminator', getU8Encoder()]]),
     (value) => ({
       ...value,
-      discriminator: MANAGE_AUTHORIZED_CREATORS_DISCRIMINATOR,
+      discriminator: CANCEL_AUTHORITY_TRANSFER_DISCRIMINATOR,
     })
   );
 }
 
-export function getManageAuthorizedCreatorsInstructionDataDecoder(): Decoder<ManageAuthorizedCreatorsInstructionData> {
-  return getStructDecoder([
-    ['discriminator', getU8Decoder()],
-    ['add', getArrayDecoder(getAddressDecoder())],
-    ['remove', getArrayDecoder(getAddressDecoder())],
-  ]);
+export function getCancelAuthorityTransferInstructionDataDecoder(): FixedSizeDecoder<CancelAuthorityTransferInstructionData> {
+  return getStructDecoder([['discriminator', getU8Decoder()]]);
 }
 
-export function getManageAuthorizedCreatorsInstructionDataCodec(): Codec<
-  ManageAuthorizedCreatorsInstructionDataArgs,
-  ManageAuthorizedCreatorsInstructionData
+export function getCancelAuthorityTransferInstructionDataCodec(): FixedSizeCodec<
+  CancelAuthorityTransferInstructionDataArgs,
+  CancelAuthorityTransferInstructionData
 > {
   return combineCodec(
-    getManageAuthorizedCreatorsInstructionDataEncoder(),
-    getManageAuthorizedCreatorsInstructionDataDecoder()
+    getCancelAuthorityTransferInstructionDataEncoder(),
+    getCancelAuthorityTransferInstructionDataDecoder()
   );
 }
 
-export type ManageAuthorizedCreatorsInput<
+export type CancelAuthorityTransferInput<
   TAccountProgramAuthority extends string = string,
-  TAccountAuthority extends string = string,
+  TAccountCurrentAuthority extends string = string,
 > = {
   /** The program authority PDA */
   programAuthority: Address<TAccountProgramAuthority>;
-  /** The program authority signer */
-  authority: TransactionSigner<TAccountAuthority>;
-  add: ManageAuthorizedCreatorsInstructionDataArgs['add'];
-  remove: ManageAuthorizedCreatorsInstructionDataArgs['remove'];
+  /** The current program authority */
+  currentAuthority: TransactionSigner<TAccountCurrentAuthority>;
 };
 
-export function getManageAuthorizedCreatorsInstruction<
+export function getCancelAuthorityTransferInstruction<
   TAccountProgramAuthority extends string,
-  TAccountAuthority extends string,
+  TAccountCurrentAuthority extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
-  input: ManageAuthorizedCreatorsInput<
+  input: CancelAuthorityTransferInput<
     TAccountProgramAuthority,
-    TAccountAuthority
+    TAccountCurrentAuthority
   >,
   config?: { programAddress?: TProgramAddress }
-): ManageAuthorizedCreatorsInstruction<
+): CancelAuthorityTransferInstruction<
   TProgramAddress,
   TAccountProgramAuthority,
-  TAccountAuthority
+  TAccountCurrentAuthority
 > {
   // Program address.
   const programAddress = config?.programAddress ?? STAKE_POOL_PROGRAM_ADDRESS;
@@ -139,34 +118,32 @@ export function getManageAuthorizedCreatorsInstruction<
       value: input.programAuthority ?? null,
       isWritable: true,
     },
-    authority: { value: input.authority ?? null, isWritable: false },
+    currentAuthority: {
+      value: input.currentAuthority ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
     ResolvedAccount
   >;
 
-  // Original args.
-  const args = { ...input };
-
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
     accounts: [
       getAccountMeta(accounts.programAuthority),
-      getAccountMeta(accounts.authority),
+      getAccountMeta(accounts.currentAuthority),
     ],
-    data: getManageAuthorizedCreatorsInstructionDataEncoder().encode(
-      args as ManageAuthorizedCreatorsInstructionDataArgs
-    ),
+    data: getCancelAuthorityTransferInstructionDataEncoder().encode({}),
     programAddress,
-  } as ManageAuthorizedCreatorsInstruction<
+  } as CancelAuthorityTransferInstruction<
     TProgramAddress,
     TAccountProgramAuthority,
-    TAccountAuthority
+    TAccountCurrentAuthority
   >);
 }
 
-export type ParsedManageAuthorizedCreatorsInstruction<
+export type ParsedCancelAuthorityTransferInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -174,20 +151,20 @@ export type ParsedManageAuthorizedCreatorsInstruction<
   accounts: {
     /** The program authority PDA */
     programAuthority: TAccountMetas[0];
-    /** The program authority signer */
-    authority: TAccountMetas[1];
+    /** The current program authority */
+    currentAuthority: TAccountMetas[1];
   };
-  data: ManageAuthorizedCreatorsInstructionData;
+  data: CancelAuthorityTransferInstructionData;
 };
 
-export function parseManageAuthorizedCreatorsInstruction<
+export function parseCancelAuthorityTransferInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
-): ParsedManageAuthorizedCreatorsInstruction<TProgram, TAccountMetas> {
+): ParsedCancelAuthorityTransferInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 2) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -202,9 +179,9 @@ export function parseManageAuthorizedCreatorsInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       programAuthority: getNextAccount(),
-      authority: getNextAccount(),
+      currentAuthority: getNextAccount(),
     },
-    data: getManageAuthorizedCreatorsInstructionDataDecoder().decode(
+    data: getCancelAuthorityTransferInstructionDataDecoder().decode(
       instruction.data
     ),
   };

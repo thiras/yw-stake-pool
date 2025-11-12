@@ -40,6 +40,7 @@ fn test_program_authority_initialization() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -61,6 +62,7 @@ fn test_main_authority_is_authorized() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -78,6 +80,7 @@ fn test_unauthorized_address_is_not_authorized() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -95,6 +98,7 @@ fn test_add_authorized_creator_success() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -120,6 +124,7 @@ fn test_add_main_authority_fails() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -147,6 +152,7 @@ fn test_add_duplicate_creator_fails() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -172,6 +178,7 @@ fn test_add_max_creators_success() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -198,6 +205,7 @@ fn test_add_beyond_max_creators_fails() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -231,6 +239,7 @@ fn test_remove_authorized_creator_success() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -260,6 +269,7 @@ fn test_remove_main_authority_fails() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -286,6 +296,7 @@ fn test_remove_nonexistent_creator_fails() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -308,6 +319,7 @@ fn test_add_and_remove_multiple_creators() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -371,6 +383,7 @@ fn test_authorized_creators_array_size() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -386,6 +399,7 @@ fn test_creator_count_accuracy() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -421,6 +435,7 @@ fn test_serialization_size() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -441,6 +456,7 @@ fn test_deserialization_roundtrip() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -475,6 +491,7 @@ fn test_array_compaction_after_removal() {
         authority,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump: 255,
     };
 
@@ -507,6 +524,53 @@ fn test_array_compaction_after_removal() {
 
     // Verify count is correct
     assert_eq!(program_authority.creator_count, 3);
+}
+
+#[test]
+fn test_program_authority_size_calculation() {
+    // Verify LEN constant is correct
+    assert_eq!(ProgramAuthority::LEN, 398);
+
+    // Test with minimal instance (all None)
+    let minimal = ProgramAuthority {
+        key: Key::ProgramAuthority,
+        authority: Pubkey::default(),
+        authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
+        creator_count: 0,
+        pending_authority: None,
+        bump: 255,
+    };
+    let serialized_minimal = borsh::to_vec(&minimal).unwrap();
+    assert!(
+        serialized_minimal.len() <= ProgramAuthority::LEN,
+        "Minimal serialized size {} exceeds LEN {}",
+        serialized_minimal.len(),
+        ProgramAuthority::LEN
+    );
+
+    // Test with maximal instance (all Some)
+    let maximal = ProgramAuthority {
+        key: Key::ProgramAuthority,
+        authority: Pubkey::new_unique(),
+        authorized_creators: [Some(Pubkey::new_unique()); ProgramAuthority::MAX_CREATORS],
+        creator_count: ProgramAuthority::MAX_CREATORS as u8,
+        pending_authority: Some(Pubkey::new_unique()),
+        bump: 255,
+    };
+    let serialized_maximal = borsh::to_vec(&maximal).unwrap();
+    assert!(
+        serialized_maximal.len() <= ProgramAuthority::LEN,
+        "Maximal serialized size {} exceeds LEN {}",
+        serialized_maximal.len(),
+        ProgramAuthority::LEN
+    );
+
+    // Verify the maximal case is the actual maximum
+    assert_eq!(
+        serialized_maximal.len(),
+        ProgramAuthority::LEN,
+        "Expected maximal serialized size to match LEN exactly"
+    );
 }
 
 // ============================================================================

@@ -33,10 +33,10 @@ YW Stake Pool is a production-ready Solana program that provides:
 
 ### For Pool Operators
 - **Initialize** pools with custom parameters (reward rate, lockup, minimum stake)
-- **Create Multiple Pools** - Same authority can manage multiple pools for the same token using unique pool IDs
+- **Authorize Creators** - Delegate pool creation rights to specific addresses via ProgramAuthority
 - **Update** pool settings (pause/unpause, change rates)
 - **Fund** reward vaults to ensure liquidity
-- **Transfer** authority with two-step verification
+- **Transfer** program authority with two-step verification (controls entire system)
 - **Set** optional pool end dates
 
 ## Security
@@ -48,8 +48,8 @@ This program implements multiple security best practices:
 3. **Account Validation** - Comprehensive ownership and state validation
 4. **Transfer Fee Support** - Properly handles Token-2022 transfer fees
 5. **Numerical Overflow Protection** - All arithmetic uses checked operations
-6. **Two-step Authority Transfer** - Prevents accidental authority loss
-7. **Admin-Only Pool Creation** - Only authorized addresses can create pools (prevents spam/scam pools)
+6. **Two-step Authority Transfer** - Prevents accidental authority loss (global program authority)
+7. **Admin-Only Pool Creation** - Global ProgramAuthority controls who can create pools (prevents spam/scam pools)
 
 See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) for detailed security analysis.
 
@@ -57,10 +57,10 @@ See [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) for detailed security analysis.
 
 ```
 Program Structure:
-├── State Management (237 bytes pool account, 98 bytes stake account)
-├── 9 Instructions (Initialize, Stake, Unstake, Claim, Update, Fund, Authority)
+├── State Management (398 bytes ProgramAuthority, 223 bytes pool, 98 bytes stake)
+├── 15 Instructions (Pool ops, Staking, Claims, Admin, Authority)
 ├── Token-2022 Support (Transfer fees, extensions)
-└── Comprehensive Error Handling (15 custom error types)
+└── Comprehensive Error Handling (17 custom error types)
 ```
 
 **Program ID**: `8PtjrGvKNeZt2vCmRkSPGjss7TAFhvxux2N8r67UMKBx`
@@ -127,12 +127,15 @@ import {
   getInitializePoolInstruction,
   getStakeInstruction,
   getClaimRewardsInstruction,
+  findProgramAuthorityPda,
 } from '@yourwallet/stake-pool';
 
-// Initialize a pool
+// Get the global program authority PDA (required for pool operations)
+const [programAuthority] = await findProgramAuthorityPda();
+
+// Initialize a pool (requires authorization via ProgramAuthority)
 const initIx = getInitializePoolInstruction({
   pool: poolAddress,
-  authority: authority,
   stakeMint,
   rewardMint,
   stakeVault,
@@ -141,10 +144,12 @@ const initIx = getInitializePoolInstruction({
   tokenProgram: TOKEN_PROGRAM_ID,
   systemProgram: SYSTEM_PROGRAM_ID,
   rent: SYSVAR_RENT_PUBKEY,
+  programAuthority,              // Global authority that validates creator
   poolId: 0n,                    // Unique ID (0 for first pool, 1 for second, etc.)
   rewardRate: 100_000_000n,      // 10% APY
   minStakeAmount: 1_000_000n,    // 1 token (6 decimals)
   lockupPeriod: 86400n,          // 1 day
+  enforceLockup: false,
   poolEndDate: null,
 });
 
@@ -188,10 +193,11 @@ The program validates that the pool address matches the provided `pool_id`. If y
 - ✅ Always use `findPoolPda()` helper → Correct address is guaranteed
 
 **Pool ID Management:**
-Since pool IDs are scoped per token (not per authority), coordinate `pool_id` allocation:
+Pool IDs are scoped per token (not per authority or creator). When creating pools:
 - **Query existing pools**: Check which pool IDs are already in use for a token
 - **Increment from highest**: Use `max(pool_id) + 1` when creating new pools
 - **Document your pools**: Maintain off-chain records of pool purposes and configurations
+- **Authorization**: Only addresses in ProgramAuthority's authorized_creators list (or the main authority) can create pools
 
 **Example**:
 ```typescript
@@ -306,26 +312,67 @@ pnpm programs:list-creators -- --json
 
 ### Managing authority
 
-The project includes tools for managing program upgrade authority:
+The project includes tools for managing both program upgrade authority and program operational authority:
 
-#### Program Upgrade Authority
+#### Program Authority Transfer (Two-Step Process)
 
-Transfer or revoke program upgrade authority using Solana CLI:
+The program authority controls who can create pools and manage system-wide settings. Transfer this authority using a secure two-step process:
 
 ```sh
-# Transfer upgrade authority to a new address
-pnpm programs:transfer-authority -- --new-authority <ADDRESS>
+# Step 1: Current authority nominates new authority
+pnpm programs:transfer-authority <NEW_AUTHORITY_PUBKEY>
 
-# Make program immutable (irreversible!)
-pnpm programs:transfer-authority -- --none
+# Step 2: New authority accepts the transfer
+pnpm programs:accept-authority
+
+# Optional: Cancel pending transfer (before acceptance)
+pnpm programs:cancel-authority-transfer
 
 # View help and options
 pnpm programs:transfer-authority -- --help
 ```
 
-This is a **one-step, immediate transfer** using Solana's native authority management. Use with caution!
+**Benefits of Two-Step Transfer:**
+- **Safe**: Current authority retains control until new authority accepts
+- **Reversible**: Can be cancelled before acceptance
+- **Verified**: Both parties must explicitly agree to the transfer
 
-**Note:** Pool operational authority (for managing pool parameters, funding rewards, etc.) can be transferred using the program's built-in two-step authority transfer instructions (`NominateNewAuthority` and `AcceptAuthority`). See the [Client Library documentation](./clients/js/README.md) for details on using these instructions.
+**Example Workflow:**
+```sh
+# Current authority (alice) nominates bob
+pnpm programs:transfer-authority BobPubKey123... --cluster devnet
+
+# Bob accepts the transfer
+pnpm programs:accept-authority --cluster devnet --keypair /path/to/bob.json
+
+# Now bob is the program authority
+```
+
+#### Program Upgrade Authority (One-Step Transfer)
+
+Transfer or revoke program upgrade authority using Solana CLI:
+
+```sh
+# Transfer upgrade authority to a new address
+pnpm programs:transfer-upgrade-authority <NEW_AUTHORITY_PUBKEY>
+
+# Make program immutable (irreversible!)
+pnpm programs:transfer-upgrade-authority --none
+
+# View help and options
+pnpm programs:transfer-upgrade-authority --help
+```
+
+This is a **one-step, immediate transfer** using Solana's native authority management. Use with extreme caution!
+
+**Key Differences:**
+
+| Feature | Program Authority | Upgrade Authority |
+|---------|------------------|-------------------|
+| **Controls** | Pool creation, authorized creators | Program code upgrades |
+| **Transfer** | Two-step (nominate + accept) | One-step (immediate) |
+| **Safety** | Safer, reversible before acceptance | Immediate, irreversible |
+| **Use Case** | Day-to-day operations | Code deployment |
 
 ## Generating IDLs
 

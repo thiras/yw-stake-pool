@@ -31,15 +31,15 @@ import {
 import { STAKE_POOL_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const NOMINATE_NEW_AUTHORITY_DISCRIMINATOR = 6;
+export const TRANSFER_PROGRAM_AUTHORITY_DISCRIMINATOR = 10;
 
-export function getNominateNewAuthorityDiscriminatorBytes() {
-  return getU8Encoder().encode(NOMINATE_NEW_AUTHORITY_DISCRIMINATOR);
+export function getTransferProgramAuthorityDiscriminatorBytes() {
+  return getU8Encoder().encode(TRANSFER_PROGRAM_AUTHORITY_DISCRIMINATOR);
 }
 
-export type NominateNewAuthorityInstruction<
+export type TransferProgramAuthorityInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
-  TAccountPool extends string | AccountMeta<string> = string,
+  TAccountProgramAuthority extends string | AccountMeta<string> = string,
   TAccountCurrentAuthority extends string | AccountMeta<string> = string,
   TAccountNewAuthority extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
@@ -47,9 +47,9 @@ export type NominateNewAuthorityInstruction<
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
-      TAccountPool extends string
-        ? WritableAccount<TAccountPool>
-        : TAccountPool,
+      TAccountProgramAuthority extends string
+        ? WritableAccount<TAccountProgramAuthority>
+        : TAccountProgramAuthority,
       TAccountCurrentAuthority extends string
         ? ReadonlySignerAccount<TAccountCurrentAuthority> &
             AccountSignerMeta<TAccountCurrentAuthority>
@@ -61,62 +61,62 @@ export type NominateNewAuthorityInstruction<
     ]
   >;
 
-export type NominateNewAuthorityInstructionData = { discriminator: number };
+export type TransferProgramAuthorityInstructionData = { discriminator: number };
 
-export type NominateNewAuthorityInstructionDataArgs = {};
+export type TransferProgramAuthorityInstructionDataArgs = {};
 
-export function getNominateNewAuthorityInstructionDataEncoder(): FixedSizeEncoder<NominateNewAuthorityInstructionDataArgs> {
+export function getTransferProgramAuthorityInstructionDataEncoder(): FixedSizeEncoder<TransferProgramAuthorityInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', getU8Encoder()]]),
     (value) => ({
       ...value,
-      discriminator: NOMINATE_NEW_AUTHORITY_DISCRIMINATOR,
+      discriminator: TRANSFER_PROGRAM_AUTHORITY_DISCRIMINATOR,
     })
   );
 }
 
-export function getNominateNewAuthorityInstructionDataDecoder(): FixedSizeDecoder<NominateNewAuthorityInstructionData> {
+export function getTransferProgramAuthorityInstructionDataDecoder(): FixedSizeDecoder<TransferProgramAuthorityInstructionData> {
   return getStructDecoder([['discriminator', getU8Decoder()]]);
 }
 
-export function getNominateNewAuthorityInstructionDataCodec(): FixedSizeCodec<
-  NominateNewAuthorityInstructionDataArgs,
-  NominateNewAuthorityInstructionData
+export function getTransferProgramAuthorityInstructionDataCodec(): FixedSizeCodec<
+  TransferProgramAuthorityInstructionDataArgs,
+  TransferProgramAuthorityInstructionData
 > {
   return combineCodec(
-    getNominateNewAuthorityInstructionDataEncoder(),
-    getNominateNewAuthorityInstructionDataDecoder()
+    getTransferProgramAuthorityInstructionDataEncoder(),
+    getTransferProgramAuthorityInstructionDataDecoder()
   );
 }
 
-export type NominateNewAuthorityInput<
-  TAccountPool extends string = string,
+export type TransferProgramAuthorityInput<
+  TAccountProgramAuthority extends string = string,
   TAccountCurrentAuthority extends string = string,
   TAccountNewAuthority extends string = string,
 > = {
-  /** The stake pool */
-  pool: Address<TAccountPool>;
-  /** The current pool authority */
+  /** The program authority PDA */
+  programAuthority: Address<TAccountProgramAuthority>;
+  /** The current program authority */
   currentAuthority: TransactionSigner<TAccountCurrentAuthority>;
   /** The new authority to nominate */
   newAuthority: Address<TAccountNewAuthority>;
 };
 
-export function getNominateNewAuthorityInstruction<
-  TAccountPool extends string,
+export function getTransferProgramAuthorityInstruction<
+  TAccountProgramAuthority extends string,
   TAccountCurrentAuthority extends string,
   TAccountNewAuthority extends string,
   TProgramAddress extends Address = typeof STAKE_POOL_PROGRAM_ADDRESS,
 >(
-  input: NominateNewAuthorityInput<
-    TAccountPool,
+  input: TransferProgramAuthorityInput<
+    TAccountProgramAuthority,
     TAccountCurrentAuthority,
     TAccountNewAuthority
   >,
   config?: { programAddress?: TProgramAddress }
-): NominateNewAuthorityInstruction<
+): TransferProgramAuthorityInstruction<
   TProgramAddress,
-  TAccountPool,
+  TAccountProgramAuthority,
   TAccountCurrentAuthority,
   TAccountNewAuthority
 > {
@@ -125,7 +125,10 @@ export function getNominateNewAuthorityInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    pool: { value: input.pool ?? null, isWritable: true },
+    programAuthority: {
+      value: input.programAuthority ?? null,
+      isWritable: true,
+    },
     currentAuthority: {
       value: input.currentAuthority ?? null,
       isWritable: false,
@@ -140,44 +143,44 @@ export function getNominateNewAuthorityInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
     accounts: [
-      getAccountMeta(accounts.pool),
+      getAccountMeta(accounts.programAuthority),
       getAccountMeta(accounts.currentAuthority),
       getAccountMeta(accounts.newAuthority),
     ],
-    data: getNominateNewAuthorityInstructionDataEncoder().encode({}),
+    data: getTransferProgramAuthorityInstructionDataEncoder().encode({}),
     programAddress,
-  } as NominateNewAuthorityInstruction<
+  } as TransferProgramAuthorityInstruction<
     TProgramAddress,
-    TAccountPool,
+    TAccountProgramAuthority,
     TAccountCurrentAuthority,
     TAccountNewAuthority
   >);
 }
 
-export type ParsedNominateNewAuthorityInstruction<
+export type ParsedTransferProgramAuthorityInstruction<
   TProgram extends string = typeof STAKE_POOL_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    /** The stake pool */
-    pool: TAccountMetas[0];
-    /** The current pool authority */
+    /** The program authority PDA */
+    programAuthority: TAccountMetas[0];
+    /** The current program authority */
     currentAuthority: TAccountMetas[1];
     /** The new authority to nominate */
     newAuthority: TAccountMetas[2];
   };
-  data: NominateNewAuthorityInstructionData;
+  data: TransferProgramAuthorityInstructionData;
 };
 
-export function parseNominateNewAuthorityInstruction<
+export function parseTransferProgramAuthorityInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
-): ParsedNominateNewAuthorityInstruction<TProgram, TAccountMetas> {
+): ParsedTransferProgramAuthorityInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 3) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -191,11 +194,11 @@ export function parseNominateNewAuthorityInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      pool: getNextAccount(),
+      programAuthority: getNextAccount(),
       currentAuthority: getNextAccount(),
       newAuthority: getNextAccount(),
     },
-    data: getNominateNewAuthorityInstructionDataDecoder().decode(
+    data: getTransferProgramAuthorityInstructionDataDecoder().decode(
       instruction.data
     ),
   };
