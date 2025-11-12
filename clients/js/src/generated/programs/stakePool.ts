@@ -54,9 +54,9 @@ export enum StakePoolInstruction {
   ManageAuthorizedCreators,
   TransferProgramAuthority,
   AcceptProgramAuthority,
+  CancelAuthorityTransfer,
   GetAuthorizedCreators,
   CheckAuthorization,
-  CancelAuthorityTransfer,
 }
 
 export function identifyStakePoolInstruction(
@@ -103,13 +103,13 @@ export function identifyStakePoolInstruction(
     return StakePoolInstruction.AcceptProgramAuthority;
   }
   if (containsBytes(data, getU8Encoder().encode(13), 0)) {
-    return StakePoolInstruction.GetAuthorizedCreators;
+    return StakePoolInstruction.CancelAuthorityTransfer;
   }
   if (containsBytes(data, getU8Encoder().encode(14), 0)) {
-    return StakePoolInstruction.CheckAuthorization;
+    return StakePoolInstruction.GetAuthorizedCreators;
   }
   if (containsBytes(data, getU8Encoder().encode(15), 0)) {
-    return StakePoolInstruction.CancelAuthorityTransfer;
+    return StakePoolInstruction.CheckAuthorization;
   }
   throw new Error(
     'The provided instruction could not be identified as a stakePool instruction.'
@@ -159,11 +159,11 @@ export type ParsedStakePoolInstruction<
       instructionType: StakePoolInstruction.AcceptProgramAuthority;
     } & ParsedAcceptProgramAuthorityInstruction<TProgram>)
   | ({
+      instructionType: StakePoolInstruction.CancelAuthorityTransfer;
+    } & ParsedCancelAuthorityTransferInstruction<TProgram>)
+  | ({
       instructionType: StakePoolInstruction.GetAuthorizedCreators;
     } & ParsedGetAuthorizedCreatorsInstruction<TProgram>)
   | ({
       instructionType: StakePoolInstruction.CheckAuthorization;
-    } & ParsedCheckAuthorizationInstruction<TProgram>)
-  | ({
-      instructionType: StakePoolInstruction.CancelAuthorityTransfer;
-    } & ParsedCancelAuthorityTransferInstruction<TProgram>);
+    } & ParsedCheckAuthorizationInstruction<TProgram>);

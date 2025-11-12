@@ -758,47 +758,6 @@
       }
     },
     {
-      "name": "GetAuthorizedCreators",
-      "accounts": [
-        {
-          "name": "programAuthority",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The program authority PDA"
-          ]
-        }
-      ],
-      "args": [],
-      "discriminant": {
-        "type": "u8",
-        "value": 13
-      }
-    },
-    {
-      "name": "CheckAuthorization",
-      "accounts": [
-        {
-          "name": "programAuthority",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The program authority PDA"
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "address",
-          "type": "publicKey"
-        }
-      ],
-      "discriminant": {
-        "type": "u8",
-        "value": 14
-      }
-    },
-    {
       "name": "CancelAuthorityTransfer",
       "accounts": [
         {
@@ -819,6 +778,47 @@
         }
       ],
       "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 13
+      }
+    },
+    {
+      "name": "GetAuthorizedCreators",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 14
+      }
+    },
+    {
+      "name": "CheckAuthorization",
+      "accounts": [
+        {
+          "name": "programAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The program authority PDA"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "address",
+          "type": "publicKey"
+        }
+      ],
       "discriminant": {
         "type": "u8",
         "value": 15
