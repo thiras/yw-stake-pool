@@ -277,7 +277,32 @@ pnpm programs:init-authority -- --keypair /path/to/authority.json
   - Add/remove other authorized pool creators
 - Running this again will fail if already initialized (which is expected)
 
-To add more authorized pool creators later, use the TypeScript client's `manage_authorized_creators` instruction (see example code in `example/src/pool-admin.ts`).
+#### Managing Authorized Pool Creators
+
+After initializing the program authority, you can manage who is authorized to create new stake pools:
+
+```sh
+# Add an authorized creator
+pnpm programs:add-creator <PUBKEY>
+
+# Add creator on specific cluster
+pnpm programs:add-creator <PUBKEY> -- --cluster mainnet-beta
+
+# Remove an authorized creator
+pnpm programs:remove-creator <PUBKEY>
+
+# List all authorized creators
+pnpm programs:list-creators
+
+# List creators as JSON
+pnpm programs:list-creators -- --json
+```
+
+**Notes:**
+- Only the main program authority can add/remove creators
+- The main authority is always authorized (cannot be removed)
+- Maximum 10 additional authorized creators per program
+- Creators can immediately create pools after being added
 
 ### Managing authority
 
