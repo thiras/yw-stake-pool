@@ -69,6 +69,7 @@ pub fn initialize_program_authority<'a>(accounts: &'a [AccountInfo<'a>]) -> Prog
         authority: *ctx.accounts.initial_authority.key,
         authorized_creators: [None; ProgramAuthority::MAX_CREATORS],
         creator_count: 0,
+        pending_authority: None,
         bump,
     };
 

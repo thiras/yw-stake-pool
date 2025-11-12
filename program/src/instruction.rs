@@ -7,16 +7,15 @@ use solana_program::pubkey::Pubkey;
 pub enum StakePoolInstruction {
     /// Initialize a new stake pool
     #[account(0, writable, name="pool", desc = "The stake pool PDA")]
-    #[account(1, signer, name="authority", desc = "The pool authority")]
-    #[account(2, name="stake_mint", desc = "The token mint being staked")]
-    #[account(3, name="reward_mint", desc = "The reward token mint")]
-    #[account(4, writable, name="stake_vault", desc = "The pool's stake token vault")]
-    #[account(5, writable, name="reward_vault", desc = "The pool's reward token vault")]
-    #[account(6, writable, signer, name="payer", desc = "The account paying for rent")]
-    #[account(7, name="token_program", desc = "The token program")]
-    #[account(8, name="system_program", desc = "The system program")]
-    #[account(9, name="rent", desc = "Rent sysvar")]
-    #[account(10, name="program_authority", desc = "The program authority account (validates creator permission)")]
+    #[account(1, name="stake_mint", desc = "The token mint being staked")]
+    #[account(2, name="reward_mint", desc = "The reward token mint")]
+    #[account(3, writable, name="stake_vault", desc = "The pool's stake token vault")]
+    #[account(4, writable, name="reward_vault", desc = "The pool's reward token vault")]
+    #[account(5, writable, signer, name="payer", desc = "The account paying for rent (must be authorized admin)")]
+    #[account(6, name="token_program", desc = "The token program")]
+    #[account(7, name="system_program", desc = "The system program")]
+    #[account(8, name="rent", desc = "Rent sysvar")]
+    #[account(9, name="program_authority", desc = "The program authority account (validates creator permission)")]
     InitializePool {
         /// Unique identifier to allow multiple pools for same authority + stake_mint (typically 0 for first pool, 1 for second, etc.)
         pool_id: u64,
@@ -77,9 +76,10 @@ pub enum StakePoolInstruction {
     #[account(7, name="clock", desc = "Clock sysvar")]
     ClaimRewards,
 
-    /// Update pool settings (authority only)
+    /// Update pool settings (global admin only)
     #[account(0, writable, name="pool", desc = "The stake pool")]
-    #[account(1, signer, name="authority", desc = "The pool authority")]
+    #[account(1, signer, name="admin", desc = "The global admin (authorized in ProgramAuthority)")]
+    #[account(2, name="program_authority", desc = "The program authority account (validates admin permission)")]
     UpdatePool {
         reward_rate: Option<u64>,
         min_stake_amount: Option<u64>,
@@ -99,19 +99,6 @@ pub enum StakePoolInstruction {
     #[account(4, name="reward_mint", desc = "The reward token mint")]
     #[account(5, name="token_program", desc = "The token program")]
     FundRewards { amount: u64 },
-
-    /// Nominate a new authority (current authority only)
-    /// This is the first step of a two-step authority transfer process
-    #[account(0, writable, name="pool", desc = "The stake pool")]
-    #[account(1, signer, name="current_authority", desc = "The current pool authority")]
-    #[account(2, name="new_authority", desc = "The new authority to nominate")]
-    NominateNewAuthority,
-
-    /// Accept authority transfer (pending authority only)
-    /// This is the second step that completes the authority transfer
-    #[account(0, writable, name="pool", desc = "The stake pool")]
-    #[account(1, signer, name="pending_authority", desc = "The pending authority accepting the transfer")]
-    AcceptAuthority,
 
     /// Close an empty stake account and recover rent
     #[account(0, writable, name="stake_account", desc = "The stake account to close")]
@@ -144,4 +131,18 @@ pub enum StakePoolInstruction {
         /// Addresses to remove from authorized creators list
         remove: Vec<Pubkey>,
     },
+
+    /// Transfer the global program authority to a new admin
+    /// This is a two-step process: nominate + accept
+    /// Only the current program authority can call this
+    #[account(0, writable, name="program_authority", desc = "The program authority PDA")]
+    #[account(1, signer, name="current_authority", desc = "The current program authority")]
+    #[account(2, name="new_authority", desc = "The new authority to nominate")]
+    TransferProgramAuthority,
+
+    /// Accept the transfer of program authority
+    /// Second step of the authority transfer process
+    #[account(0, writable, name="program_authority", desc = "The program authority PDA")]
+    #[account(1, signer, name="pending_authority", desc = "The pending authority accepting the transfer")]
+    AcceptProgramAuthority,
 }
