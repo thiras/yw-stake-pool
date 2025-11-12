@@ -54,7 +54,7 @@ test('InvalidTimestamp error message', (t) => {
 });
 
 test('FinalizeRewardRateChange instruction has correct discriminator', (t) => {
-  t.is(FINALIZE_REWARD_RATE_CHANGE_DISCRIMINATOR, 9);
+  t.is(FINALIZE_REWARD_RATE_CHANGE_DISCRIMINATOR, 7); // Updated after adding new instructions
 });
 
 test('FinalizeRewardRateChange instruction data codec encodes and decodes', (t) => {

@@ -22,7 +22,6 @@ test('StakePool codec encodes and decodes correctly', (t) => {
     isPaused: false,
     enforceLockup: false,
     bump: 255,
-    pendingAuthority: null,
     poolEndDate: null,
     pendingRewardRate: null,
     rewardRateChangeTimestamp: null,
@@ -33,9 +32,9 @@ test('StakePool codec encodes and decodes correctly', (t) => {
   const encoded = codec.encode(stakePool);
   const decoded = codec.decode(encoded);
 
-  // Compare all fields except pendingAuthority
+  // Compare all fields
   t.is(decoded.key, stakePool.key);
-  t.is(decoded.authority, stakePool.authority);
+  // Note: authority field removed - now managed globally via ProgramAuthority
   t.is(decoded.stakeMint, stakePool.stakeMint);
   t.is(decoded.rewardMint, stakePool.rewardMint);
   t.is(decoded.stakeVault, stakePool.stakeVault);
@@ -46,9 +45,7 @@ test('StakePool codec encodes and decodes correctly', (t) => {
   t.is(decoded.lockupPeriod, stakePool.lockupPeriod);
   t.is(decoded.isPaused, stakePool.isPaused);
   t.is(decoded.bump, stakePool.bump);
-
-  // Check pendingAuthority is None
-  t.deepEqual(decoded.pendingAuthority, { __option: 'None' });
+  // Note: pendingAuthority field removed - now managed globally via ProgramAuthority
 });
 
 test('StakePool has correct reward_rate field', (t) => {
