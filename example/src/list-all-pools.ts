@@ -2,14 +2,13 @@
  * List All Pools Script
  *
  * This script scans the Solana blockchain for ALL stake pools created by the program.
- * It doesn't require authority or stake_mint - it finds all pools on the network.
+ * It doesn't require parameters - it finds all pools on the network.
  *
  * Usage:
- *   tsx src/list-all-pools.ts [cluster]
+ *   tsx src/list-all-pools.ts
  *
  * Example:
- *   tsx src/list-all-pools.ts          # Uses default cluster from config
- *   tsx src/list-all-pools.ts devnet   # Explicitly use devnet
+ *   tsx src/list-all-pools.ts          # Scans the configured network
  */
 
 import { address } from '@solana/kit';
@@ -38,7 +37,7 @@ function decodePoolData(data: Uint8Array): any {
 function formatPoolInfo(pool: any, index: number) {
   console.log(`\n${index}. Pool ${pool.address}`);
   console.log('   ─'.repeat(35));
-  console.log(`   Authority: ${pool.data.authority}`);
+  console.log(`   Pool ID: ${pool.data.poolId}`);
   console.log(`   Stake Mint: ${pool.data.stakeMint}`);
   console.log(`   Reward Mint: ${pool.data.rewardMint}`);
   
@@ -68,10 +67,6 @@ function formatPoolInfo(pool: any, index: number) {
     console.log(`      End Date: ${endDate.toLocaleString()}`);
   } else {
     console.log(`      End Date: None (runs indefinitely)`);
-  }
-  
-  if (pool.data.pendingAuthority && pool.data.pendingAuthority.__option === 'Some') {
-    console.log(`      ⚠️  Pending Authority: ${pool.data.pendingAuthority.value}`);
   }
 }
 
@@ -144,31 +139,31 @@ async function listAllPools() {
     console.log(`📊 Found ${pools.length} Stake Pool(s)`);
     console.log('══════════════════════════════════════════════════════════════════════');
 
-    // Group pools by authority
-    const poolsByAuthority = new Map<string, typeof pools>();
-    pools.forEach((pool) => {
-      const authority = pool.data.authority;
-      if (!poolsByAuthority.has(authority)) {
-        poolsByAuthority.set(authority, []);
-      }
-      poolsByAuthority.get(authority)!.push(pool);
-    });
-
     // Display each pool
     pools.forEach((pool, index) => {
       formatPoolInfo(pool, index + 1);
     });
 
-    // Summary by authority
+    // Group pools by stake mint for summary
+    const poolsByMint = new Map<string, typeof pools>();
+    pools.forEach((pool) => {
+      const mint = pool.data.stakeMint;
+      if (!poolsByMint.has(mint)) {
+        poolsByMint.set(mint, []);
+      }
+      poolsByMint.get(mint)!.push(pool);
+    });
+
+    // Summary by stake mint
     console.log('\n' + '═'.repeat(70));
-    console.log('📈 Summary by Authority');
+    console.log('📈 Summary by Stake Mint');
     console.log('═'.repeat(70));
     
-    poolsByAuthority.forEach((authorityPools, authority) => {
-      console.log(`\n${authority}`);
-      console.log(`  → ${authorityPools.length} pool(s)`);
+    poolsByMint.forEach((mintPools, mint) => {
+      console.log(`\n${mint}`);
+      console.log(`  → ${mintPools.length} pool(s)`);
       
-      const totalStaked = authorityPools.reduce(
+      const totalStaked = mintPools.reduce(
         (sum, p) => sum + Number(p.data.totalStaked),
         0
       );
@@ -194,7 +189,7 @@ async function listAllPools() {
     console.log(`Total Pools: ${pools.length}`);
     console.log(`Active Pools: ${activePools}`);
     console.log(`Paused Pools: ${pausedPools}`);
-    console.log(`Unique Authorities: ${poolsByAuthority.size}`);
+    console.log(`Unique Stake Mints: ${poolsByMint.size}`);
     console.log(`Total Value Staked: ${(totalStakedAll / 1_000_000).toFixed(2)} tokens`);
     console.log(`Total Rewards Owed: ${(totalRewardsOwedAll / 1_000_000).toFixed(2)} tokens`);
     

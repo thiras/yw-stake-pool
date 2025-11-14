@@ -7,11 +7,7 @@
     "build": "tsc",
     "start": "pnpm build && node dist/index.js",
     "dev": "tsx src/index.ts",
-    "simple": "tsx src/simple-example.ts",
-    "devnet-test": "pnpm build && tsx src/devnet-integration-test.ts",
-    "pool-admin": "pnpm build && tsx src/pool-admin.ts",
-    "user-staking": "pnpm build && tsx src/user-staking.ts",
-    "list-pools": "tsx src/list-pools.ts",
+    "devnet-test": "tsx src/devnet-integration-test.ts",
     "list-all-pools": "tsx src/list-all-pools.ts"
   },
   "dependencies": {
